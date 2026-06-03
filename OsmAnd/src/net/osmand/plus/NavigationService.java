@@ -53,7 +53,7 @@ public class NavigationService extends Service {
 	private OsmandSettings settings;
 	private RoutingHelper routingHelper;
 
-	protected int usedBy;
+	protected volatile int usedBy;
 	private OsmAndLocationProvider locationProvider;
 	private LocationServiceHelper locationServiceHelper;
 	private StateChangedListener<LocationSource> locationSourceListener;
