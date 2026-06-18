@@ -13,6 +13,17 @@ Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavo
 
 ## Build
 
+For the easiest manual path, run:
+
+```bash
+cd /home/yetisoldier/projects/FlockFree-Navigation
+scripts/flockfree-user-build-install.sh
+```
+
+That script builds the current APK, copies it to `build-artifacts/`, installs it on the default Moto Wi-Fi ADB endpoint, launches it, and captures diagnostics. It runs Gradle, so it is for Eric/manual use rather than agent execution.
+
+Manual equivalent:
+
 ```bash
 cd /home/yetisoldier/projects/FlockFree-Navigation
 

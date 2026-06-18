@@ -56,14 +56,15 @@
 
 ## Morning First Steps
 
-1. Open the app on the Moto G Stylus. It should already be installed as `com.yetiwurks.flockfree`.
-2. Work through or skip the first-run map download flow.
-3. Confirm camera data finishes loading on Wi-Fi.
-4. Move/zoom to a camera-dense area and verify markers.
-5. Open the plugin settings, confirm the camera-data diagnostic row, enable camera avoidance, calculate a route, and verify the route-summary toast includes an applied/fallback/skipped status line.
-6. Compare one camera-dense offline route with avoidance off and on. A successful newer build should either route around camera-adjacent road objects, fall back cleanly to the original route, or say why avoidance was skipped.
-7. In the CYD hardware section, enable CYD BLE, scan/connect to a powered `CYD-Flock-You`, request status, and try the simulated detection command.
-8. After a GPS-backed CYD detection, return to the map, confirm a CYD diamond marker appears near the detection location, tap it, and choose `Review as ALPR camera` to open the normal ALPR report flow.
+1. Rebuild/install the latest source manually with `scripts/flockfree-user-build-install.sh` so the phone has the newest source changes. The helper runs Gradle, installs on the default Moto Wi-Fi ADB endpoint, launches the app, and captures diagnostics.
+2. Open the app on the Moto G Stylus. It should already be installed as `com.yetiwurks.flockfree`.
+3. Work through or skip the first-run map download flow.
+4. Confirm camera data finishes loading on Wi-Fi.
+5. Move/zoom to a camera-dense area and verify markers.
+6. Open the plugin settings, confirm the camera-data diagnostic row, enable camera avoidance, calculate a route, and verify the route-summary toast includes an applied/fallback/skipped status line.
+7. Compare one camera-dense offline route with avoidance off and on. A successful newer build should either route around camera-adjacent road objects, fall back cleanly to the original route, or say why avoidance was skipped.
+8. In the CYD hardware section, enable CYD BLE, scan/connect to a powered `CYD-Flock-You`, request status, and try the simulated detection command.
+9. After a GPS-backed CYD detection, return to the map, confirm a CYD diamond marker appears near the detection location, tap it, and choose `Review as ALPR camera` to open the normal ALPR report flow.
 
 For a no-Gradle device snapshot before or after those checks, run:
 

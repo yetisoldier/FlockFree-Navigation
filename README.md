@@ -15,6 +15,14 @@ ANDROID_HOME=$HOME/Android/Sdk ANDROID_SDK=$HOME/Android/Sdk \
   -x test --no-daemon --max-workers=1
 ```
 
+For a one-command manual build/install/launch/diagnostics flow, Eric can run:
+
+```bash
+scripts/flockfree-user-build-install.sh
+```
+
+That helper intentionally runs Gradle and is for manual use. Agents should not execute it because `AGENTS.md` forbids agent-run Gradle build tasks.
+
 Last verified local APK output:
 
 ```text
