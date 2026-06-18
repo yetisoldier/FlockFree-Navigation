@@ -112,6 +112,12 @@ scripts/flockfree-field-test-session.sh
 It runs the readiness gate, writes manual prompts, captures filtered logcat during the test window, then captures post-session diagnostics.
 It also writes `test-area-suggestions.txt` with bundled-seed map anchors, prints the first anchors into the session report, creates `manual-test-results.tsv` for PASS/FAIL/SKIP notes during the walk-through, and writes `session-summary.txt` with crash status, observed evidence buckets, manual results, and missing manual checks.
 
+To mark a visual/manual result and refresh the summary afterward:
+
+```bash
+scripts/flockfree-mark-result.py logs/flockfree-field-session/RUN_ID route_avoidance PASS --notes "Avoidance applied toast observed" --summarize
+```
+
 For offline route-test anchors from the bundled camera seed:
 
 ```bash

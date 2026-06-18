@@ -260,6 +260,29 @@ if missing:
 print("field-session summarizer wiring ok")
 PY
 
+log "Manual result marker checks"
+python3 - <<'PY'
+from pathlib import Path
+
+marker = Path("scripts/flockfree-mark-result.py").read_text()
+required = [
+    "manual-test-results.tsv",
+    "VALID_CHECKS",
+    "VALID_STATUSES",
+    "PASS",
+    "FAIL",
+    "SKIP",
+    "TODO",
+    "--summarize",
+    "--self-check",
+    "flockfree-summarize-session.py",
+]
+missing = [item for item in required if item not in marker]
+if missing:
+    raise SystemExit("manual result marker missing expected behavior:\n" + "\n".join(missing))
+print("manual result marker wiring ok")
+PY
+
 log "Test-area suggestion helper checks"
 python3 - <<'PY'
 from pathlib import Path
@@ -308,13 +331,17 @@ bash -n scripts/flockfree-moto-diagnostics.sh \
 log "Python helper syntax checks"
 python3 -m py_compile \
 	scripts/flockfree-suggest-test-areas.py \
-	scripts/flockfree-summarize-session.py
+	scripts/flockfree-summarize-session.py \
+	scripts/flockfree-mark-result.py
 
 log "Test-area helper smoke check"
 scripts/flockfree-suggest-test-areas.py --limit 2 --radius-km 80 >/dev/null
 
 log "Field-session summarizer self-check"
 scripts/flockfree-summarize-session.py --self-check >/dev/null
+
+log "Manual result marker self-check"
+scripts/flockfree-mark-result.py --self-check >/dev/null
 
 log "CYD parser/store self-check"
 ANNOTATION_JAR="${ANNOTATION_JAR:-$(find_first_jar '*androidx.annotation/annotation-jvm*')}"

@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+"""Mark a FlockFree field-session manual result and optionally refresh the summary."""
+
+from __future__ import annotations
+
+import argparse
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+
+VALID_CHECKS = {
+    "camera_data": "Refresh camera data and verify the settings row settles with a source/freshness value.",
+    "route_avoidance": "Calculate a camera-dense offline route with avoidance enabled and capture applied/fallback/skipped status.",
+    "nearby_alerts": "Move or navigate near a known camera and confirm nearby alert behavior.",
+    "osm_reporting": "Open Add ALPR Camera and confirm OsmAnd editor/tag prefill.",
+    "cyd": "Connect/simulate CYD and confirm status, phone GPS, marker, or review flow.",
+}
+VALID_STATUSES = {"PASS", "FAIL", "SKIP", "TODO"}
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Update manual-test-results.tsv for a FlockFree field-test session."
+    )
+    parser.add_argument("session_dir", nargs="?", help="logs/flockfree-field-session/... directory.")
+    parser.add_argument("check_id", nargs="?", choices=sorted(VALID_CHECKS), help="Manual check to update.")
+    parser.add_argument("status", nargs="?", help="PASS, FAIL, SKIP, or TODO.")
+    parser.add_argument("--notes", default=None, help="Replacement notes for the check row.")
+    parser.add_argument(
+        "--summarize",
+        action="store_true",
+        help="Regenerate session-summary.txt with scripts/flockfree-summarize-session.py.",
+    )
+    parser.add_argument("--self-check", action="store_true", help="Run a small built-in self-check.")
+    return parser.parse_args()
+
+
+def clean_notes(notes: str) -> str:
+    return " ".join(notes.replace("\t", " ").splitlines()).strip()
+
+
+def default_rows() -> list[tuple[str, str, str]]:
+    return [(check_id, "TODO", notes) for check_id, notes in VALID_CHECKS.items()]
+
+
+def read_rows(path: Path) -> list[tuple[str, str, str]]:
+    rows = []
+    if path.exists():
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or stripped.startswith("check_id\t"):
+                continue
+            parts = stripped.split("\t", 2)
+            if len(parts) < 2 or parts[0] not in VALID_CHECKS:
+                continue
+            notes = parts[2].strip() if len(parts) > 2 else ""
+            status = parts[1].strip().upper() or "TODO"
+            if status not in VALID_STATUSES:
+                status = "TODO"
+            rows.append((parts[0], status, notes))
+    known = {check_id for check_id, _status, _notes in rows}
+    for check_id, status, notes in default_rows():
+        if check_id not in known:
+            rows.append((check_id, status, notes))
+    return rows
+
+
+def write_rows(path: Path, rows: list[tuple[str, str, str]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "# FlockFree manual test results",
+        "# Edit status to PASS, FAIL, SKIP, or leave TODO. Keep tab separators.",
+        "check_id\tstatus\tnotes",
+    ]
+    for check_id, status, notes in rows:
+        lines.append(f"{check_id}\t{status}\t{clean_notes(notes)}")
+    fd, tmp_name = tempfile.mkstemp(prefix=".manual-test-results.", suffix=".tmp", dir=str(path.parent))
+    tmp = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write("\n".join(lines) + "\n")
+        tmp.replace(path)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
+
+
+def update_result(path: Path, check_id: str, status: str, notes: str | None) -> None:
+    status = status.upper()
+    if status not in VALID_STATUSES:
+        raise SystemExit(f"status must be one of: {', '.join(sorted(VALID_STATUSES))}")
+    rows = []
+    updated = False
+    for row_check_id, row_status, row_notes in read_rows(path):
+        if row_check_id == check_id:
+            rows.append((row_check_id, status, clean_notes(notes) if notes is not None else row_notes))
+            updated = True
+        else:
+            rows.append((row_check_id, row_status, row_notes))
+    if not updated:
+        rows.append((check_id, status, clean_notes(notes or VALID_CHECKS[check_id])))
+    write_rows(path, rows)
+
+
+def refresh_summary(session_dir: Path) -> str:
+    root = Path(__file__).resolve().parent.parent
+    summarizer = root / "scripts" / "flockfree-summarize-session.py"
+    result = subprocess.run(
+        [sys.executable, str(summarizer), str(session_dir)],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    summary = result.stdout
+    (session_dir / "session-summary.txt").write_text(summary, encoding="utf-8")
+    return summary
+
+
+def self_check() -> int:
+    with tempfile.TemporaryDirectory() as tmp:
+        session = Path(tmp)
+        results = session / "manual-test-results.tsv"
+        update_result(results, "route_avoidance", "PASS", "Avoidance applied toast observed")
+        update_result(results, "cyd", "SKIP", "Hardware intentionally skipped")
+        text = results.read_text(encoding="utf-8")
+        required = [
+            "route_avoidance\tPASS\tAvoidance applied toast observed",
+            "cyd\tSKIP\tHardware intentionally skipped",
+            "camera_data\tTODO\t",
+        ]
+        missing = [item for item in required if item not in text]
+        if missing:
+            raise SystemExit("self-check failed; missing: " + ", ".join(missing))
+    print("FlockFree manual-result marker self-check passed.")
+    return 0
+
+
+def main() -> int:
+    args = parse_args()
+    if args.self_check:
+        return self_check()
+    if not args.session_dir or not args.check_id or not args.status:
+        raise SystemExit("session_dir, check_id, and status are required unless --self-check is used")
+    session_dir = Path(args.session_dir)
+    if not session_dir.exists():
+        raise SystemExit(f"Session directory not found: {session_dir}")
+    results = session_dir / "manual-test-results.tsv"
+    update_result(results, args.check_id, args.status, args.notes)
+    print(f"Updated {results}: {args.check_id}={args.status.upper()}")
+    if args.summarize:
+        print(refresh_summary(session_dir), end="")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

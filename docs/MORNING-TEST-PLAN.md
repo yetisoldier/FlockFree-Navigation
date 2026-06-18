@@ -151,6 +151,12 @@ scripts/flockfree-field-test-session.sh --duration 900
 
 During or immediately after the walk-through, edit the generated `manual-test-results.tsv` statuses to `PASS`, `FAIL`, or `SKIP` for any checks that were visually confirmed but did not produce distinctive log evidence. Rerun `scripts/flockfree-summarize-session.py logs/flockfree-field-session/...` to fold those manual results into the summary.
 
+You can also update one row and refresh the summary without opening an editor:
+
+```bash
+scripts/flockfree-mark-result.py logs/flockfree-field-session/RUN_ID route_avoidance PASS --notes "Avoidance applied toast observed" --summarize
+```
+
 To pick data-backed route-test areas from the bundled seed:
 
 ```bash
