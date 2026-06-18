@@ -9,6 +9,7 @@ import android.widget.EditText;
 import android.widget.Spinner;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import net.osmand.PlatformUtil;
 import net.osmand.osm.PoiType;
@@ -35,6 +36,8 @@ public class CameraReporter {
     private static final Log LOG = PlatformUtil.getLog(CameraReporter.class);
 
     private final OsmandApplication app;
+    @Nullable
+    private String lastReportDraftSummary;
 
     // Brand presets with their OSM tag values
     private static final Map<String, Map<String, String>> BRAND_PRESETS = new LinkedHashMap<>();
@@ -92,6 +95,17 @@ public class CameraReporter {
         return BRAND_PRESETS;
     }
 
+    @NonNull
+    public synchronized String getLastReportDraftSummary() {
+        return lastReportDraftSummary != null
+                ? lastReportDraftSummary
+                : app.getString(R.string.flockfree_report_last_draft_none);
+    }
+
+    private synchronized void setLastReportDraftSummary(@NonNull String summary) {
+        lastReportDraftSummary = summary;
+    }
+
     /**
      * Show a dialog for the user to add a new ALPR camera at the given location.
      * The user selects a brand preset and optional direction, then submits via
@@ -99,6 +113,7 @@ public class CameraReporter {
      */
     public void showAddCameraDialog(@NonNull MapActivity mapActivity, double lat, double lon) {
         Context ctx = mapActivity;
+        setLastReportDraftSummary(app.getString(R.string.flockfree_report_last_draft_dialog, lat, lon));
         AlertDialog.Builder builder = new AlertDialog.Builder(ctx);
         builder.setTitle(R.string.flockfree_add_camera);
 
@@ -137,10 +152,11 @@ public class CameraReporter {
         builder.setView(layout);
         builder.setPositiveButton(R.string.flockfree_open_osm_editor, (dialog, which) -> {
             String brand = (String) brandSpinner.getSelectedItem();
+            String brandName = brand != null ? brand : "Generic ALPR";
             String direction = dirInput.getText().toString().trim();
             String operator = opInput.getText().toString().trim();
 
-            Map<String, String> tags = brand != null ? getTagsForBrand(brand) : getTagsForBrand("Generic ALPR");
+            Map<String, String> tags = getTagsForBrand(brandName);
             if (!direction.isEmpty()) {
                 tags.put("direction", direction);
             }
@@ -148,7 +164,7 @@ public class CameraReporter {
                 tags.put("operator", operator);
             }
 
-            openPoiEditorWithTags(mapActivity, lat, lon, tags);
+            openPoiEditorWithTags(mapActivity, lat, lon, brandName, tags);
         });
         builder.setNegativeButton(R.string.shared_string_cancel, null);
         builder.show();
@@ -158,10 +174,13 @@ public class CameraReporter {
      * Opens OsmAnd's existing EditPoiDialogFragment with pre-filled ALPR tags.
      */
     private void openPoiEditorWithTags(@NonNull MapActivity mapActivity, double lat, double lon,
+                                       @NonNull String brandName,
                                        @NonNull Map<String, String> tags) {
         try {
             OsmEditingPlugin editingPlugin = PluginsHelper.getPlugin(OsmEditingPlugin.class);
             if (editingPlugin == null) {
+                setLastReportDraftSummary(app.getString(R.string.flockfree_report_last_draft_fallback,
+                        brandName, lat, lon, tags.size()));
                 showTagsFallback(mapActivity, tags);
                 return;
             }
@@ -170,9 +189,13 @@ public class CameraReporter {
             Node node = new Node(lat, lon, -1);
             node.replaceTags(editorTags);
             EditPoiDialogFragment.showInstance(mapActivity, node, true, editorTags);
+            setLastReportDraftSummary(app.getString(R.string.flockfree_report_last_draft_editor,
+                    brandName, lat, lon, editorTags.size()));
             LOG.info("Opened POI editor for camera at " + lat + "," + lon + " with tags: " + editorTags);
         } catch (Exception e) {
             LOG.error("Failed to open POI editor", e);
+            setLastReportDraftSummary(app.getString(R.string.flockfree_report_last_draft_fallback,
+                    brandName, lat, lon, tags.size()));
             showTagsFallback(mapActivity, tags);
         }
     }

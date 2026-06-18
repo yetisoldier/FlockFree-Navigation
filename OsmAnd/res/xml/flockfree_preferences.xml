@@ -87,6 +87,21 @@
 		android:selectable="false" />
 
 	<PreferenceCategory
+		android:key="flockfree_reporting"
+		android:layout="@layout/preference_category_with_descr"
+		android:title="@string/flockfree_reporting" />
+
+	<Preference
+		android:key="flockfree_report_last_draft"
+		android:layout="@layout/preference_with_descr"
+		android:persistent="false"
+		android:title="@string/flockfree_report_last_draft" />
+
+	<Preference
+		android:layout="@layout/simple_divider_item"
+		android:selectable="false" />
+
+	<PreferenceCategory
 		android:key="flockfree_cyd_hardware"
 		android:layout="@layout/preference_category_with_descr"
 		android:title="@string/flockfree_cyd_hardware" />

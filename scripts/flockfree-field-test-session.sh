@@ -185,14 +185,15 @@ Use these while the timed logcat capture is running:
 
 0. Open test-area-suggestions.txt and use one of the Map anchor coordinates for camera markers, nearby alerts, and route tests.
 1. Open FlockFree settings and confirm the readiness-relevant rows:
-   Camera data, Last route check, Last alert check, Nearby camera alerts, CYD status.
+   Camera data, Last route check, Last alert check, Last report draft, Nearby camera alerts, CYD status.
 2. Tap Refresh camera data on Wi-Fi and wait for the row to settle.
 3. Calculate one camera-dense offline route with avoidance enabled.
 4. Reopen settings and confirm Last route check preserves applied/fallback/skipped status.
 5. Reopen FlockFree settings and confirm Last alert check explains the last trigger/skip state.
 6. Long-press a map location, choose Add ALPR Camera, and confirm OsmAnd's editor opens with ALPR/surveillance tags.
-7. Enable CYD BLE, scan/connect, request CYD status, and run Simulate CYD detection if hardware is available.
-8. Return to the map and review any CYD marker as an ALPR camera.
+7. Reopen FlockFree settings and confirm Last report draft describes the editor or fallback path.
+8. Enable CYD BLE, scan/connect, request CYD status, and run Simulate CYD detection if hardware is available.
+9. Return to the map and review any CYD marker as an ALPR camera.
 
 This script only records evidence. It does not submit OSM edits.
 PROMPTS
@@ -206,7 +207,7 @@ check_id	status	notes
 camera_data	TODO	Refresh camera data and verify the settings row settles with a source/freshness value.
 route_avoidance	TODO	Calculate a camera-dense offline route with avoidance enabled and capture applied/fallback/skipped status.
 nearby_alerts	TODO	Move or navigate near a known camera and confirm nearby alert behavior plus Last alert check status.
-osm_reporting	TODO	Open Add ALPR Camera and confirm OsmAnd editor/tag prefill.
+osm_reporting	TODO	Open Add ALPR Camera and confirm OsmAnd editor/tag prefill plus Last report draft status.
 cyd	TODO	Connect/simulate CYD and confirm status, phone GPS, marker, or review flow.
 RESULTS
 }
@@ -228,7 +229,7 @@ write_manual_result_commands() {
       "Nearby camera alert behavior and Last alert check status observed"
     printf '%s\n' "# OSM editor opened with ALPR/surveillance tags."
     printf 'scripts/flockfree-mark-result.py "$SESSION_DIR" osm_reporting PASS --notes %q --summarize\n\n' \
-      "ALPR/surveillance tag prefill observed in OSM editor"
+      "ALPR/surveillance tag prefill and Last report draft status observed"
     printf '%s\n' "# CYD connect/status/GPS/marker/review flow observed."
     printf 'scripts/flockfree-mark-result.py "$SESSION_DIR" cyd PASS --notes %q --summarize\n' \
       "CYD status, GPS, marker, or review flow observed"

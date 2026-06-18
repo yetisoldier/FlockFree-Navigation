@@ -117,6 +117,12 @@
 	<string name="flockfree_report_direction_hint">N, NE, E, or 90</string>
 	<string name="flockfree_report_operator_label">Operator (optional):</string>
 	<string name="flockfree_report_operator_hint">Operator name</string>
+	<string name="flockfree_reporting">Reporting</string>
+	<string name="flockfree_report_last_draft">Last report draft</string>
+	<string name="flockfree_report_last_draft_none">No ALPR report draft opened yet.</string>
+	<string name="flockfree_report_last_draft_dialog">ALPR report dialog opened at %1$.5f, %2$.5f.</string>
+	<string name="flockfree_report_last_draft_editor">OSM editor opened for %1$s at %2$.5f, %3$.5f with %4$d tags.</string>
+	<string name="flockfree_report_last_draft_fallback">Manual tag fallback shown for %1$s at %2$.5f, %3$.5f with %4$d tags.</string>
 	<string name="flockfree_open_osm_editor">Open OSM editor</string>
 	<string name="flockfree_osm_editor_unavailable_title">OSM editor unavailable</string>
 	<string name="flockfree_osm_editor_unavailable_message">Could not open OsmAnd\'s OSM editor. Add these tags manually:</string>

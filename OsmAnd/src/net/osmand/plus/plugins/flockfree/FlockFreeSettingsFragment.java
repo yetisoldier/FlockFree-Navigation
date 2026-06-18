@@ -24,6 +24,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 	private static final String CAMERA_DATA_REFRESH_KEY = "flockfree_camera_data_refresh";
 	private static final String ROUTE_LAST_CHECK_KEY = "flockfree_route_last_check";
 	private static final String ALERT_LAST_CHECK_KEY = "flockfree_alert_last_check";
+	private static final String REPORT_LAST_DRAFT_KEY = "flockfree_report_last_draft";
 	private static final String CYD_STATUS_KEY = "flockfree_cyd_status";
 	private static final String CYD_CONNECT_KEY = "flockfree_cyd_connect";
 	private static final String CYD_REQUEST_STATUS_KEY = "flockfree_cyd_request_status";
@@ -63,6 +64,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		setupDistancePreference(plugin.CAMERA_ALERT_DISTANCE.getId(), ALERT_DISTANCE_VALUES,
 				R.string.flockfree_alert_distance_description);
 		setupAlertLastCheckPreference();
+		setupReportLastDraftPreference();
 		setupSwitchPreference(plugin.CYD_BLE_ENABLED.getId(),
 				R.string.flockfree_cyd_ble_description);
 		setupCydStatusPreference();
@@ -115,6 +117,13 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		Preference preference = findPreference(ALERT_LAST_CHECK_KEY);
 		if (preference != null) {
 			preference.setSummary(plugin.getLastCameraAlertCheckSummary());
+		}
+	}
+
+	private void setupReportLastDraftPreference() {
+		Preference preference = findPreference(REPORT_LAST_DRAFT_KEY);
+		if (preference != null) {
+			preference.setSummary(plugin.getCameraReporter().getLastReportDraftSummary());
 		}
 	}
 
@@ -232,6 +241,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		setupCameraDataStatusPreference();
 		setupRouteLastCheckPreference();
 		setupAlertLastCheckPreference();
+		setupReportLastDraftPreference();
 		setupCydStatusPreference();
 	}
 
