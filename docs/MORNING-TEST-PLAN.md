@@ -74,7 +74,7 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 - [ ] Long-press or use map context at a location and confirm `Add ALPR Camera` is present.
 - [ ] Select an ALPR brand preset and confirm OsmAnd's POI editor opens with the surveillance/ALPR tags present in the advanced tag view.
 - [ ] Open plugin/settings surfaces and confirm the FlockFree settings screen is visible.
-- [ ] Confirm the FlockFree settings screen shows a `Camera data` status row after camera data loads.
+- [ ] Confirm the FlockFree settings screen shows a `Camera data` status row after camera data loads, including source `cache`, `bundled seed`, or `network`.
 - [ ] Tap `Refresh camera data` once on Wi-Fi and confirm the status switches to loading or returns to the indexed camera count.
 - [ ] Toggle the camera layer preference if reachable, then return to the map and confirm the layer hides/shows after refresh.
 - [ ] Confirm `Nearby camera alerts` and `Alert distance` are present, then while navigating or moving near a known camera confirm FlockFree shows a nearby-camera toast no more than once per cooldown window.

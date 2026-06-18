@@ -14,7 +14,7 @@
 - Synced artifact: `build-artifacts/FlockFree-gplayFree-legacy-fat-debug.apk`
 - Package: `com.yetiwurks.flockfree`
 - SHA-256: `ed7ecd983d1be9fcc8f2491405d836a175cd380d389a188dbb67cfa67222e210`
-- Source commit: `70296983deee589ba418aaa5b0e98d9f157b626c`
+- Source commit: `de6e423f8d136358b744641e812d15bb663e349d`
 - Signature: verifies with APK Signature Scheme v2 using the Android debug certificate
 - Phone install: succeeded over Wi-Fi ADB on `192.168.1.139:5555`
 - Launch: succeeded into `net.osmand.plus.activities.MapActivity`
@@ -47,6 +47,7 @@
   - It can load an existing camera cache synchronously before routing, but does not block routing on a network refresh.
   - It falls back to the original route if the avoided route fails.
 - Camera data now builds a coarse in-memory spatial grid and the settings screen shows camera count/bucket diagnostics when loaded.
+- The camera-data diagnostic row now shows whether the active data came from cache, bundled seed, or network.
 - The settings screen now includes `Refresh camera data`, which starts an explicit network refresh and leaves existing loaded data in place if the refresh fails.
 - The `Nearby camera alerts` switch and `Alert distance` preference are now active: while navigating or moving, FlockFree checks the nearest indexed camera and shows a cooldown-limited nearby-camera toast.
 - A CYD BLE path exists under `OsmAnd/src/net/osmand/plus/plugins/flockfree/cyd/`, including Nordic UART connection handling, idle auto-scan on map resume when CYD BLE is enabled, parsers for `pair_status` and `detection` JSON, outbound `FYGPS` phone-location streaming, and FlockFree settings rows for scan/connect, status request, simulated detection, clearing recent detections, and visible phone-GPS-send status.
@@ -66,7 +67,7 @@
 2. Work through or skip the first-run map download flow.
 3. Confirm camera data finishes loading on Wi-Fi.
 4. Move/zoom to a camera-dense area and verify markers.
-5. Open the plugin settings, confirm the camera-data diagnostic row, tap `Refresh camera data` on Wi-Fi, and confirm the row returns to an indexed camera count.
+5. Open the plugin settings, confirm the camera-data diagnostic row includes an indexed camera count and source, tap `Refresh camera data` on Wi-Fi, and confirm the row returns to an indexed camera count.
 6. Confirm the `Nearby camera alerts` / `Alert distance` rows are present.
 7. While navigating or moving near a known camera, verify FlockFree shows a nearby-camera toast and does not repeat it continuously.
 8. Enable camera avoidance, calculate a route, and verify the route-summary toast includes an applied/fallback/skipped status line.

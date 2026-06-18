@@ -5,6 +5,7 @@ import androidx.annotation.Nullable;
 
 import net.osmand.PlatformUtil;
 import net.osmand.plus.OsmandApplication;
+import net.osmand.plus.R;
 import net.osmand.plus.settings.backend.preferences.OsmandPreference;
 
 import org.apache.commons.logging.Log;
@@ -49,6 +50,8 @@ public class CameraData {
     private volatile Map<Long, List<CameraPoint>> cameraGrid = new HashMap<>();
     private volatile boolean dataLoaded = false;
     private volatile boolean loading = false;
+    @NonNull
+    private volatile DataSource lastLoadedSource = DataSource.NONE;
 
     public CameraData(@NonNull OsmandApplication app) {
         this.app = app;
@@ -133,7 +136,7 @@ public class CameraData {
         if (cacheFile.exists()) {
             try {
                 String json = readGeoJsonFile(cacheFile);
-                if (!parseGeoJSON(json, "cache")) {
+                if (!parseGeoJSON(json, DataSource.CACHE)) {
                     return false;
                 }
                 dataLoaded = true;
@@ -155,7 +158,7 @@ public class CameraData {
     private boolean loadFromBundledSeed() {
         try {
             String json = readGeoJsonAsset(BUNDLED_SEED_ASSET);
-            if (!parseGeoJSON(json, "bundled seed")) {
+            if (!parseGeoJSON(json, DataSource.BUNDLED_SEED)) {
                 return false;
             }
             dataLoaded = true;
@@ -186,7 +189,7 @@ public class CameraData {
             }
 
             String json = readGeoJsonResponse(conn);
-            if (!parseGeoJSON(json, "network")) {
+            if (!parseGeoJSON(json, DataSource.NETWORK)) {
                 return false;
             }
             dataLoaded = true;
@@ -212,7 +215,7 @@ public class CameraData {
         }
     }
 
-    private boolean parseGeoJSON(@NonNull String json, @NonNull String source) {
+    private boolean parseGeoJSON(@NonNull String json, @NonNull DataSource source) {
         try {
             JSONObject root = new JSONObject(json);
             String type = root.optString("type", "");
@@ -281,8 +284,9 @@ public class CameraData {
             synchronized (this) {
                 cameras = parsed;
                 cameraGrid = buildSpatialGrid(parsed);
+                lastLoadedSource = source;
             }
-            LOG.info("Parsed " + parsed.size() + " camera points from " + source
+            LOG.info("Parsed " + parsed.size() + " camera points from " + source.logName
                     + "; skipped=" + skipped + ", features=" + features.length()
                     + ", buckets=" + cameraGrid.size());
             return true;
@@ -383,6 +387,11 @@ public class CameraData {
 
     public synchronized int getSpatialBucketCount() {
         return cameraGrid.size();
+    }
+
+    @NonNull
+    public synchronized String getLastLoadedSourceLabel() {
+        return app.getString(lastLoadedSource.labelRes);
     }
 
     public synchronized List<CameraPoint> getCamerasNear(double lat, double lon, double radiusMeters) {
@@ -532,5 +541,21 @@ public class CameraData {
         @Nullable public String mountType;
         @Nullable public String surveillanceZone;
         @Nullable public String osmTimestamp;
+    }
+
+    private enum DataSource {
+        NONE("unknown", R.string.flockfree_camera_data_source_unknown),
+        CACHE("cache", R.string.flockfree_camera_data_source_cache),
+        BUNDLED_SEED("bundled seed", R.string.flockfree_camera_data_source_bundled_seed),
+        NETWORK("network", R.string.flockfree_camera_data_source_network);
+
+        @NonNull
+        private final String logName;
+        private final int labelRes;
+
+        DataSource(@NonNull String logName, int labelRes) {
+            this.logName = logName;
+            this.labelRes = labelRes;
+        }
     }
 }

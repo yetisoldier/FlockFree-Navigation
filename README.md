@@ -39,7 +39,7 @@ OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-de
 
 Verified debug package/application ID: `com.yetiwurks.flockfree`.
 Verified APK SHA-256: `ed7ecd983d1be9fcc8f2491405d836a175cd380d389a188dbb67cfa67222e210`.
-That APK was built from clean source commit `70296983deee589ba418aaa5b0e98d9f157b626c`, installed and launched on a Moto G Stylus over Wi-Fi ADB, and verified with cache removed so the bundled camera seed loaded before the network refresh.
+That APK was built from clean source commit `de6e423f8d136358b744641e812d15bb663e349d`, installed and launched on a Moto G Stylus over Wi-Fi ADB, and verified with cache removed so the bundled camera seed loaded before the network refresh.
 
 ## What Works Now
 
@@ -49,7 +49,7 @@ That APK was built from clean source commit `70296983deee589ba418aaa5b0e98d9f157
 - The data loader handles both gzip and plain GeoJSON because the live `.gz` endpoint currently returns plain GeoJSON.
 - A compressed bundled camera seed is included from `OsmAnd/assets/flockfree/cameras.geojson.gz`, packaged as `assets/flockfree/cameras.geojson`, so a fresh install can show the current 104,902-camera snapshot even if the first network refresh is unavailable.
 - Parsed cameras are indexed into a coarse in-memory spatial grid so map and route-corridor lookups do not scan the full camera list every time.
-- The FlockFree settings screen can manually refresh the camera data cache for morning validation or later data updates.
+- The FlockFree settings screen can show whether camera data was loaded from cache, bundled seed, or network, and can manually refresh the camera data cache for morning validation or later data updates.
 - Camera points render on the map at zoom 10+ with basic vendor colors and higher-zoom labels.
 - Tapping a rendered camera opens a simple details dialog with brand, operator, direction, mount, surveillance zone, OSM ID/type, and timestamp when present.
 - The map context menu has an `Add ALPR Camera` action that opens OsmAnd's POI editor with the selected ALPR tag preset already attached to a new node.

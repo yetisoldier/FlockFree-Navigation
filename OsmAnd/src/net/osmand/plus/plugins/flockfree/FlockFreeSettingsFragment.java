@@ -57,8 +57,9 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		if (preference != null) {
 			CameraData cameraData = plugin.getCameraData();
 			if (cameraData.isDataLoaded()) {
-				preference.setSummary(getString(R.string.flockfree_camera_data_loaded_summary,
-						cameraData.getCameraCount(), cameraData.getSpatialBucketCount()));
+				preference.setSummary(getString(R.string.flockfree_camera_data_loaded_source_summary,
+						cameraData.getCameraCount(), cameraData.getSpatialBucketCount(),
+						cameraData.getLastLoadedSourceLabel()));
 			} else if (cameraData.isLoading()) {
 				preference.setSummary(R.string.flockfree_camera_data_loading_summary);
 			} else {

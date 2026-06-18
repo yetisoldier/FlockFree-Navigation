@@ -24,6 +24,11 @@
 	<string name="flockfree_avoidance_radius_default_summary">100 meters</string>
 	<string name="flockfree_camera_data_status">Camera data</string>
 	<string name="flockfree_camera_data_loaded_summary">%1$d cameras indexed in %2$d map buckets.</string>
+	<string name="flockfree_camera_data_loaded_source_summary">%1$d cameras indexed in %2$d map buckets. Source: %3$s.</string>
+	<string name="flockfree_camera_data_source_cache">cache</string>
+	<string name="flockfree_camera_data_source_bundled_seed">bundled seed</string>
+	<string name="flockfree_camera_data_source_network">network</string>
+	<string name="flockfree_camera_data_source_unknown">unknown</string>
 	<string name="flockfree_camera_data_loading_summary">Camera data is loading.</string>
 	<string name="flockfree_camera_data_not_loaded_summary">Camera data has not loaded yet. Open the map on a network connection to start the download.</string>
 	<string name="flockfree_camera_data_refresh">Refresh camera data</string>
