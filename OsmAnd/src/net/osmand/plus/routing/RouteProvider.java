@@ -31,6 +31,7 @@ import net.osmand.plus.onlinerouting.OnlineRoutingHelper;
 import net.osmand.plus.onlinerouting.engine.OnlineRoutingEngine;
 import net.osmand.plus.onlinerouting.engine.OnlineRoutingEngine.OnlineRoutingResponse;
 import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.CameraAvoidanceHelper;
 import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.render.NativeOsmandLibrary;
 import net.osmand.plus.routing.GPXRouteParams.GPXRouteParamsBuilder;
@@ -206,19 +207,23 @@ public class RouteProvider {
 		if (params.cameraAvoidanceApplied || !initial.isCalculated()) {
 			return null;
 		}
-		if (params.previousToRecalculate != null && params.onlyStartPointChanged) {
-			return null;
-		}
 		FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
 		if (plugin == null || !plugin.CAMERA_AVOIDANCE_ENABLED.get()) {
 			return null;
 		}
-		if (!plugin.getCameraData().isDataLoaded() && !plugin.getCameraData().ensureCacheLoadedForRouting()) {
+		CameraAvoidanceHelper avoidanceHelper = plugin.getAvoidanceHelper();
+		if (params.previousToRecalculate != null && params.onlyStartPointChanged) {
+			avoidanceHelper.recordAvoidanceSkipped(CameraAvoidanceHelper.AvoidanceStatus.SKIPPED_PARTIAL);
 			return null;
 		}
-		Set<Long> avoidIds = plugin.getAvoidanceHelper().collectAvoidRoadIdsForRoute(initial,
+		if (!plugin.getCameraData().isDataLoaded() && !plugin.getCameraData().ensureCacheLoadedForRouting()) {
+			avoidanceHelper.recordAvoidanceSkipped(CameraAvoidanceHelper.AvoidanceStatus.SKIPPED_NO_DATA);
+			return null;
+		}
+		Set<Long> avoidIds = avoidanceHelper.collectAvoidRoadIdsForRoute(initial,
 				plugin.CAMERA_AVOIDANCE_RADIUS.get());
 		if (Algorithms.isEmpty(avoidIds)) {
+			avoidanceHelper.recordAvoidanceSkipped(CameraAvoidanceHelper.AvoidanceStatus.SKIPPED_NO_ROAD_IDS);
 			return null;
 		}
 
@@ -229,12 +234,14 @@ public class RouteProvider {
 			RouteCalculationResult avoided = findVectorMapsRoute(avoidedParams, calcGPXRoute);
 			if (avoided.isCalculated()) {
 				log.info("FlockFree recalculated route with " + avoidIds.size() + " temporary avoid road ids");
+				avoidanceHelper.recordAvoidanceApplied(avoidIds.size());
 				return avoided;
 			}
 		} catch (IOException e) {
 			log.warn("FlockFree temporary camera avoidance threw; returning original route", e);
 		}
 		restoreFlockFreeProgressState(params, originalMissingMaps);
+		avoidanceHelper.recordAvoidanceFallback(avoidIds.size());
 		log.warn("FlockFree temporary camera avoidance failed; returning original route");
 		return null;
 	}

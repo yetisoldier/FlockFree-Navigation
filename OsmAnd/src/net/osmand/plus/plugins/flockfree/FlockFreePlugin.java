@@ -261,6 +261,12 @@ public class FlockFreePlugin extends OsmandPlugin {
         if (routeLocations == null || routeLocations.isEmpty()) {
             return;
         }
-        app.showToastMessage(getAvoidanceHelper().getRouteCameraSummaryFromLocations(routeLocations));
+        CameraAvoidanceHelper helper = getAvoidanceHelper();
+        String routeSummary = helper.getRouteCameraSummaryFromLocations(routeLocations);
+        String avoidanceSummary = helper.consumeLastAvoidanceStatusSummary();
+        if (!avoidanceSummary.isEmpty()) {
+            routeSummary = routeSummary + "\n" + avoidanceSummary;
+        }
+        app.showToastMessage(routeSummary);
     }
 }

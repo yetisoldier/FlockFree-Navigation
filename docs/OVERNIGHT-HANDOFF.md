@@ -5,8 +5,8 @@
 - Repository: `https://github.com/yetisoldier/FlockFree-Navigation`
 - Local path: `/home/yetisoldier/projects/FlockFree-Navigation`
 - Branch: `master`
-- Latest functional source commit: `95e8384bf9 Add FlockFree CYD settings controls` (subsequent commits may be handoff/doc-only updates)
-- Current source includes the route camera summary hook, exposed FlockFree settings screen, camera-data spatial indexing, OSM editor tag-prefill reporting, experimental two-pass offline camera avoidance, cache-only route startup for existing camera data, and a settings-driven CYD BLE scan/status/simulation path.
+- Latest functional source: current `master` after `Expose FlockFree route avoidance status`.
+- Current source includes the route camera summary hook, exposed FlockFree settings screen, camera-data spatial indexing, OSM editor tag-prefill reporting, experimental two-pass offline camera avoidance, visible applied/fallback/skipped route diagnostics, cache-only route startup for existing camera data, and a settings-driven CYD BLE scan/status/simulation path.
 
 ## Verified APK
 
@@ -33,6 +33,7 @@
   - `FlockFreePlugin.newRouteIsCalculated(boolean)` now watches newly calculated routes when camera avoidance is enabled.
   - `CameraAvoidanceHelper` now checks cameras against route segments instead of only route vertices.
 - The hook still shows an advisory FlockFree toast after route calculation so testers can see the camera count near the final route.
+- The toast now also reports whether route avoidance applied, fell back to the original route, skipped because camera data was unavailable, skipped because no camera-adjacent road objects were found, or skipped during a lightweight follow-me recalculation.
 - Current source adds an experimental second-pass OsmAnd offline route calculation:
   - It maps cameras near the initial route to `RouteDataObject` IDs.
   - It passes those IDs as temporary per-calculation impassable roads.
@@ -58,8 +59,8 @@
 2. Work through or skip the first-run map download flow.
 3. Confirm camera data finishes loading on Wi-Fi.
 4. Move/zoom to a camera-dense area and verify markers.
-5. Open the plugin settings, confirm the camera-data diagnostic row, enable camera avoidance, calculate a route, and verify the route-summary toast.
-6. Compare one camera-dense offline route with avoidance off and on. A successful newer build should either route around camera-adjacent road objects or fall back cleanly to the original route.
+5. Open the plugin settings, confirm the camera-data diagnostic row, enable camera avoidance, calculate a route, and verify the route-summary toast includes an applied/fallback/skipped status line.
+6. Compare one camera-dense offline route with avoidance off and on. A successful newer build should either route around camera-adjacent road objects, fall back cleanly to the original route, or say why avoidance was skipped.
 7. In the CYD hardware section, enable CYD BLE, scan/connect to a powered `CYD-Flock-You`, request status, and try the simulated detection command.
 
 For a no-Gradle device snapshot before or after those checks, run:

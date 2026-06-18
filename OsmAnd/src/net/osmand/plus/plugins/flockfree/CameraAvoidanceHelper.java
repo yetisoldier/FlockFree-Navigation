@@ -29,8 +29,19 @@ public class CameraAvoidanceHelper {
 
     private static final Log LOG = PlatformUtil.getLog(CameraAvoidanceHelper.class);
 
+    public enum AvoidanceStatus {
+        NONE,
+        APPLIED,
+        FALLBACK,
+        SKIPPED_PARTIAL,
+        SKIPPED_NO_DATA,
+        SKIPPED_NO_ROAD_IDS
+    }
+
     private final OsmandApplication app;
     private final FlockFreePlugin plugin;
+    private AvoidanceStatus lastAvoidanceStatus = AvoidanceStatus.NONE;
+    private int lastAvoidanceRoadCount;
 
     public CameraAvoidanceHelper(@NonNull OsmandApplication app, @NonNull FlockFreePlugin plugin) {
         this.app = app;
@@ -43,6 +54,50 @@ public class CameraAvoidanceHelper {
 
     public int getAvoidanceRadius() {
         return plugin.CAMERA_AVOIDANCE_RADIUS.get();
+    }
+
+    public synchronized void recordAvoidanceApplied(int roadCount) {
+        lastAvoidanceStatus = AvoidanceStatus.APPLIED;
+        lastAvoidanceRoadCount = roadCount;
+    }
+
+    public synchronized void recordAvoidanceFallback(int roadCount) {
+        lastAvoidanceStatus = AvoidanceStatus.FALLBACK;
+        lastAvoidanceRoadCount = roadCount;
+    }
+
+    public synchronized void recordAvoidanceSkipped(@NonNull AvoidanceStatus status) {
+        lastAvoidanceStatus = status;
+        lastAvoidanceRoadCount = 0;
+    }
+
+    @NonNull
+    public synchronized String consumeLastAvoidanceStatusSummary() {
+        String summary;
+        switch (lastAvoidanceStatus) {
+            case APPLIED:
+                summary = app.getString(R.string.flockfree_route_status_applied, lastAvoidanceRoadCount);
+                break;
+            case FALLBACK:
+                summary = app.getString(R.string.flockfree_route_status_fallback, lastAvoidanceRoadCount);
+                break;
+            case SKIPPED_PARTIAL:
+                summary = app.getString(R.string.flockfree_route_status_skipped_partial);
+                break;
+            case SKIPPED_NO_DATA:
+                summary = app.getString(R.string.flockfree_route_status_no_data);
+                break;
+            case SKIPPED_NO_ROAD_IDS:
+                summary = app.getString(R.string.flockfree_route_status_no_road_ids);
+                break;
+            case NONE:
+            default:
+                summary = "";
+                break;
+        }
+        lastAvoidanceStatus = AvoidanceStatus.NONE;
+        lastAvoidanceRoadCount = 0;
+        return summary;
     }
 
     /**
