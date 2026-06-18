@@ -150,7 +150,7 @@ if [[ "$LAUNCH" -eq 1 ]]; then
 	adb -s "$PHONE_SERIAL" shell monkey -p "$PACKAGE_NAME" 1
 fi
 
-if [[ "$RUN_READINESS" -eq 1 && "$INSTALL" -eq 1 ]]; then
+if [[ "$RUN_READINESS" -eq 1 && "$INSTALL" -eq 1 && "$RUN_FIELD_SESSION" -eq 0 ]]; then
 	readiness_args=(--serial "$PHONE_SERIAL" --logcat-lines 2000)
 	if [[ "$LAUNCH" -eq 0 ]]; then
 		readiness_args+=(--no-launch)
@@ -158,6 +158,9 @@ if [[ "$RUN_READINESS" -eq 1 && "$INSTALL" -eq 1 ]]; then
 	echo
 	echo "Running no-Gradle readiness gate for the installed APK..."
 	"$ROOT_DIR/scripts/flockfree-morning-readiness.sh" "${readiness_args[@]}"
+elif [[ "$RUN_READINESS" -eq 1 && "$INSTALL" -eq 1 ]]; then
+	echo
+	echo "Readiness gate will run at the start of the timed field-test session."
 elif [[ "$RUN_READINESS" -eq 1 ]]; then
 	echo
 	echo "Skipped readiness gate because --no-install was used. Run scripts/flockfree-morning-readiness.sh after installing."
@@ -170,6 +173,9 @@ if [[ "$RUN_FIELD_SESSION" -eq 1 && "$INSTALL" -eq 1 ]]; then
 	field_args=(--serial "$PHONE_SERIAL" --duration "$FIELD_DURATION")
 	if [[ "$LAUNCH" -eq 0 ]]; then
 		field_args+=(--no-launch)
+	fi
+	if [[ "$RUN_READINESS" -eq 0 ]]; then
+		field_args+=(--skip-readiness)
 	fi
 	echo
 	echo "Starting timed FlockFree field-test evidence session..."
