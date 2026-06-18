@@ -70,7 +70,7 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 - [ ] Open plugin/settings surfaces and confirm the FlockFree settings screen is visible.
 - [ ] Confirm the FlockFree settings screen shows a `Camera data` status row after camera data loads.
 - [ ] Toggle the camera layer preference if reachable, then return to the map and confirm the layer hides/shows after refresh.
-- [ ] Confirm `Alert distance` is present, then while navigating or moving near a known camera confirm FlockFree shows a nearby-camera toast no more than once per cooldown window.
+- [ ] Confirm `Nearby camera alerts` and `Alert distance` are present, then while navigating or moving near a known camera confirm FlockFree shows a nearby-camera toast no more than once per cooldown window.
 - [ ] Enable camera avoidance, calculate a route, and confirm FlockFree shows a route camera summary toast with `Avoidance applied`, `Avoidance fallback`, or an explicit skipped reason.
 - [ ] On an offline OsmAnd route through a known camera corridor, compare the route with camera avoidance off versus on and look for a one-pass reroute around camera-adjacent road objects.
 - [ ] Open the FlockFree CYD hardware settings, enable `CYD BLE`, and tap `Scan and connect CYD` with the CYD powered and advertising `CYD-Flock-You`.

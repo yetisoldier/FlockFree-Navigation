@@ -51,6 +51,13 @@
 		android:layout="@layout/preference_category_with_descr"
 		android:title="@string/flockfree_alerts" />
 
+	<net.osmand.plus.settings.preferences.SwitchPreferenceEx
+		android:key="camera_alerts_enabled"
+		android:layout="@layout/preference_with_descr_dialog_and_switch"
+		android:summaryOff="@string/shared_string_disabled"
+		android:summaryOn="@string/shared_string_enabled"
+		android:title="@string/flockfree_nearby_alerts_enabled" />
+
 	<net.osmand.plus.settings.preferences.ListPreferenceEx
 		android:key="camera_alert_distance"
 		android:layout="@layout/preference_with_descr"

@@ -16,12 +16,14 @@ public final class FlockFreePreferences {
     public static final String CAMERA_AVOIDANCE_ENABLED = "camera_avoidance_enabled";
     public static final String CAMERA_AVOIDANCE_RADIUS = "camera_avoidance_radius";
     public static final String CAMERA_SHOW_LAYER = "camera_show_layer";
+    public static final String CAMERA_ALERTS_ENABLED = "camera_alerts_enabled";
     public static final String CAMERA_ALERT_DISTANCE = "camera_alert_distance";
     public static final String CYD_BLE_ENABLED = "cyd_ble_enabled";
 
     // Default values
     public static final boolean DEFAULT_CAMERA_SHOW_LAYER = true;
     public static final boolean DEFAULT_CAMERA_AVOIDANCE_ENABLED = false;
+    public static final boolean DEFAULT_CAMERA_ALERTS_ENABLED = true;
     public static final int DEFAULT_CAMERA_AVOIDANCE_RADIUS = 100;     // meters
     public static final int DEFAULT_CAMERA_ALERT_DISTANCE = 300;        // meters
     public static final long DEFAULT_CAMERA_DATA_LAST_UPDATE = 0L;

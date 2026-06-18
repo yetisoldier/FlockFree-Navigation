@@ -33,6 +33,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     public final OsmandPreference<Boolean> CAMERA_SHOW_LAYER;
     public final CommonPreference<Boolean> CAMERA_AVOIDANCE_ENABLED;
     public final CommonPreference<Integer> CAMERA_AVOIDANCE_RADIUS;
+    public final CommonPreference<Boolean> CAMERA_ALERTS_ENABLED;
     public final CommonPreference<Integer> CAMERA_ALERT_DISTANCE;
     public final CommonPreference<Long> CAMERA_DATA_LAST_UPDATE;
     public final CommonPreference<Boolean> CYD_BLE_ENABLED;
@@ -66,6 +67,9 @@ public class FlockFreePlugin extends OsmandPlugin {
         CAMERA_AVOIDANCE_RADIUS = registerIntPreference(
                 FlockFreePreferences.CAMERA_AVOIDANCE_RADIUS,
                 FlockFreePreferences.DEFAULT_CAMERA_AVOIDANCE_RADIUS).makeProfile().cache();
+        CAMERA_ALERTS_ENABLED = registerBooleanPreference(
+                FlockFreePreferences.CAMERA_ALERTS_ENABLED,
+                FlockFreePreferences.DEFAULT_CAMERA_ALERTS_ENABLED).makeProfile().cache();
         CAMERA_ALERT_DISTANCE = registerIntPreference(
                 FlockFreePreferences.CAMERA_ALERT_DISTANCE,
                 FlockFreePreferences.DEFAULT_CAMERA_ALERT_DISTANCE).makeProfile().cache();
@@ -348,6 +352,9 @@ public class FlockFreePlugin extends OsmandPlugin {
     }
 
     private boolean shouldCheckCameraAlert(@NonNull Location location) {
+        if (!CAMERA_ALERTS_ENABLED.get()) {
+            return false;
+        }
         int alertDistance = CAMERA_ALERT_DISTANCE.get();
         if (alertDistance <= 0) {
             return false;

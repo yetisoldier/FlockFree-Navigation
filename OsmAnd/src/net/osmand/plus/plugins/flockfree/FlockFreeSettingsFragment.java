@@ -35,6 +35,8 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 				R.string.flockfree_camera_avoidance_enabled_description);
 		setupDistancePreference(plugin.CAMERA_AVOIDANCE_RADIUS.getId(), AVOIDANCE_RADIUS_VALUES,
 				R.string.flockfree_avoidance_radius_description);
+		setupSwitchPreference(plugin.CAMERA_ALERTS_ENABLED.getId(),
+				R.string.flockfree_nearby_alerts_enabled_description);
 		setupDistancePreference(plugin.CAMERA_ALERT_DISTANCE.getId(), ALERT_DISTANCE_VALUES,
 				R.string.flockfree_alert_distance_description);
 		setupSwitchPreference(plugin.CYD_BLE_ENABLED.getId(),

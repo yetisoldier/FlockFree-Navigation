@@ -43,7 +43,7 @@
   - It can load an existing camera cache synchronously before routing, but does not block routing on a network refresh.
   - It falls back to the original route if the avoided route fails.
 - Camera data now builds a coarse in-memory spatial grid and the settings screen shows camera count/bucket diagnostics when loaded.
-- The `Alert distance` preference is now active: while navigating or moving, FlockFree checks the nearest indexed camera and shows a cooldown-limited nearby-camera toast.
+- The `Nearby camera alerts` switch and `Alert distance` preference are now active: while navigating or moving, FlockFree checks the nearest indexed camera and shows a cooldown-limited nearby-camera toast.
 - A CYD BLE path exists under `OsmAnd/src/net/osmand/plus/plugins/flockfree/cyd/`, including Nordic UART connection handling, parsers for `pair_status` and `detection` JSON, and FlockFree settings rows for scan/connect, status request, simulated detection, and clearing recent detections.
 - GPS-backed CYD detections are now retained in memory, persisted to `flockfree-cyd-detections.json` in app-private storage, drawn on the map as CYD diamond markers, selectable from the map/context menu, and can be handed to the existing `Add ALPR Camera` reporting flow.
 
@@ -62,7 +62,7 @@
 3. Work through or skip the first-run map download flow.
 4. Confirm camera data finishes loading on Wi-Fi.
 5. Move/zoom to a camera-dense area and verify markers.
-6. Open the plugin settings, confirm the camera-data diagnostic row, and confirm the `Alert distance` row is present.
+6. Open the plugin settings, confirm the camera-data diagnostic row, and confirm the `Nearby camera alerts` / `Alert distance` rows are present.
 7. While navigating or moving near a known camera, verify FlockFree shows a nearby-camera toast and does not repeat it continuously.
 8. Enable camera avoidance, calculate a route, and verify the route-summary toast includes an applied/fallback/skipped status line.
 9. Compare one camera-dense offline route with avoidance off and on. A successful newer build should either route around camera-adjacent road objects, fall back cleanly to the original route, or say why avoidance was skipped.
