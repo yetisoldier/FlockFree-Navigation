@@ -38,8 +38,8 @@ OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-de
 ```
 
 Verified debug package/application ID: `com.yetiwurks.flockfree`.
-Verified APK SHA-256: `038dd9caa9d8525e2abf95dd5563fa2294f30b1db79fbcff56de3c4829b6c764`.
-That APK was built from clean source commit `47ec9c733f74cf6741a170e79ba753a09e11f393`, installed and launched on a Moto G Stylus over Wi-Fi ADB, and diagnostics showed `MapActivity` top-resumed with no fatal FlockFree crash entries.
+Verified APK SHA-256: `29cbf62a0695741202ce459d34cff99f0cc1a8be8f8a43f36b379b9e0b94e934`.
+That APK was built from clean source commit `f5751c5cda9bcaff62fc0d47838ce4f87e8183bd`, installed and launched on a Moto G Stylus over Wi-Fi ADB, and diagnostics showed `MapActivity` top-resumed with no fatal FlockFree crash entries.
 
 ## What Works Now
 
@@ -83,7 +83,7 @@ For a no-Gradle diagnostic snapshot during morning validation, run:
 scripts/flockfree-moto-diagnostics.sh
 ```
 
-It writes local artifacts under ignored `logs/flockfree-diagnostics/` and checks ADB state, package install state, current activity, PID/process state, package metadata, and filtered FlockFree/CameraData/FATAL logcat output.
+It writes local artifacts under ignored `logs/flockfree-diagnostics/` and checks ADB state, package install state, current activity, PID/process state, package metadata, UI screenshot/hierarchy, a FlockFree UI text summary, and filtered FlockFree/CameraData/FATAL logcat output.
 
 ## Credits
 

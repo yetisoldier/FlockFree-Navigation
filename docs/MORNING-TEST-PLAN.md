@@ -109,7 +109,7 @@ cd /home/yetisoldier/projects/FlockFree-Navigation
 scripts/flockfree-moto-diagnostics.sh
 ```
 
-The script defaults to the last verified Moto Wi-Fi ADB endpoint, `192.168.1.139:5555`, and writes local-only artifacts under `logs/flockfree-diagnostics/YYYYMMDD-HHMMSS/`. It checks `adb` device state, whether `com.yetiwurks.flockfree` is installed, current focused activity, app PID/process state, package metadata, and a filtered logcat snapshot for `FlockFree`, `CameraData`, `FATAL`, `AndroidRuntime`, and `com.yetiwurks.flockfree`. Start with `summary.txt`, then inspect `package-state.txt`, `current-activity.txt`, `process-state.txt`, and `logcat-flockfree-camera-fatal.txt`.
+The script defaults to the last verified Moto Wi-Fi ADB endpoint, `192.168.1.139:5555`, and writes local-only artifacts under `logs/flockfree-diagnostics/YYYYMMDD-HHMMSS/`. It checks `adb` device state, whether `com.yetiwurks.flockfree` is installed, current focused activity, app PID/process state, package metadata, UI screenshot/hierarchy, and a filtered logcat snapshot for `FlockFree`, `CameraData`, `FATAL`, `AndroidRuntime`, and `com.yetiwurks.flockfree`. Start with `summary.txt`, then inspect `screenshot.png`, `ui-summary.txt`, `package-state.txt`, `current-activity.txt`, `process-state.txt`, and `logcat-flockfree-camera-fatal.txt`.
 
 If the phone IP changes:
 

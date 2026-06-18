@@ -5,7 +5,7 @@
 - Repository: `https://github.com/yetisoldier/FlockFree-Navigation`
 - Local path: `/home/yetisoldier/projects/FlockFree-Navigation`
 - Branch: `master`
-- Latest functional source: current `master` after the camera-data freshness source pass.
+- Latest functional source: current `master` after the live settings-status refresh and diagnostics UI-evidence passes.
 - Current source includes the route camera summary hook, exposed FlockFree settings screen with live dynamic status refresh, camera-data spatial indexing with source/freshness diagnostics, OSM editor tag-prefill reporting, experimental two-pass offline camera avoidance, retained applied/fallback/skipped route diagnostics, movement/navigation nearby-camera alerts, cache-only route startup for existing camera data, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, phone GPS streaming to CYD over `FYGPS`, and persisted CYD detection map/review candidates.
 
 ## Verified APK
@@ -13,13 +13,14 @@
 - APK: `OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-debug.apk`
 - Synced artifact: `build-artifacts/FlockFree-gplayFree-legacy-fat-debug.apk`
 - Package: `com.yetiwurks.flockfree`
-- SHA-256: `038dd9caa9d8525e2abf95dd5563fa2294f30b1db79fbcff56de3c4829b6c764`
-- Source commit: `47ec9c733f74cf6741a170e79ba753a09e11f393`
+- SHA-256: `29cbf62a0695741202ce459d34cff99f0cc1a8be8f8a43f36b379b9e0b94e934`
+- Source commit: `f5751c5cda9bcaff62fc0d47838ce4f87e8183bd`
 - Signature: verifies with APK Signature Scheme v2 using the Android debug certificate
 - Phone install: succeeded over Wi-Fi ADB on `192.168.1.139:5555`
-- Launch: succeeded into `net.osmand.plus.activities.MapActivity`; diagnostics showed it top-resumed with PID `14073`
+- Launch: succeeded into `net.osmand.plus.activities.MapActivity`; diagnostics showed it top-resumed with PID `16659`
 - Build info: `build-artifacts/FlockFree-build-info.txt`
-- Smoke log directory: `logs/flockfree-diagnostics/20260618-031105`
+- Smoke log directory: `logs/flockfree-diagnostics/20260618-032012`
+- UI-evidence diagnostic directory: `logs/flockfree-diagnostics/20260618-032221`
 - Crash check: no fatal FlockFree crash entries in filtered logcat
 
 ## What Is Ready To Test
@@ -86,7 +87,7 @@ For a no-Gradle device snapshot before or after those checks, run:
 scripts/flockfree-moto-diagnostics.sh
 ```
 
-The collector uses Wi-Fi ADB, defaults to `192.168.1.139:5555`, writes only local ignored files under `logs/flockfree-diagnostics/`, and captures ADB state, package install state, current activity, PID, package metadata, and filtered `FlockFree` / `CameraData` / `FATAL` logcat evidence.
+The collector uses Wi-Fi ADB, defaults to `192.168.1.139:5555`, writes only local ignored files under `logs/flockfree-diagnostics/`, and captures ADB state, package install state, current activity, PID, package metadata, screenshot/UI hierarchy evidence, a FlockFree UI text summary, and filtered `FlockFree` / `CameraData` / `FATAL` logcat evidence.
 
 For source-only checks without running Gradle, run:
 

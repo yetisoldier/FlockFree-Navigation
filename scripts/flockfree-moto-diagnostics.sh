@@ -154,6 +154,85 @@ capture_logcat_filter() {
   log "wrote ${file}"
 }
 
+capture_ui_snapshot() {
+  screenshot_file="${OUT_DIR}/screenshot.png"
+  screenshot_err="${OUT_DIR}/screenshot.err"
+  if "$ADB" -s "$SERIAL" exec-out screencap -p > "$screenshot_file" 2> "$screenshot_err"; then
+    log "wrote ${screenshot_file}"
+    if [ ! -s "$screenshot_err" ]; then
+      rm -f "$screenshot_err"
+    fi
+  else
+    log "failed to capture screenshot; see ${screenshot_err}"
+  fi
+
+  remote_xml="/sdcard/flockfree-window.xml"
+  dump_file="${OUT_DIR}/window-dump.txt"
+  pull_file="${OUT_DIR}/window-pull.txt"
+  {
+    printf '$ %q -s %q shell uiautomator dump %q\n\n' "$ADB" "$SERIAL" "$remote_xml"
+    "$ADB" -s "$SERIAL" shell uiautomator dump "$remote_xml"
+    status="$?"
+    printf '\n[exit_status=%s]\n' "$status"
+  } > "$dump_file" 2>&1
+  log "wrote ${dump_file}"
+
+  if grep -q '\[exit_status=0\]' "$dump_file"; then
+    {
+      printf '$ %q -s %q pull %q %q\n\n' "$ADB" "$SERIAL" "$remote_xml" "${OUT_DIR}/window.xml"
+      "$ADB" -s "$SERIAL" pull "$remote_xml" "${OUT_DIR}/window.xml"
+      status="$?"
+      printf '\n[exit_status=%s]\n' "$status"
+      "$ADB" -s "$SERIAL" shell rm -f "$remote_xml" >/dev/null 2>&1 || true
+    } > "$pull_file" 2>&1
+    log "wrote ${pull_file}"
+  fi
+
+  ui_summary="${OUT_DIR}/ui-summary.txt"
+  python3 - "$OUT_DIR/window.xml" > "$ui_summary" 2>&1 <<'PY'
+import sys
+import xml.etree.ElementTree as ET
+
+path = sys.argv[1]
+patterns = [
+    "FlockFree",
+    "Camera data",
+    "Refresh camera data",
+    "Last route check",
+    "CYD status",
+    "Phone GPS",
+    "Refresh due",
+    "Avoidance",
+]
+
+print("FlockFree UI text summary")
+print("=========================")
+try:
+    root = ET.parse(path).getroot()
+except Exception as exc:
+    print(f"window.xml unavailable or unreadable: {exc}")
+    raise SystemExit(0)
+
+matches = []
+for node in root.iter("node"):
+    values = []
+    for key in ("text", "content-desc", "resource-id"):
+        value = node.attrib.get(key)
+        if value:
+            values.append(value)
+    joined = " | ".join(values)
+    if joined and any(pattern.lower() in joined.lower() for pattern in patterns):
+        matches.append(joined)
+
+if matches:
+    for value in matches[:100]:
+        print(f"- {value}")
+else:
+    print("No target UI text matched.")
+PY
+  log "wrote ${ui_summary}"
+}
+
 write_summary() {
   adb_state="${1:-unknown}"
   package_installed="${2:-unknown}"
@@ -182,6 +261,9 @@ write_summary() {
     printf '%s\n' '- package-state.txt'
     printf '%s\n' '- current-activity.txt'
     printf '%s\n' '- process-state.txt'
+    printf '%s\n' '- screenshot.png'
+    printf '%s\n' '- window.xml'
+    printf '%s\n' '- ui-summary.txt'
     printf '%s\n' '- logcat-flockfree-camera-fatal.txt'
   } > "${OUT_DIR}/summary.txt"
   log "wrote ${OUT_DIR}/summary.txt"
@@ -231,6 +313,8 @@ capture_shell "process-state.txt" \
 
 capture_shell "activity-top.txt" \
   "dumpsys activity top 2>/dev/null | head -200 || true"
+
+capture_ui_snapshot
 
 capture_logcat_filter
 
