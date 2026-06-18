@@ -250,6 +250,87 @@ if missing_tokens:
 print("permission primer wiring ok")
 PY
 
+log "CYD foreground service checks"
+python3 - <<'PY'
+from pathlib import Path
+
+manifest = Path("OsmAnd/AndroidManifest.xml").read_text()
+strings = Path("OsmAnd/res/values/strings.xml").read_text()
+service_path = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/cyd/CydBleService.java")
+service = service_path.read_text()
+plugin = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/FlockFreePlugin.java").read_text()
+fragment = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/FlockFreeSettingsFragment.java").read_text()
+readme = Path("README.md").read_text()
+handoff = Path("docs/OVERNIGHT-HANDOFF.md").read_text()
+morning = Path("docs/MORNING-TEST-PLAN.md").read_text()
+
+required_manifest = [
+    "android.permission.FOREGROUND_SERVICE",
+    "android.permission.FOREGROUND_SERVICE_LOCATION",
+    "android.permission.POST_NOTIFICATIONS",
+    "net.osmand.plus.plugins.flockfree.cyd.CydBleService",
+    'android:foregroundServiceType="location"',
+]
+missing_manifest = [item for item in required_manifest if item not in manifest]
+if missing_manifest:
+    raise SystemExit("missing CYD foreground service manifest wiring:\n" + "\n".join(missing_manifest))
+
+required_strings = [
+    "flockfree_cyd_service_channel_name",
+    "flockfree_cyd_service_channel_desc",
+    "flockfree_cyd_service_notification_title",
+    "flockfree_cyd_service_notification_text",
+]
+missing_strings = [item for item in required_strings if item not in strings]
+if missing_strings:
+    raise SystemExit("missing CYD foreground service strings:\n" + "\n".join(missing_strings))
+
+required_service = [
+    "extends Service",
+    "startForeground(",
+    "NotificationChannel",
+    "FOREGROUND_SERVICE_TYPE_LOCATION",
+    "CydHardwareManager",
+    "getHardwareManager()",
+    "startForegroundService(intent)",
+    "NotificationCompat.Builder",
+    "R.drawable.ic_action_bluetooth",
+]
+missing_service = [item for item in required_service if item not in service]
+if missing_service:
+    raise SystemExit("missing CYD foreground service implementation tokens:\n" + "\n".join(missing_service))
+
+required_callers = [
+    "CydBleService.start(",
+    "CydBleService.stop(",
+]
+for token in required_callers:
+    if token not in plugin and token not in fragment:
+        raise SystemExit(f"missing CYD foreground service caller token: {token}")
+
+stale_doc_phrases = [
+    "no foreground service yet",
+    "no foreground service or sync",
+]
+for phrase in stale_doc_phrases:
+    for path, text in {
+        "README.md": readme,
+        "docs/OVERNIGHT-HANDOFF.md": handoff,
+        "docs/MORNING-TEST-PLAN.md": morning,
+    }.items():
+        if phrase in text:
+            raise SystemExit(f"stale foreground service wording in {path}: {phrase}")
+required_doc_tokens = [
+    "foreground service source path",
+    "not yet validated on-device",
+]
+docs_text = "\n".join([readme, handoff, morning])
+missing_doc_tokens = [item for item in required_doc_tokens if item not in docs_text]
+if missing_doc_tokens:
+    raise SystemExit("missing CYD foreground service documentation tokens:\n" + "\n".join(missing_doc_tokens))
+print("CYD foreground service wiring ok")
+PY
+
 log "Morning readiness wrapper checks"
 python3 - <<'PY'
 from pathlib import Path
