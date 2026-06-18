@@ -75,14 +75,14 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 - [ ] Select an ALPR brand preset and confirm OsmAnd's POI editor opens with the surveillance/ALPR tags present in the advanced tag view.
 - [ ] Open plugin/settings surfaces and confirm the FlockFree settings screen is visible.
 - [ ] Confirm the FlockFree settings screen shows a `Camera data` status row after camera data loads, including source `cache`, `bundled seed`, or `network`, plus last-refresh freshness or `Refresh due`.
-- [ ] Tap `Refresh camera data` once on Wi-Fi and confirm the status switches to loading or returns to the indexed camera count.
+- [ ] Tap `Refresh camera data` once on Wi-Fi and confirm the status switches to loading, then refreshes in place or returns to the indexed camera count.
 - [ ] Toggle the camera layer preference if reachable, then return to the map and confirm the layer hides/shows after refresh.
 - [ ] Confirm `Nearby camera alerts` and `Alert distance` are present, then while navigating or moving near a known camera confirm FlockFree shows a nearby-camera toast no more than once per cooldown window.
 - [ ] Enable camera avoidance, calculate a route, and confirm FlockFree shows a route camera summary toast with `Avoidance applied`, `Avoidance fallback`, or an explicit skipped reason.
 - [ ] Reopen FlockFree settings and confirm `Last route check` preserves the same route summary/status after the toast disappears.
 - [ ] On an offline OsmAnd route through a known camera corridor, compare the route with camera avoidance off versus on and look for a one-pass reroute around camera-adjacent road objects.
 - [ ] Open the FlockFree CYD hardware settings, enable `CYD BLE`, and tap `Scan and connect CYD` with the CYD powered and advertising `CYD-Flock-You`.
-- [ ] If the CYD connects, tap `Request CYD status` and confirm the `CYD status` row updates with device, GPS, SD, detection, and radio scan details.
+- [ ] If the CYD connects, tap `Request CYD status` and confirm the `CYD status` row refreshes in place with device, GPS, SD, detection, and radio scan details.
 - [ ] Relaunch or leave/return to the map with `CYD BLE` still enabled and confirm FlockFree starts scanning again without revisiting the CYD settings screen.
 - [ ] After FlockFree has a valid phone GPS fix, wait roughly one second and confirm the `CYD status` row says `Phone GPS sent ... seconds ago`.
 - [ ] Tap `Request CYD status` and confirm the CYD itself reports phone GPS as available.

@@ -99,6 +99,7 @@ required_fragments = [
     "flockfree_camera_data_loaded_source_age_summary",
     "getLastLoadedSourceLabel()",
     "getLastLoadedFreshnessLabel()",
+    "startDynamicStatusRefresh()",
     "ROUTE_LAST_CHECK_KEY",
     "setupRouteLastCheckPreference()",
     "CYD_CLEAR_DETECTIONS_KEY",

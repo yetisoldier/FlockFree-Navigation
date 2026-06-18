@@ -1,5 +1,8 @@
 package net.osmand.plus.plugins.flockfree;
 
+import android.os.Handler;
+import android.os.Looper;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
 import androidx.preference.Preference;
@@ -15,6 +18,8 @@ import net.osmand.plus.settings.preferences.SwitchPreferenceEx;
 
 public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 
+	private static final long DYNAMIC_STATUS_REFRESH_MS = 1_000L;
+	private static final int MAX_DYNAMIC_STATUS_REFRESH_TICKS = 90;
 	private static final String CAMERA_DATA_STATUS_KEY = "flockfree_camera_data_status";
 	private static final String CAMERA_DATA_REFRESH_KEY = "flockfree_camera_data_refresh";
 	private static final String ROUTE_LAST_CHECK_KEY = "flockfree_route_last_check";
@@ -27,6 +32,20 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 	private static final Integer[] ALERT_DISTANCE_VALUES = {100, 200, 300, 500, 750, 1000};
 
 	private final FlockFreePlugin plugin = PluginsHelper.requirePlugin(FlockFreePlugin.class);
+	private final Handler statusRefreshHandler = new Handler(Looper.getMainLooper());
+	private final Runnable dynamicStatusRefreshRunnable = new Runnable() {
+		@Override
+		public void run() {
+			refreshDynamicStatusPreferences();
+			dynamicStatusRefreshTicks++;
+			if (dynamicStatusRefreshTicks < MAX_DYNAMIC_STATUS_REFRESH_TICKS
+					&& shouldKeepDynamicStatusRefreshing()) {
+				statusRefreshHandler.postDelayed(this, DYNAMIC_STATUS_REFRESH_MS);
+			}
+		}
+	};
+
+	private int dynamicStatusRefreshTicks;
 
 	@Override
 	protected void setupPreferences() {
@@ -45,6 +64,19 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		setupSwitchPreference(plugin.CYD_BLE_ENABLED.getId(),
 				R.string.flockfree_cyd_ble_description);
 		setupCydStatusPreference();
+	}
+
+	@Override
+	public void onResume() {
+		super.onResume();
+		refreshDynamicStatusPreferences();
+		startDynamicStatusRefresh();
+	}
+
+	@Override
+	public void onPause() {
+		statusRefreshHandler.removeCallbacks(dynamicStatusRefreshRunnable);
+		super.onPause();
 	}
 
 	private void setupSwitchPreference(@NonNull String prefId, @StringRes int descriptionId) {
@@ -139,6 +171,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		String key = preference.getKey();
 		if (CAMERA_DATA_REFRESH_KEY.equals(key)) {
 			refreshCameraData();
+			startDynamicStatusRefresh();
 			return true;
 		} else if (CYD_CONNECT_KEY.equals(key)) {
 			startCydScan();
@@ -146,10 +179,12 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		} else if (CYD_REQUEST_STATUS_KEY.equals(key)) {
 			plugin.getCydHardwareManager().requestStatus();
 			setupCydStatusPreference();
+			startDynamicStatusRefresh();
 			return true;
 		} else if (CYD_SIMULATE_DETECTION_KEY.equals(key)) {
 			plugin.getCydHardwareManager().simulateDetection();
 			setupCydStatusPreference();
+			startDynamicStatusRefresh();
 			return true;
 		} else if (CYD_CLEAR_DETECTIONS_KEY.equals(key)) {
 			plugin.getCydHardwareManager().clearDetections();
@@ -181,5 +216,30 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		plugin.CYD_BLE_ENABLED.set(true);
 		plugin.getCydHardwareManager().startScanAndConnect(mapActivity);
 		setupCydStatusPreference();
+		startDynamicStatusRefresh();
+	}
+
+	private void refreshDynamicStatusPreferences() {
+		setupCameraDataStatusPreference();
+		setupRouteLastCheckPreference();
+		setupCydStatusPreference();
+	}
+
+	private void startDynamicStatusRefresh() {
+		statusRefreshHandler.removeCallbacks(dynamicStatusRefreshRunnable);
+		dynamicStatusRefreshTicks = 0;
+		if (shouldKeepDynamicStatusRefreshing()) {
+			statusRefreshHandler.postDelayed(dynamicStatusRefreshRunnable, DYNAMIC_STATUS_REFRESH_MS);
+		}
+	}
+
+	private boolean shouldKeepDynamicStatusRefreshing() {
+		if (plugin.getCameraData().isLoading()) {
+			return true;
+		}
+		CydHardwareManager.State state = plugin.getCydHardwareManager().getState();
+		return state == CydHardwareManager.State.SCANNING
+				|| state == CydHardwareManager.State.CONNECTING
+				|| state == CydHardwareManager.State.READY;
 	}
 }
