@@ -96,7 +96,7 @@ For a no-Gradle diagnostic snapshot during morning validation, run:
 scripts/flockfree-moto-diagnostics.sh
 ```
 
-It writes local artifacts under ignored `logs/flockfree-diagnostics/` and checks ADB state, package install state, current activity, PID/process state, package metadata, UI screenshot/hierarchy, a FlockFree UI text summary, app-private camera cache, camera database, CYD candidate file state, runtime location/Bluetooth/notification permission state, CYD foreground service/notification state summarized in `summary.txt`, and filtered FlockFree/CameraData/FATAL logcat output.
+It writes local artifacts under ignored `logs/flockfree-diagnostics/` and checks ADB state, package install state, current activity, PID/process state, package metadata, UI screenshot/hierarchy, a FlockFree UI text summary, app-private camera cache, camera database size/row count when local `sqlite3` is available, CYD candidate file state, runtime location/Bluetooth/notification permission state, CYD foreground service/notification state summarized in `summary.txt`, and filtered FlockFree/CameraData/FATAL logcat output.
 
 If Wi-Fi ADB returns `No route to host`, retry the endpoint and capture a recovery log:
 

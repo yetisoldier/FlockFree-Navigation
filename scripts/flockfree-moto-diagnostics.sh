@@ -249,6 +249,42 @@ capture_app_data_state() {
   log "wrote ${file}"
 }
 
+capture_camera_database_summary() {
+  db_file="${OUT_DIR}/camera-database.sqlite"
+  db_err="${OUT_DIR}/camera-database-copy.err"
+  db_summary="${OUT_DIR}/camera-database-summary.txt"
+  {
+    printf '$ %q -s %q exec-out run-as %q cat databases/flockfree_cameras.db > %q\n\n' \
+      "$ADB" "$SERIAL" "$PACKAGE" "$db_file"
+  } > "$db_summary"
+
+  if "$ADB" -s "$SERIAL" exec-out run-as "$PACKAGE" cat databases/flockfree_cameras.db > "$db_file" 2> "$db_err"; then
+    if [ ! -s "$db_err" ]; then
+      rm -f "$db_err"
+    fi
+    if [ ! -s "$db_file" ]; then
+      printf 'camera database copy is empty\n' >> "$db_summary"
+    elif command -v sqlite3 >/dev/null 2>&1; then
+      {
+        printf 'camera database bytes: '
+        wc -c < "$db_file"
+        printf '\ntables:\n'
+        sqlite3 "$db_file" ".tables" 2>&1 || true
+        printf '\ncamera row count:\n'
+        sqlite3 "$db_file" "SELECT COUNT(*) FROM cameras;" 2>&1 || true
+        printf '\nschema:\n'
+        sqlite3 "$db_file" ".schema cameras" 2>&1 || true
+      } >> "$db_summary"
+    else
+      printf 'sqlite3 not found on workstation; copied database but did not inspect rows\n' >> "$db_summary"
+    fi
+  else
+    printf 'failed to copy camera database; see %s\n' "$db_err" >> "$db_summary"
+    rm -f "$db_file"
+  fi
+  log "wrote ${db_summary}"
+}
+
 capture_permission_state() {
   file="${OUT_DIR}/permission-state.txt"
   shell_script="printf 'runtime permissions:\\n'; dumpsys package $PACKAGE 2>/dev/null | grep -E 'android.permission.(ACCESS_FINE_LOCATION|ACCESS_COARSE_LOCATION|BLUETOOTH_SCAN|BLUETOOTH_CONNECT|POST_NOTIFICATIONS):' || true; printf '\\nappops:\\n'; cmd appops get $PACKAGE 2>/dev/null | grep -Ei 'COARSE_LOCATION|FINE_LOCATION|POST_NOTIFICATION|BLUETOOTH_SCAN|BLUETOOTH_CONNECT' || true; printf '\\ndevice toggles:\\n'; printf 'location_mode='; settings get secure location_mode 2>/dev/null || true; printf 'bluetooth_on='; settings get global bluetooth_on 2>/dev/null || true"
@@ -282,6 +318,7 @@ write_summary() {
   app_data_file="${OUT_DIR}/app-data-state.txt"
   permission_file="${OUT_DIR}/permission-state.txt"
   service_file="${OUT_DIR}/service-state.txt"
+  db_summary_file="${OUT_DIR}/camera-database-summary.txt"
   log_lines="0"
   camera_cache_state="not checked"
   camera_database_state="not checked"
@@ -310,6 +347,15 @@ write_summary() {
       camera_database_state="present (${camera_database_bytes} bytes)"
     elif grep -q 'databases/flockfree_cameras.db missing' "$app_data_file"; then
       camera_database_state="missing"
+    fi
+    if [ -f "$db_summary_file" ] && [ -n "$camera_database_bytes" ]; then
+      camera_database_rows="$(awk '
+        found && $0 ~ /^[0-9]+$/ { print $0; exit }
+        /^camera row count:/ { found=1 }
+      ' "$db_summary_file")"
+      if [ -n "$camera_database_rows" ]; then
+        camera_database_state="present (${camera_database_bytes} bytes, ${camera_database_rows} rows)"
+      fi
     fi
     cyd_store_bytes="$(awk '/files\/flockfree-cyd-detections\.json$/ {print $1}' "$app_data_file" | tail -n 1)"
     if [ -n "$cyd_store_bytes" ]; then
@@ -403,6 +449,7 @@ write_summary() {
     printf '%s\n' '- window.xml'
     printf '%s\n' '- ui-summary.txt'
     printf '%s\n' '- app-data-state.txt'
+    printf '%s\n' '- camera-database-summary.txt'
     printf '%s\n' '- permission-state.txt'
     printf '%s\n' '- service-state.txt'
     printf '%s\n' '- logcat-flockfree-camera-fatal.txt'
@@ -458,6 +505,8 @@ capture_shell "activity-top.txt" \
 capture_ui_snapshot
 
 capture_app_data_state
+
+capture_camera_database_summary
 
 capture_permission_state
 
