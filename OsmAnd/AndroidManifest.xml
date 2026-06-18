@@ -23,6 +23,7 @@
 	<uses-permission android:name="android.permission.RECORD_AUDIO" />
 	<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 	<uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+	<uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
 	<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 	<uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
 	<uses-permission android:name="androidx.car.app.MAP_TEMPLATES"/>
@@ -1152,12 +1153,12 @@
 			android:stopWithTask="false">
 		</service>
 
-		<service
-			android:name="net.osmand.plus.plugins.flockfree.cyd.CydBleService"
-			android:label="@string/flockfree_cyd_hardware"
-			android:exported="false"
-			android:foregroundServiceType="location"
-			android:stopWithTask="false" />
+			<service
+				android:name="net.osmand.plus.plugins.flockfree.cyd.CydBleService"
+				android:label="@string/flockfree_cyd_hardware"
+				android:exported="false"
+				android:foregroundServiceType="connectedDevice"
+				android:stopWithTask="false" />
 
 		<service android:name="net.osmand.aidl.OsmandAidlService" android:exported="true" >
 			<intent-filter>

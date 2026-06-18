@@ -5,22 +5,23 @@
 - Repository: `https://github.com/yetisoldier/FlockFree-Navigation`
 - Local path: `/home/yetisoldier/projects/FlockFree-Navigation`
 - Branch: `master`
-- Latest functional source: current `master` after the CYD foreground-service source pass.
-- Current source includes the route camera summary hook, exposed FlockFree settings screen with live dynamic status refresh, camera-data spatial indexing with source/freshness diagnostics, OSM editor tag-prefill reporting with map-center draft action and profile-persisted report-draft status, experimental two-pass offline camera avoidance, profile-persisted applied/fallback/skipped route diagnostics, movement/navigation nearby-camera alerts with profile-persisted last-check status plus a map-center alert test action, cache-only route startup for existing camera data, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, a CYD foreground service source path with permission-gated background scan restart, phone GPS streaming to CYD over `FYGPS`, local CYD simulation from phone/OsmAnd GPS or current map center when hardware is absent, and persisted CYD detection map/review candidates.
+- Latest functional source: `81b44a6556` — CYD BLE foreground service validated on-device.
+- Current source includes the route camera summary hook, exposed FlockFree settings screen with live dynamic status refresh, camera-data spatial indexing with source/freshness diagnostics, OSM editor tag-prefill reporting with map-center draft action and profile-persisted report-draft status, experimental two-pass offline camera avoidance, profile-persisted applied/fallback/skipped route diagnostics, movement/navigation nearby-camera alerts with profile-persisted last-check status plus a map-center alert test action, cache-only route startup for existing camera data, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, a CYD BLE foreground service that keeps the BLE connection alive in the background with a persistent low-priority notification and `foregroundServiceType=location`, phone GPS streaming to CYD over `FYGPS`, local CYD simulation from phone/OsmAnd GPS or current map center when hardware is absent, and persisted CYD detection map/review candidates.
+- **CYD BLE foreground service validated on-device 2026-06-18 07:28 CDT:** `CydBleService` starts on map resume when `cyd_ble_enabled` is true, runs as `isForeground=true` with `foregroundId=200` and `types=00000008` (location), notification channel `flockfree_cyd_service` is registered and visible, service survives backgrounding (home button) with `stopIfKilled=false`, and BLE scanning is active. ADB serial changed to `192.168.1.139:39183` after battery death and wireless debugging re-enablement.
 
 ## Verified APK
 
 - APK: `OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-debug.apk`
 - Synced artifact: `build-artifacts/FlockFree-gplayFree-legacy-fat-debug.apk`
 - Package: `com.yetiwurks.flockfree`
-- SHA-256: `29cbf62a0695741202ce459d34cff99f0cc1a8be8f8a43f36b379b9e0b94e934`
-- Source commit: `f5751c5cda9bcaff62fc0d47838ce4f87e8183bd`
+- SHA-256: `8965af94adc4148c94daf8d9033a02865f7fdb5093ebc6947ac5fb664447eda5`
+- Source commit: `81b44a6556`
 - Signature: verifies with APK Signature Scheme v2 using the Android debug certificate
-- Phone install: succeeded over Wi-Fi ADB on `192.168.1.139:5555`
-- Launch: succeeded into `net.osmand.plus.activities.MapActivity`; diagnostics showed it top-resumed with PID `16659`
+- Phone install: succeeded over Wi-Fi ADB on `192.168.1.139:39183`
+- Launch: succeeded into `net.osmand.plus.activities.MapActivity`; diagnostics showed it top-resumed with PID `16569`
+- CYD BLE service: started on map resume, `isForeground=true`, `foregroundId=200`, notification channel `flockfree_cyd_service` registered, survives backgrounding
 - Build info: `build-artifacts/FlockFree-build-info.txt`
-- Smoke log directory: `logs/flockfree-diagnostics/20260618-032012`
-- UI-evidence diagnostic directory: `logs/flockfree-diagnostics/20260618-032221`
+- Diagnostic directory: `logs/flockfree-diagnostics/20260618-072703`
 - Crash check: no fatal FlockFree crash entries in filtered logcat
 
 ## What Is Ready To Test
@@ -61,7 +62,7 @@
 ## Known Limits
 
 - Route avoidance is still experimental and only works for OsmAnd offline vector routing. It blocks whole road objects and can be coarse.
-- CYD BLE has a map-activity/settings-driven scanner/status/simulation/review MVP with idle scan-on-resume, a foreground service source path with permission-gated background scan restart, local phone/map-center simulation fallback, and local candidate persistence, but no sync and no on-device proof yet for the background-service path.
+- CYD BLE has a map-activity/settings-driven scanner/status/simulation/review MVP with idle scan-on-resume, a foreground service that keeps BLE alive in the background (validated on-device 2026-06-18), local phone/map-center simulation fallback, and local candidate persistence, but no sync yet. The background service starts on map resume when CYD BLE is enabled, runs as `foregroundServiceType=location`, and survives app backgrounding.
 - Camera data is still held in memory and indexed in Java; persisted SQLite/geohash indexing is a later optimization.
 - The bundled camera seed is a snapshot. Live freshness still depends on the weekly or manual `Refresh camera data` network path.
 - The current OSM reporting helper pre-fills tags, but still needs end-to-end on-device validation before treating it as upload-ready.

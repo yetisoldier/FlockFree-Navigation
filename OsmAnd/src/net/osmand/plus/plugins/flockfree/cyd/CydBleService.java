@@ -25,12 +25,11 @@ import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import org.apache.commons.logging.Log;
 
 /**
- * Foreground service that keeps the CYD BLE connection alive when the app goes to background.
+ * Foreground service that keeps the CYD BLE path alive when the app goes to background.
  * <p>
- * The service owns a {@link CydHardwareManager} instance and exposes it through a binder.
- * When CYD BLE is enabled in settings, {@link FlockFreePlugin} starts this service so that
- * GPS streaming to the CYD hardware and detection reception continue even when the map is
- * not in the foreground.
+ * The plugin owns the shared {@link CydHardwareManager}. This service keeps a foreground
+ * lifetime around that manager and can restart scanning when CYD BLE remains enabled and
+ * runtime Bluetooth permissions are already granted.
  * <p>
  * The foreground notification is low-priority and silent, simply indicating that FlockFree
  * hardware monitoring is active.
@@ -74,6 +73,7 @@ public class CydBleService extends Service {
 			return START_NOT_STICKY;
 		}
 		if (started) {
+			maybeStartBackgroundScan();
 			return START_STICKY;
 		}
 		started = true;
@@ -81,10 +81,10 @@ public class CydBleService extends Service {
 		try {
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
 				startForeground(NOTIFICATION_ID, notification,
-						android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+						android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
 			} else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 				startForeground(NOTIFICATION_ID, notification,
-						android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+						android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
 			} else {
 				startForeground(NOTIFICATION_ID, notification);
 			}
@@ -145,7 +145,7 @@ public class CydBleService extends Service {
 		}
 		CydHardwareManager manager = getHardwareManager();
 		CydHardwareManager.State state = manager.getState();
-		if (state == CydHardwareManager.State.IDLE) {
+		if (state == CydHardwareManager.State.IDLE || state == CydHardwareManager.State.ERROR) {
 			manager.startScanAndConnectFromService(this);
 		}
 	}
