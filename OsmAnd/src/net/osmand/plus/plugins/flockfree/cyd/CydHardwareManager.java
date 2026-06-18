@@ -47,6 +47,7 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 	private final Handler handler = new Handler(Looper.getMainLooper());
 	private final CydBleUartClient client = new CydBleUartClient(this);
 	private final Object lock = new Object();
+	private final Runnable scanTimeoutRunnable = this::handleScanTimeout;
 
 	@Nullable
 	private BluetoothLeScanner scanner;
@@ -163,6 +164,7 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 			return false;
 		}
 		stopScan();
+		handler.removeCallbacks(scanTimeoutRunnable);
 		client.close();
 		synchronized (lock) {
 			lastPairStatus = null;
@@ -184,7 +186,7 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 		}
 		try {
 			bluetoothLeScanner.startScan(createScanFilters(), settings, callback);
-			handler.postDelayed(this::handleScanTimeout, SCAN_TIMEOUT_MS);
+			handler.postDelayed(scanTimeoutRunnable, SCAN_TIMEOUT_MS);
 			return true;
 		} catch (RuntimeException e) {
 			LOG.error("CYD BLE scan could not be started", e);
@@ -358,6 +360,7 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 				LOG.warn("CYD BLE scan stop failed", e);
 			}
 		}
+		handler.removeCallbacks(scanTimeoutRunnable);
 	}
 
 	private void handleScanTimeout() {
