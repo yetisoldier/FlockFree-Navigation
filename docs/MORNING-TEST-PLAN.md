@@ -45,6 +45,7 @@ scripts/flockfree-morning-readiness.sh
 ```
 
 Start with the generated `logs/flockfree-readiness/.../readiness-report.txt`. The report compares `build-artifacts/FlockFree-build-info.txt` against the current repo, states whether the installed APK is app-code current or whether app/runtime paths changed after the last APK build, and ends with a `Readiness verdict`.
+The verdict also flags an empty camera database when diagnostics can inspect `flockfree_cameras.db`, which is the expected failure signal until the latest SQLite source path is rebuilt and proven.
 
 Timed no-Gradle evidence capture while performing the manual checklist:
 

@@ -11,7 +11,7 @@ from typing import NamedTuple
 
 
 EVIDENCE_PATTERNS = {
-    "camera data": re.compile(r"CameraData|Camera data|camera cache|cameras?\.geojson", re.I),
+    "camera data": re.compile(r"CameraData|Camera data|camera cache|camera database|cameras?\.geojson|flockfree_cameras", re.I),
     "route avoidance": re.compile(r"Avoidance|Last route check|route camera|camera-adjacent|reroute", re.I),
     "nearby alerts": re.compile(r"nearby camera|Nearby camera alerts|Alert distance", re.I),
     "OSM reporting": re.compile(r"Add ALPR Camera|ALPR|surveillance|EditPoi", re.I),
@@ -139,6 +139,7 @@ def summarize(session_dir: Path) -> str:
     activity = first_match(r"^Current activity: (.+)$", post_summary)
     pid = first_match(r"^PID: (.+)$", post_summary)
     camera_cache = first_match(r"^Camera cache: (.+)$", post_summary)
+    camera_database = first_match(r"^Camera database: (.+)$", post_summary)
     cyd_store = first_match(r"^CYD detection store: (.+)$", post_summary)
     location_permissions = first_match(r"^Location permissions: (.+)$", post_summary)
     bluetooth_permissions = first_match(r"^Bluetooth permissions: (.+)$", post_summary)
@@ -178,6 +179,7 @@ def summarize(session_dir: Path) -> str:
         f"ADB/package: {adb_state}; installed {package_state}; PID {pid}",
         f"Activity: {activity}",
         f"Camera cache: {camera_cache}",
+        f"Camera database: {camera_database}",
         f"CYD store: {cyd_store}",
         f"Permissions: location {location_permissions}; Bluetooth {bluetooth_permissions}; notifications {notification_permission}",
         f"Timed logcat lines: {timed_log_lines}",
@@ -247,6 +249,7 @@ def self_check() -> int:
             "Current activity: MapActivity\n"
             "PID: 123\n"
             "Camera cache: present (10 bytes)\n"
+            "Camera database: present (20480 bytes, 10 rows)\n"
             "CYD detection store: missing\n"
             "Location permissions: fine granted, coarse granted; device location on\n"
             "Bluetooth permissions: scan granted, connect granted; Bluetooth on\n"
@@ -269,6 +272,7 @@ def self_check() -> int:
         required = [
             "Readiness: READY",
             "Installed APK app-code: current",
+            "Camera database: present",
             "camera data",
             "route avoidance",
             "OSM reporting",

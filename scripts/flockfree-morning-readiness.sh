@@ -254,6 +254,13 @@ if [ "$RUN_DIAGNOSTICS" -eq 1 ]; then
       append_report "  ATTENTION: camera cache is not present"
       verdict="ATTENTION"
     fi
+    if ! grep -q '^Camera database: present' "$summary_file"; then
+      append_report "  ATTENTION: camera database is not present"
+      verdict="ATTENTION"
+    elif grep -q '^Camera database: present .* 0 rows' "$summary_file"; then
+      append_report "  ATTENTION: camera database is present but empty"
+      verdict="ATTENTION"
+    fi
     if ! grep -q '^Location permissions: fine granted, coarse granted; device location on' "$summary_file"; then
       append_report "  ATTENTION: location permission or device location is not ready"
       verdict="ATTENTION"
@@ -277,7 +284,7 @@ if [ "$RUN_DIAGNOSTICS" -eq 1 ]; then
     verdict="ATTENTION"
   fi
   if [ "$verdict" = "READY" ]; then
-    append_report "  READY: source checks, APK freshness, permissions, camera cache, launch state, and filtered crash checks are ready for manual feature testing."
+    append_report "  READY: source checks, APK freshness, permissions, camera cache/database, launch state, and filtered crash checks are ready for manual feature testing."
   else
     append_report "  ATTENTION: review the item(s) above before judging app behavior."
   fi
