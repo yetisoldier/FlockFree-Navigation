@@ -2,7 +2,7 @@
 
 Goal: prove the debug APK installs over Wi-Fi ADB, launches as FlockFree, and exposes the current camera-awareness MVP without chasing unfinished features.
 
-Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The first verified APK installed successfully on the Moto G Stylus and launched into the FlockFree first-run screen.
+Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The first verified APK installed successfully on the Moto G Stylus and launched into the FlockFree first-run screen. Source now includes an additional route-summary hook after that packaged APK, so rebuild before testing the route-summary toast.
 
 ## Setup
 
@@ -57,10 +57,11 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 - [ ] Long-press or use map context at a location and confirm `Add ALPR Camera` is present.
 - [ ] Open plugin/settings surfaces and confirm FlockFree settings are visible where exposed by the current OsmAnd UI.
 - [ ] Toggle the camera layer preference if reachable, then return to the map and confirm the layer hides/shows after refresh.
+- [ ] After rebuilding the latest source, enable camera avoidance, calculate a route, and confirm FlockFree shows a route camera summary toast.
 
 ## Known Non-Goals For This Morning
 
-- Do not expect camera avoidance to change generated routes yet.
+- Do not expect camera avoidance to change generated routes yet. Current source only reports cameras near a calculated route.
 - Do not expect CYD BLE hardware to connect from this repo state.
 - Do not expect offline first-run camera data before the GeoJSON download succeeds.
 - Do not expect polished widgets, quick actions, or a final settings UI.
