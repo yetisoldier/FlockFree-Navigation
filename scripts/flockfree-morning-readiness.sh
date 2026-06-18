@@ -115,6 +115,7 @@ PRIMER_LOG="${OUT_DIR}/permission-primer.txt"
 DIAG_DIR="${OUT_DIR}/diagnostics"
 SOURCE_CHANGES_LOG="${OUT_DIR}/source-changes-since-build.txt"
 APP_CHANGES_LOG="${OUT_DIR}/app-runtime-changes-since-build.txt"
+APP_CHANGE_COUNT="unknown"
 
 append_report() {
   printf '%s\n' "$*" | tee -a "$REPORT"
@@ -169,6 +170,7 @@ if [ -f build-artifacts/FlockFree-build-info.txt ]; then
       "$SOURCE_CHANGES_LOG" > "$APP_CHANGES_LOG" || true
     source_change_count="$(grep -c . "$SOURCE_CHANGES_LOG" 2>/dev/null || true)"
     app_change_count="$(grep -c . "$APP_CHANGES_LOG" 2>/dev/null || true)"
+    APP_CHANGE_COUNT="$app_change_count"
     append_report "Source files changed since last APK build: ${source_change_count}"
     if [ "$app_change_count" -eq 0 ]; then
       append_report "Installed APK app-code status: current (no app/runtime changes since last APK build)"
@@ -218,6 +220,65 @@ if [ "$RUN_DIAGNOSTICS" -eq 1 ]; then
     sed 's/^/  /' "${DIAG_DIR}/summary.txt" | tee -a "$REPORT"
   else
     append_report "  missing diagnostics summary"
+  fi
+
+  append_report ""
+  append_report "Readiness verdict:"
+  verdict="READY"
+  if [ "$source_state" != "clean" ]; then
+    append_report "  ATTENTION: source tree is ${source_state}"
+    verdict="ATTENTION"
+  fi
+  if [ "$APP_CHANGE_COUNT" = "unknown" ]; then
+    append_report "  ATTENTION: installed APK app-code freshness is unknown"
+    verdict="ATTENTION"
+  elif [ "$APP_CHANGE_COUNT" -gt 0 ]; then
+    append_report "  ATTENTION: installed APK is stale for ${APP_CHANGE_COUNT} app/runtime path(s)"
+    verdict="ATTENTION"
+  fi
+  if [ -f "${DIAG_DIR}/summary.txt" ]; then
+    summary_file="${DIAG_DIR}/summary.txt"
+    if ! grep -q '^ADB state: device' "$summary_file"; then
+      append_report "  ATTENTION: ADB device state is not ready"
+      verdict="ATTENTION"
+    fi
+    if ! grep -q '^Package installed: yes' "$summary_file"; then
+      append_report "  ATTENTION: package is not installed"
+      verdict="ATTENTION"
+    fi
+    if grep -q '^PID: not running' "$summary_file"; then
+      append_report "  ATTENTION: package process is not running"
+      verdict="ATTENTION"
+    fi
+    if ! grep -q '^Camera cache: present' "$summary_file"; then
+      append_report "  ATTENTION: camera cache is not present"
+      verdict="ATTENTION"
+    fi
+    if ! grep -q '^Location permissions: fine granted, coarse granted; device location on' "$summary_file"; then
+      append_report "  ATTENTION: location permission or device location is not ready"
+      verdict="ATTENTION"
+    fi
+    if ! grep -q '^Bluetooth permissions: scan granted, connect granted; Bluetooth on' "$summary_file"; then
+      append_report "  ATTENTION: Bluetooth permission or device Bluetooth is not ready"
+      verdict="ATTENTION"
+    fi
+    if ! grep -q '^Notifications permission: granted' "$summary_file"; then
+      append_report "  ATTENTION: notification permission is not ready"
+      verdict="ATTENTION"
+    fi
+  else
+    append_report "  ATTENTION: diagnostics summary is missing"
+    verdict="ATTENTION"
+  fi
+  if [ -f "${DIAG_DIR}/logcat-flockfree-camera-fatal.txt" ] \
+    && grep -Eiq 'FATAL EXCEPTION| E AndroidRuntime|AndroidRuntime.*FATAL' "${DIAG_DIR}/logcat-flockfree-camera-fatal.txt"; then
+    append_report "  ATTENTION: fatal crash evidence found in filtered logcat"
+    verdict="ATTENTION"
+  fi
+  if [ "$verdict" = "READY" ]; then
+    append_report "  READY: source checks, APK freshness, permissions, camera cache, launch state, and filtered crash checks are ready for manual feature testing."
+  else
+    append_report "  ATTENTION: review the item(s) above before judging app behavior."
   fi
 else
   append_report "Skipped: Moto diagnostics"
