@@ -295,6 +295,7 @@ required_service = [
     "CydHardwareManager",
     "getHardwareManager()",
     "maybeStartBackgroundScan()",
+    "intent != null ? intent.getStringExtra(EXTRA_ACTION) : ACTION_START",
     "startScanAndConnectFromService(this)",
     "startForegroundService(intent)",
     "NotificationCompat.Builder",

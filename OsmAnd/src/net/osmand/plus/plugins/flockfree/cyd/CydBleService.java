@@ -67,8 +67,8 @@ public class CydBleService extends Service {
 	}
 
 	@Override
-	public int onStartCommand(@NonNull Intent intent, int flags, int startId) {
-		String action = intent.getStringExtra(EXTRA_ACTION);
+	public int onStartCommand(@Nullable Intent intent, int flags, int startId) {
+		String action = intent != null ? intent.getStringExtra(EXTRA_ACTION) : ACTION_START;
 		if (ACTION_STOP.equals(action)) {
 			stopSelf();
 			return START_NOT_STICKY;
