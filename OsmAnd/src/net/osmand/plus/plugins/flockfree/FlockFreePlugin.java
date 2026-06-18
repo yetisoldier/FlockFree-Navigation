@@ -16,6 +16,7 @@ import net.osmand.plus.plugins.flockfree.cyd.CydDetectionCandidate;
 import net.osmand.plus.plugins.flockfree.cyd.CydHardwareManager;
 import net.osmand.plus.routing.RouteCalculationResult;
 import net.osmand.plus.quickaction.QuickActionType;
+import net.osmand.plus.settings.backend.ApplicationMode;
 import net.osmand.plus.settings.backend.preferences.CommonPreference;
 import net.osmand.plus.settings.backend.preferences.OsmandPreference;
 import net.osmand.plus.settings.fragments.SettingsScreenType;
@@ -82,9 +83,11 @@ public class FlockFreePlugin extends OsmandPlugin {
         CAMERA_DATA_LAST_UPDATE = registerLongPreference(
                 FlockFreePreferences.CAMERA_DATA_LAST_UPDATE,
                 FlockFreePreferences.DEFAULT_CAMERA_DATA_LAST_UPDATE).makeProfile().cache();
-        CYD_BLE_ENABLED = registerBooleanPreference(
+        CommonPreference<Boolean> cydBleEnabled = registerBooleanPreference(
                 FlockFreePreferences.CYD_BLE_ENABLED,
                 FlockFreePreferences.DEFAULT_CYD_BLE_ENABLED).makeProfile().cache();
+        migrateCydBleEnabledToGlobal(cydBleEnabled);
+        CYD_BLE_ENABLED = cydBleEnabled;
         CAMERA_ROUTE_LAST_CHECK_SUMMARY = registerStringPreference(
                 FlockFreePreferences.CAMERA_ROUTE_LAST_CHECK_SUMMARY,
                 FlockFreePreferences.DEFAULT_STATUS_SUMMARY).makeProfile().cache();
@@ -97,6 +100,22 @@ public class FlockFreePlugin extends OsmandPlugin {
         CAMERA_NEAREST_LAST_CHECK_SUMMARY = registerStringPreference(
                 FlockFreePreferences.CAMERA_NEAREST_LAST_CHECK_SUMMARY,
                 FlockFreePreferences.DEFAULT_STATUS_SUMMARY).makeProfile().cache();
+    }
+
+    private void migrateCydBleEnabledToGlobal(@NonNull CommonPreference<Boolean> preference) {
+        boolean migrateEnabled = false;
+        if (!app.getSettings().isSet(true, preference.getId())) {
+            for (ApplicationMode mode : ApplicationMode.allPossibleValues()) {
+                if (preference.isSetForMode(mode) && Boolean.TRUE.equals(preference.getModeValue(mode))) {
+                    migrateEnabled = true;
+                    break;
+                }
+            }
+        }
+        preference.makeGlobal();
+        if (migrateEnabled) {
+            preference.set(true);
+        }
     }
 
     @Override
