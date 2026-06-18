@@ -223,6 +223,7 @@ required = [
     "post-diagnostics",
     "flockfree-summarize-session.py",
     "Map anchor coordinates",
+    "Suggested map anchors:",
     "--duration",
     "--skip-readiness",
     "FlockFree|CameraData|CYD|Avoidance",
@@ -245,6 +246,7 @@ required = [
     "Observed evidence buckets:",
     "Not observed in captured artifacts:",
     "Suggested next manual checks:",
+    "Crash evidence:",
     "--self-check",
     "Timed fatal crash evidence lines:",
 ]

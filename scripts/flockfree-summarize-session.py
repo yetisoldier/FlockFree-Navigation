@@ -15,8 +15,8 @@ EVIDENCE_PATTERNS = {
     "nearby alerts": re.compile(r"nearby camera|Nearby camera alerts|Alert distance", re.I),
     "OSM reporting": re.compile(r"Add ALPR Camera|ALPR|surveillance|EditPoi", re.I),
     "CYD": re.compile(r"\bCYD\b|FYSTATUS|FYGPS|FYSIM|pair_status|detection", re.I),
-    "fatal crash": re.compile(r"FATAL EXCEPTION|AndroidRuntime.*FATAL EXCEPTION", re.I),
 }
+FATAL_CRASH_PATTERN = re.compile(r"FATAL EXCEPTION|AndroidRuntime.*FATAL EXCEPTION", re.I)
 
 
 def parse_args() -> argparse.Namespace:
@@ -60,6 +60,15 @@ def present(pattern: re.Pattern[str], *texts: str) -> bool:
     return any(pattern.search(text) for text in texts if text)
 
 
+def has_fatal_crash_evidence(timed_fatal_lines: str, *texts: str) -> bool:
+    try:
+        if int(timed_fatal_lines.strip()) > 0:
+            return True
+    except ValueError:
+        pass
+    return present(FATAL_CRASH_PATTERN, *texts)
+
+
 def summarize(session_dir: Path) -> str:
     field_report = read_text(session_dir / "field-session-report.txt")
     readiness = read_text(session_dir / "readiness" / "readiness-report.txt")
@@ -85,6 +94,7 @@ def summarize(session_dir: Path) -> str:
     timed_fatal_lines = first_match(r"^Timed fatal crash evidence lines: (.+)$", field_report)
 
     evidence_texts = (field_report, readiness, post_summary, ui_summary, app_data, session_log)
+    fatal_crash_found = has_fatal_crash_evidence(timed_fatal_lines, field_report, readiness, post_summary, session_log)
     observed = []
     not_observed = []
     for name, pattern in EVIDENCE_PATTERNS.items():
@@ -107,6 +117,7 @@ def summarize(session_dir: Path) -> str:
         f"Permissions: location {location_permissions}; Bluetooth {bluetooth_permissions}; notifications {notification_permission}",
         f"Timed logcat lines: {timed_log_lines}",
         f"Timed fatal crash evidence lines: {timed_fatal_lines}",
+        f"Crash evidence: {'FOUND' if fatal_crash_found else 'none found'}",
         "",
         "Observed evidence buckets:",
     ]
@@ -118,6 +129,10 @@ def summarize(session_dir: Path) -> str:
     output.extend(f"- {name}" for name in not_observed)
     if not not_observed:
         output.append("- none")
+
+    if fatal_crash_found:
+        output.append("")
+        output.append("ATTENTION: fatal crash evidence was found in the captured artifacts.")
 
     next_checks = []
     if "route avoidance" in not_observed:
@@ -177,6 +192,7 @@ def self_check() -> int:
             "camera data",
             "route avoidance",
             "Timed fatal crash evidence lines: 0",
+            "Crash evidence: none found",
         ]
         missing = [item for item in required if item not in result]
         if missing:

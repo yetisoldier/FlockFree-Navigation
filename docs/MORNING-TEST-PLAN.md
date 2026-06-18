@@ -42,7 +42,7 @@ Timed no-Gradle evidence capture while performing the manual checklist:
 scripts/flockfree-field-test-session.sh
 ```
 
-Start with the generated `logs/flockfree-field-session/.../field-session-report.txt`. It includes a readiness gate, manual test prompts, `test-area-suggestions.txt` map anchors from the bundled seed, filtered logcat from the test window, post-session diagnostics, and a `session-summary.txt` evidence summary.
+Start with the generated `logs/flockfree-field-session/.../field-session-report.txt`. It includes a readiness gate, manual test prompts, `test-area-suggestions.txt` map anchors from the bundled seed, filtered logcat from the test window, post-session diagnostics, and a `session-summary.txt` evidence summary with explicit crash status and missing manual checks.
 
 Offline camera-dense route-test anchors:
 

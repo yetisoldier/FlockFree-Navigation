@@ -216,6 +216,10 @@ write_test_areas
 write_prompts
 append_report "Manual prompts: ${PROMPTS}"
 append_report "Test-area suggestions: ${TEST_AREAS}"
+if [ -f "$TEST_AREAS" ]; then
+  append_report "Suggested map anchors:"
+  grep -E '^[[:space:]]*Map anchor:' "$TEST_AREAS" | head -n 5 | sed 's/^/  /' | tee -a "$REPORT" || true
+fi
 append_report ""
 
 if [ "$RUN_READINESS" -eq 1 ]; then
