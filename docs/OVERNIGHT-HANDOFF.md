@@ -118,3 +118,11 @@ scripts/flockfree-field-test-session.sh
 ```
 
 Start with the generated `logs/flockfree-field-session/.../field-session-report.txt`; it includes the readiness gate, manual prompts, filtered logcat from the test window, and post-session diagnostics.
+
+For data-backed camera-dense route-test anchors from the bundled seed, run:
+
+```bash
+scripts/flockfree-suggest-test-areas.py --limit 10 --radius-km 80
+```
+
+Use the printed `Map anchor` coordinates to pick route, marker, and nearby-alert test areas without guessing.

@@ -230,6 +230,26 @@ if missing:
 print("field-test session collector wiring ok")
 PY
 
+log "Test-area suggestion helper checks"
+python3 - <<'PY'
+from pathlib import Path
+
+helper = Path("scripts/flockfree-suggest-test-areas.py").read_text()
+required = [
+    "OsmAnd/assets/flockfree/cameras.geojson.gz",
+    "FlockFree camera-dense test areas",
+    "--radius-km",
+    "--cell-km",
+    "--format",
+    "Map anchor:",
+    "FeatureCollection",
+]
+missing = [item for item in required if item not in helper]
+if missing:
+    raise SystemExit("test-area suggestion helper missing expected behavior:\n" + "\n".join(missing))
+print("test-area suggestion helper wiring ok")
+PY
+
 log "Bundled camera seed check"
 python3 - <<'PY'
 from pathlib import Path
@@ -254,6 +274,9 @@ bash -n scripts/flockfree-moto-diagnostics.sh \
 	scripts/flockfree-moto-permission-primer.sh \
 	scripts/flockfree-user-build-install.sh \
 	scripts/flockfree-source-checks.sh
+
+log "Test-area helper smoke check"
+scripts/flockfree-suggest-test-areas.py --limit 2 --radius-km 80 >/dev/null
 
 log "CYD parser/store self-check"
 ANNOTATION_JAR="${ANNOTATION_JAR:-$(find_first_jar '*androidx.annotation/annotation-jvm*')}"

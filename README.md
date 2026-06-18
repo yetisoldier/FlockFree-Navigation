@@ -111,6 +111,14 @@ scripts/flockfree-field-test-session.sh
 
 It runs the readiness gate, writes manual prompts, captures filtered logcat during the test window, then captures post-session diagnostics.
 
+For offline route-test anchors from the bundled camera seed:
+
+```bash
+scripts/flockfree-suggest-test-areas.py --limit 10 --radius-km 80
+```
+
+It prints camera-dense map anchors that can be used for manual marker, alert, and route-avoidance checks.
+
 ## Credits
 
 - Built on [OsmAnd](https://github.com/osmandapp/osmand) under Apache 2.0.

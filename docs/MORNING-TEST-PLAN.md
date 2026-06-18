@@ -44,6 +44,14 @@ scripts/flockfree-field-test-session.sh
 
 Start with the generated `logs/flockfree-field-session/.../field-session-report.txt`. It includes a readiness gate, manual test prompts, filtered logcat from the test window, and post-session diagnostics.
 
+Offline camera-dense route-test anchors:
+
+```bash
+scripts/flockfree-suggest-test-areas.py --limit 10 --radius-km 80
+```
+
+Use the printed `Map anchor` coordinates to pick areas for camera marker, nearby-alert, and route-avoidance checks.
+
 Manual equivalent:
 
 ```bash
@@ -97,6 +105,7 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 - [ ] Enable camera avoidance, calculate a route, and confirm FlockFree shows a route camera summary toast with `Avoidance applied`, `Avoidance fallback`, or an explicit skipped reason.
 - [ ] Reopen FlockFree settings and confirm `Last route check` preserves the same route summary/status after the toast disappears.
 - [ ] On an offline OsmAnd route through a known camera corridor, compare the route with camera avoidance off versus on and look for a one-pass reroute around camera-adjacent road objects.
+- [ ] If a route corridor is not obvious, run `scripts/flockfree-suggest-test-areas.py --limit 10 --radius-km 80` and use one of the printed `Map anchor` coordinates as the route/map test area.
 - [ ] Run `scripts/flockfree-moto-permission-primer.sh` before CYD/GPS testing, then confirm the generated `summary.txt` shows location and Bluetooth permissions granted.
 - [ ] Open the FlockFree CYD hardware settings, enable `CYD BLE`, and tap `Scan and connect CYD` with the CYD powered and advertising `CYD-Flock-You`.
 - [ ] If the CYD connects, tap `Request CYD status` and confirm the `CYD status` row refreshes in place with device, GPS, SD, detection, and radio scan details.
@@ -138,6 +147,12 @@ To capture evidence while performing route, OSM reporting, and CYD checks:
 
 ```bash
 scripts/flockfree-field-test-session.sh --duration 900
+```
+
+To pick data-backed route-test areas from the bundled seed:
+
+```bash
+scripts/flockfree-suggest-test-areas.py --limit 10 --radius-km 80
 ```
 
 If the phone IP changes:
