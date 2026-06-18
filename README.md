@@ -97,6 +97,14 @@ scripts/flockfree-moto-diagnostics.sh
 
 It writes local artifacts under ignored `logs/flockfree-diagnostics/` and checks ADB state, package install state, current activity, PID/process state, package metadata, UI screenshot/hierarchy, a FlockFree UI text summary, app-private camera cache/CYD candidate file state, runtime location/Bluetooth/notification permission state summarized in `summary.txt`, and filtered FlockFree/CameraData/FATAL logcat output.
 
+If Wi-Fi ADB returns `No route to host`, retry the endpoint and capture a recovery log:
+
+```bash
+scripts/flockfree-adb-recover.sh
+```
+
+If recovery still cannot reach `device`, confirm the phone is awake, on the same Wi-Fi network, Wireless debugging is enabled, and the IP:port has not changed.
+
 For a no-Gradle CYD/GPS permission prep pass on the Moto, run:
 
 ```bash

@@ -322,6 +322,29 @@ if missing:
 print("latest field-session helper wiring ok")
 PY
 
+log "ADB recovery helper checks"
+python3 - <<'PY'
+from pathlib import Path
+
+recover = Path("scripts/flockfree-adb-recover.sh").read_text()
+required = [
+    "FlockFree Wi-Fi ADB recovery",
+    "adb-recovery-report.txt",
+    "ping-host.txt",
+    "adb-kill-server.txt",
+    "adb-start-server.txt",
+    "Recovery did not reach device state",
+    "Wireless debugging",
+    "flockfree-moto-diagnostics.sh",
+    "--no-kill-server",
+    "--no-diagnostics",
+]
+missing = [item for item in required if item not in recover]
+if missing:
+    raise SystemExit("ADB recovery helper missing expected behavior:\n" + "\n".join(missing))
+print("ADB recovery helper wiring ok")
+PY
+
 log "Field-session summarizer checks"
 python3 - <<'PY'
 from pathlib import Path
@@ -423,6 +446,7 @@ PY
 
 log "Script syntax checks"
 bash -n scripts/flockfree-moto-diagnostics.sh \
+	scripts/flockfree-adb-recover.sh \
 	scripts/flockfree-field-test-session.sh \
 	scripts/flockfree-latest-field-session.sh \
 	scripts/flockfree-mark-latest-result.sh \

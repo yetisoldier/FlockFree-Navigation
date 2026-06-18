@@ -13,6 +13,15 @@ Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavo
 
 ## Build
 
+If Wi-Fi ADB is currently unreachable, recover the phone connection first:
+
+```bash
+cd /home/yetisoldier/projects/FlockFree-Navigation
+scripts/flockfree-adb-recover.sh
+```
+
+If recovery still reports `No route to host` or an unknown ADB state, wake the phone, confirm it is still on the same Wi-Fi network, confirm Wireless debugging is enabled, copy the current IP:port from the phone, and rerun with `--serial PHONE_IP:PORT`.
+
 For the easiest manual path, run:
 
 ```bash
