@@ -113,6 +113,8 @@ REPORT="${OUT_DIR}/readiness-report.txt"
 SOURCE_LOG="${OUT_DIR}/source-checks.txt"
 PRIMER_LOG="${OUT_DIR}/permission-primer.txt"
 DIAG_DIR="${OUT_DIR}/diagnostics"
+SOURCE_CHANGES_LOG="${OUT_DIR}/source-changes-since-build.txt"
+APP_CHANGES_LOG="${OUT_DIR}/app-runtime-changes-since-build.txt"
 
 append_report() {
   printf '%s\n' "$*" | tee -a "$REPORT"
@@ -161,8 +163,25 @@ if [ -f build-artifacts/FlockFree-build-info.txt ]; then
   build_sha="$(awk -F': ' '/^SHA-256:/ {print $2}' build-artifacts/FlockFree-build-info.txt | tail -n 1)"
   append_report "Last APK build source commit: ${build_commit:-unknown}"
   append_report "Last APK SHA-256: ${build_sha:-unknown}"
+  if [ -n "${build_commit:-}" ] && git cat-file -e "${build_commit}^{commit}" 2>/dev/null; then
+    git diff --name-only "${build_commit}..HEAD" > "$SOURCE_CHANGES_LOG"
+    grep -E '^(OsmAnd/(src|res|assets)/|OsmAnd/AndroidManifest\.xml|OsmAnd/build[^/]*\.gradle|OsmAnd-java/|OsmAnd-api/|OsmAnd-shared/|plugins/|gradle/|build\.gradle|settings\.gradle|gradle\.properties)' \
+      "$SOURCE_CHANGES_LOG" > "$APP_CHANGES_LOG" || true
+    source_change_count="$(grep -c . "$SOURCE_CHANGES_LOG" 2>/dev/null || true)"
+    app_change_count="$(grep -c . "$APP_CHANGES_LOG" 2>/dev/null || true)"
+    append_report "Source files changed since last APK build: ${source_change_count}"
+    if [ "$app_change_count" -eq 0 ]; then
+      append_report "Installed APK app-code status: current (no app/runtime changes since last APK build)"
+    else
+      append_report "Installed APK app-code status: stale (${app_change_count} app/runtime paths changed since last APK build)"
+      append_report "Rebuild before testing app behavior; see ${APP_CHANGES_LOG}"
+    fi
+  else
+    append_report "Installed APK app-code status: unknown (build commit not found locally)"
+  fi
 else
   append_report "Last APK build info: missing"
+  append_report "Installed APK app-code status: unknown (missing build provenance)"
 fi
 append_report ""
 

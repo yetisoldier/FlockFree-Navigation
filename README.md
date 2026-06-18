@@ -38,6 +38,7 @@ scripts/flockfree-morning-readiness.sh
 ```
 
 It runs source-only checks, primes FlockFree runtime permissions on the Moto, captures diagnostics, and writes `logs/flockfree-readiness/.../readiness-report.txt`.
+The report compares `build-artifacts/FlockFree-build-info.txt` with the current repo and says whether the installed APK is app-code current or whether app/runtime paths changed after the last APK build.
 
 Last verified local APK output:
 

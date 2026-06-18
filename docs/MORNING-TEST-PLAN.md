@@ -34,7 +34,7 @@ Full no-Gradle readiness pass against the already installed APK:
 scripts/flockfree-morning-readiness.sh
 ```
 
-Start with the generated `logs/flockfree-readiness/.../readiness-report.txt`.
+Start with the generated `logs/flockfree-readiness/.../readiness-report.txt`. The report compares `build-artifacts/FlockFree-build-info.txt` against the current repo and states whether the installed APK is app-code current or whether app/runtime paths changed after the last APK build.
 
 Manual equivalent:
 

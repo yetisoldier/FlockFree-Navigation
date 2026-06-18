@@ -109,4 +109,4 @@ For the full no-Gradle morning readiness pass against the already installed APK,
 scripts/flockfree-morning-readiness.sh
 ```
 
-Start with the generated `logs/flockfree-readiness/.../readiness-report.txt`; it includes source-check status, permission-primer status, copied APK build provenance, and the latest Moto diagnostic summary.
+Start with the generated `logs/flockfree-readiness/.../readiness-report.txt`; it includes source-check status, permission-primer status, copied APK build provenance, an installed-APK app-code freshness check, and the latest Moto diagnostic summary.
