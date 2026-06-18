@@ -38,8 +38,8 @@ OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-de
 ```
 
 Verified debug package/application ID: `com.yetiwurks.flockfree`.
-Verified APK SHA-256: `52e36c7b897724729be6fcde362174804a515695cd35638a1c18b23d67168797`.
-That APK was built from clean source commit `7a8803e6fb5b7ff73e56bcc1d117d1b10e8f193e`, installed and launched on a Moto G Stylus over Wi-Fi ADB, and verified with cache removed so the bundled camera seed loaded before the network refresh.
+Verified APK SHA-256: `5ae4a370b44170c79b0b61f532f87e2d6656803a78c454c168610e8efdaa895e`.
+That APK was built from clean source commit `9d89afe2249f5e038a39c711f2efac2c7c11a637`, installed and launched on a Moto G Stylus over Wi-Fi ADB, and verified with cache removed so the bundled camera seed loaded before the network refresh.
 
 ## What Works Now
 
