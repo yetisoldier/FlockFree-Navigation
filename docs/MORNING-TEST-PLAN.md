@@ -2,7 +2,7 @@
 
 Goal: prove the debug APK installs over Wi-Fi ADB, launches as FlockFree, and exposes the current camera-awareness MVP without chasing unfinished features.
 
-Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The current verified APK installed successfully on the Moto G Stylus and launched into the FlockFree first-run screen. It includes the route-summary hook and exposed FlockFree plugin settings screen. Source now includes newer camera indexing, experimental two-pass camera avoidance, visible applied/fallback/skipped route diagnostics, movement/navigation camera alerts, OSM editor tag-prefill reporting, cache-backed route startup, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, phone GPS streaming to CYD, and persisted CYD detection map/review candidates after that APK, so rebuild before testing those newer features.
+Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The current verified APK installed successfully on the Moto G Stylus, launched to the map, and includes camera indexing, experimental two-pass camera avoidance, visible applied/fallback/skipped route diagnostics, movement/navigation camera alerts, OSM editor tag-prefill reporting, cache-backed route startup, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, phone GPS streaming to CYD, and persisted CYD detection map/review candidates.
 
 ## Setup
 
@@ -20,7 +20,7 @@ cd /home/yetisoldier/projects/FlockFree-Navigation
 scripts/flockfree-user-build-install.sh
 ```
 
-That script builds the current APK, copies it to `build-artifacts/`, writes `build-artifacts/FlockFree-build-info.txt` with source commit, clean/dirty state, SHA-256, and signature status, installs it on the default Moto Wi-Fi ADB endpoint, launches it, and captures diagnostics. It runs Gradle, so it is for Eric/manual use rather than agent execution.
+That script builds the current APK, copies it to `build-artifacts/`, writes `build-artifacts/FlockFree-build-info.txt` with source commit, clean/dirty state, SHA-256, and signature status, installs it on the default Moto Wi-Fi ADB endpoint, launches it, and captures diagnostics.
 
 Source-only checks that do not run Gradle:
 

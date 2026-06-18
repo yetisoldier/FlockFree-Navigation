@@ -5,7 +5,7 @@
 - Repository: `https://github.com/yetisoldier/FlockFree-Navigation`
 - Local path: `/home/yetisoldier/projects/FlockFree-Navigation`
 - Branch: `master`
-- Latest functional source: current `master` after the CYD auto-reconnect and phone-GPS streaming source pass.
+- Latest functional source: current `master` after the Gradle-enabled build/install verification pass.
 - Current source includes the route camera summary hook, exposed FlockFree settings screen, camera-data spatial indexing, OSM editor tag-prefill reporting, experimental two-pass offline camera avoidance, visible applied/fallback/skipped route diagnostics, movement/navigation nearby-camera alerts, cache-only route startup for existing camera data, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, phone GPS streaming to CYD over `FYGPS`, and persisted CYD detection map/review candidates.
 
 ## Verified APK
@@ -13,11 +13,13 @@
 - APK: `OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-debug.apk`
 - Synced artifact: `build-artifacts/FlockFree-gplayFree-legacy-fat-debug.apk`
 - Package: `com.yetiwurks.flockfree`
-- SHA-256: `aecab4bdb9f873649e90fc3b4d1f6ff8f8c673e599c0b902fecf4772ff168c73`
+- SHA-256: `d3512ad42e14e3f40dce88f97bc92fb55ec2506e5f8edb9dca8d530b52d7eea2`
 - Signature: verifies with APK Signature Scheme v2 using the Android debug certificate
 - Phone install: succeeded over Wi-Fi ADB on `192.168.1.139:5555`
 - Launch: succeeded into `net.osmand.plus.activities.MapActivity`
-- Smoke log directory: `logs/flockfree-settings-smoke-20260618-000003`
+- Build info: `build-artifacts/FlockFree-build-info.txt`
+- Smoke log directory: `logs/flockfree-diagnostics/20260618-022345`
+- Screenshot: `flockfree-latest-launch.png`
 
 ## What Is Ready To Test
 
@@ -58,21 +60,20 @@
 
 ## Morning First Steps
 
-1. Rebuild/install the latest source manually with `scripts/flockfree-user-build-install.sh` so the phone has the newest source changes. The helper runs Gradle, writes `build-artifacts/FlockFree-build-info.txt`, installs on the default Moto Wi-Fi ADB endpoint, launches the app, and captures diagnostics.
-2. Open the app on the Moto G Stylus. It should already be installed as `com.yetiwurks.flockfree`.
-3. Work through or skip the first-run map download flow.
-4. Confirm camera data finishes loading on Wi-Fi.
-5. Move/zoom to a camera-dense area and verify markers.
-6. Open the plugin settings, confirm the camera-data diagnostic row, tap `Refresh camera data` on Wi-Fi, and confirm the row returns to an indexed camera count.
-7. Confirm the `Nearby camera alerts` / `Alert distance` rows are present.
-8. While navigating or moving near a known camera, verify FlockFree shows a nearby-camera toast and does not repeat it continuously.
-9. Enable camera avoidance, calculate a route, and verify the route-summary toast includes an applied/fallback/skipped status line.
-10. Compare one camera-dense offline route with avoidance off and on. A successful newer build should either route around camera-adjacent road objects, fall back cleanly to the original route, or say why avoidance was skipped.
-11. In the CYD hardware section, enable CYD BLE, scan/connect to a powered `CYD-Flock-You`, request status, and try the simulated detection command.
-12. Relaunch or leave/return to the map with `CYD BLE` still enabled and confirm FlockFree starts scanning again without visiting the settings screen.
-13. After connecting, confirm the FlockFree `CYD status` row reports `Phone GPS sent ... seconds ago` once FlockFree has a valid GPS fix.
-14. Request status and confirm the CYD reports `gps:true` once FlockFree has had roughly one second to send the fix over `FYGPS`.
-15. After a GPS-backed CYD detection, return to the map, confirm a CYD diamond marker appears near the detection location, tap it, and choose `Review as ALPR camera` to open the normal ALPR report flow.
+1. Open the app on the Moto G Stylus. The latest verified APK should already be installed as `com.yetiwurks.flockfree`.
+2. Work through or skip the first-run map download flow.
+3. Confirm camera data finishes loading on Wi-Fi.
+4. Move/zoom to a camera-dense area and verify markers.
+5. Open the plugin settings, confirm the camera-data diagnostic row, tap `Refresh camera data` on Wi-Fi, and confirm the row returns to an indexed camera count.
+6. Confirm the `Nearby camera alerts` / `Alert distance` rows are present.
+7. While navigating or moving near a known camera, verify FlockFree shows a nearby-camera toast and does not repeat it continuously.
+8. Enable camera avoidance, calculate a route, and verify the route-summary toast includes an applied/fallback/skipped status line.
+9. Compare one camera-dense offline route with avoidance off and on. A successful newer build should either route around camera-adjacent road objects, fall back cleanly to the original route, or say why avoidance was skipped.
+10. In the CYD hardware section, enable CYD BLE, scan/connect to a powered `CYD-Flock-You`, request status, and try the simulated detection command.
+11. Relaunch or leave/return to the map with `CYD BLE` still enabled and confirm FlockFree starts scanning again without visiting the settings screen.
+12. After connecting, confirm the FlockFree `CYD status` row reports `Phone GPS sent ... seconds ago` once FlockFree has a valid GPS fix.
+13. Request status and confirm the CYD reports `gps:true` once FlockFree has had roughly one second to send the fix over `FYGPS`.
+14. After a GPS-backed CYD detection, return to the map, confirm a CYD diamond marker appears near the detection location, tap it, and choose `Review as ALPR camera` to open the normal ALPR report flow.
 
 For a no-Gradle device snapshot before or after those checks, run:
 

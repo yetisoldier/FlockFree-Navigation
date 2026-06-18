@@ -23,7 +23,7 @@ scripts/flockfree-user-build-install.sh
 
 The helper writes the copied APK and `FlockFree-build-info.txt` under `build-artifacts/` so the morning install can be traced back to a source commit and APK SHA-256.
 
-That helper intentionally runs Gradle and is for manual use. Agents should not execute it because `AGENTS.md` forbids agent-run Gradle build tasks.
+That helper runs Gradle, installs the APK over Wi-Fi ADB, launches FlockFree, and captures a diagnostic bundle.
 
 For source-only verification that does not run Gradle:
 
@@ -38,9 +38,8 @@ OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-de
 ```
 
 Verified debug package/application ID: `com.yetiwurks.flockfree`.
-Verified APK SHA-256: `aecab4bdb9f873649e90fc3b4d1f6ff8f8c673e599c0b902fecf4772ff168c73`.
-That APK was installed and launched on a Moto G Stylus over Wi-Fi ADB. It includes the route-summary hook and exposed FlockFree plugin settings screen.
-The source tree has newer camera-indexing, experimental two-pass avoidance routing, location-based camera alerts, OSM editor tag-prefill reporting, CYD BLE settings controls, CYD auto-reconnect on map resume, phone GPS streaming to CYD, and CYD detection map/review work after that APK. Rebuild before testing those features on-device.
+Verified APK SHA-256: `d3512ad42e14e3f40dce88f97bc92fb55ec2506e5f8edb9dca8d530b52d7eea2`.
+That APK was installed and launched on a Moto G Stylus over Wi-Fi ADB. It includes camera indexing, experimental two-pass avoidance routing, location-based camera alerts, OSM editor tag-prefill reporting, CYD BLE settings controls, CYD auto-reconnect on map resume, phone GPS streaming to CYD, and CYD detection map/review candidates.
 
 ## What Works Now
 
