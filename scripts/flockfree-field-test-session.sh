@@ -132,6 +132,7 @@ REPORT="${OUT_DIR}/field-session-report.txt"
 SESSION_LOGCAT="${OUT_DIR}/session-logcat-filtered.txt"
 SESSION_SUMMARY="${OUT_DIR}/session-summary.txt"
 PROMPTS="${OUT_DIR}/manual-test-prompts.txt"
+MANUAL_RESULTS="${OUT_DIR}/manual-test-results.tsv"
 TEST_AREAS="${OUT_DIR}/test-area-suggestions.txt"
 READINESS_DIR="${OUT_DIR}/readiness"
 POST_DIAG_DIR="${OUT_DIR}/post-diagnostics"
@@ -195,6 +196,19 @@ This script only records evidence. It does not submit OSM edits.
 PROMPTS
 }
 
+write_manual_results_template() {
+  cat > "$MANUAL_RESULTS" <<'RESULTS'
+# FlockFree manual test results
+# Edit status to PASS, FAIL, SKIP, or leave TODO. Keep tab separators.
+check_id	status	notes
+camera_data	TODO	Refresh camera data and verify the settings row settles with a source/freshness value.
+route_avoidance	TODO	Calculate a camera-dense offline route with avoidance enabled and capture applied/fallback/skipped status.
+nearby_alerts	TODO	Move or navigate near a known camera and confirm nearby alert behavior.
+osm_reporting	TODO	Open Add ALPR Camera and confirm OsmAnd editor/tag prefill.
+cyd	TODO	Connect/simulate CYD and confirm status, phone GPS, marker, or review flow.
+RESULTS
+}
+
 source_commit="$(git rev-parse HEAD 2>/dev/null || echo unknown)"
 source_state="dirty"
 if git diff --quiet && git diff --cached --quiet; then
@@ -214,7 +228,9 @@ append_report ""
 
 write_test_areas
 write_prompts
+write_manual_results_template
 append_report "Manual prompts: ${PROMPTS}"
+append_report "Manual result sheet: ${MANUAL_RESULTS}"
 append_report "Test-area suggestions: ${TEST_AREAS}"
 if [ -f "$TEST_AREAS" ]; then
   append_report "Suggested map anchors:"

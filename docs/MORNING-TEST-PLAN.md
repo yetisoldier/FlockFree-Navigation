@@ -42,7 +42,7 @@ Timed no-Gradle evidence capture while performing the manual checklist:
 scripts/flockfree-field-test-session.sh
 ```
 
-Start with the generated `logs/flockfree-field-session/.../field-session-report.txt`. It includes a readiness gate, manual test prompts, `test-area-suggestions.txt` map anchors from the bundled seed, filtered logcat from the test window, post-session diagnostics, and a `session-summary.txt` evidence summary with explicit crash status and missing manual checks.
+Start with the generated `logs/flockfree-field-session/.../field-session-report.txt`. It includes a readiness gate, manual test prompts, `test-area-suggestions.txt` map anchors from the bundled seed, `manual-test-results.tsv` for PASS/FAIL/SKIP notes, filtered logcat from the test window, post-session diagnostics, and a `session-summary.txt` evidence summary with explicit crash status, manual results, and missing manual checks.
 
 Offline camera-dense route-test anchors:
 
@@ -148,6 +148,8 @@ To capture evidence while performing route, OSM reporting, and CYD checks:
 ```bash
 scripts/flockfree-field-test-session.sh --duration 900
 ```
+
+During or immediately after the walk-through, edit the generated `manual-test-results.tsv` statuses to `PASS`, `FAIL`, or `SKIP` for any checks that were visually confirmed but did not produce distinctive log evidence. Rerun `scripts/flockfree-summarize-session.py logs/flockfree-field-session/...` to fold those manual results into the summary.
 
 To pick data-backed route-test areas from the bundled seed:
 

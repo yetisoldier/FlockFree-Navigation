@@ -7,6 +7,7 @@ import argparse
 import re
 import tempfile
 from pathlib import Path
+from typing import NamedTuple
 
 
 EVIDENCE_PATTERNS = {
@@ -15,12 +16,27 @@ EVIDENCE_PATTERNS = {
     "nearby alerts": re.compile(r"nearby camera|Nearby camera alerts|Alert distance", re.I),
     "OSM reporting": re.compile(r"Add ALPR Camera|ALPR|surveillance|EditPoi", re.I),
 }
+EVIDENCE_ORDER = list(EVIDENCE_PATTERNS.keys()) + ["CYD"]
 CYD_EVIDENCE_PATTERN = re.compile(
     r"\b(FYSTATUS|FYGPS|FYSIM|pair_status|CYD detection received|Phone GPS sent|"
     r"Connected to CYD|CYD status|Simulate CYD detection)\b",
     re.I,
 )
 FATAL_CRASH_PATTERN = re.compile(r"FATAL EXCEPTION|AndroidRuntime.*FATAL EXCEPTION", re.I)
+MANUAL_CHECK_LABELS = {
+    "camera_data": "camera data",
+    "route_avoidance": "route avoidance",
+    "nearby_alerts": "nearby alerts",
+    "osm_reporting": "OSM reporting",
+    "cyd": "CYD",
+}
+
+
+class ManualResult(NamedTuple):
+    check_id: str
+    label: str
+    status: str
+    notes: str
 
 
 def parse_args() -> argparse.Namespace:
@@ -79,6 +95,31 @@ def has_cyd_evidence(post_summary: str, ui_summary: str, session_log: str) -> bo
     return present(CYD_EVIDENCE_PATTERN, ui_summary, session_log)
 
 
+def parse_manual_results(path: Path) -> list[ManualResult]:
+    rows = []
+    for line in read_text(path).splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or line.startswith("check_id\t"):
+            continue
+        parts = line.split("\t", 2)
+        if len(parts) < 2:
+            continue
+        check_id = parts[0].strip()
+        status = parts[1].strip().upper()
+        notes = parts[2].strip() if len(parts) > 2 else ""
+        if check_id not in MANUAL_CHECK_LABELS:
+            continue
+        rows.append(ManualResult(check_id, MANUAL_CHECK_LABELS[check_id], status, notes))
+    return rows
+
+
+def evidence_order_index(name: str) -> int:
+    try:
+        return EVIDENCE_ORDER.index(name)
+    except ValueError:
+        return len(EVIDENCE_ORDER)
+
+
 def summarize(session_dir: Path) -> str:
     field_report = read_text(session_dir / "field-session-report.txt")
     readiness = read_text(session_dir / "readiness" / "readiness-report.txt")
@@ -86,6 +127,7 @@ def summarize(session_dir: Path) -> str:
     ui_summary = read_text(session_dir / "post-diagnostics" / "ui-summary.txt")
     app_data = read_text(session_dir / "post-diagnostics" / "app-data-state.txt")
     session_log = clean_log_text(read_text(session_dir / "session-logcat-filtered.txt"))
+    manual_results = parse_manual_results(session_dir / "manual-test-results.tsv")
 
     source_commit = first_match(r"^Source commit: (.+)$", field_report)
     source_state = first_match(r"^Source state: (.+)$", field_report)
@@ -116,6 +158,14 @@ def summarize(session_dir: Path) -> str:
         observed.append("CYD")
     else:
         not_observed.append("CYD")
+    for result in manual_results:
+        if result.status == "PASS" and result.label not in observed:
+            observed.append(result.label)
+        elif result.status in {"FAIL", "TODO", ""} and result.label not in observed and result.label not in not_observed:
+            not_observed.append(result.label)
+
+    observed = sorted(set(observed), key=evidence_order_index)
+    not_observed = [name for name in sorted(set(not_observed), key=evidence_order_index) if name not in observed]
 
     output = [
         "FlockFree field-session summary",
@@ -147,6 +197,13 @@ def summarize(session_dir: Path) -> str:
     if fatal_crash_found:
         output.append("")
         output.append("ATTENTION: fatal crash evidence was found in the captured artifacts.")
+
+    if manual_results:
+        output.append("")
+        output.append("Manual result sheet:")
+        for result in manual_results:
+            detail = f" - {result.notes}" if result.notes else ""
+            output.append(f"- {result.label}: {result.status}{detail}")
 
     next_checks = []
     if "route avoidance" in not_observed:
@@ -199,12 +256,20 @@ def self_check() -> int:
             "01-01 I CameraData: loaded\n01-01 I FlockFree: Avoidance applied\n",
             encoding="utf-8",
         )
+        (root / "manual-test-results.tsv").write_text(
+            "check_id\tstatus\tnotes\n"
+            "osm_reporting\tPASS\tEditor showed ALPR tags\n"
+            "cyd\tTODO\tHardware not connected\n",
+            encoding="utf-8",
+        )
         result = summarize(root)
         required = [
             "Readiness: READY",
             "Installed APK app-code: current",
             "camera data",
             "route avoidance",
+            "OSM reporting",
+            "Manual result sheet:",
             "Timed fatal crash evidence lines: 0",
             "Crash evidence: none found",
             "connect/simulate CYD",
