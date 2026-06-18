@@ -12,18 +12,21 @@ APK_PATH="$ROOT_DIR/OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gpl
 ARTIFACT_PATH="$ROOT_DIR/build-artifacts/FlockFree-gplayFree-legacy-fat-debug.apk"
 BUILD_INFO_PATH="$ROOT_DIR/build-artifacts/FlockFree-build-info.txt"
 PACKAGE_NAME="com.yetiwurks.flockfree"
+FIELD_DURATION="${FIELD_DURATION:-900}"
 
 usage() {
 	cat <<EOF
-Usage: $(basename "$0") [--serial HOST:PORT] [--no-install] [--no-launch]
+Usage: $(basename "$0") [--serial HOST:PORT] [--no-install] [--no-launch] [--skip-readiness] [--field-session]
 
 Builds the current FlockFree debug APK, optionally installs it on the Moto over ADB,
-launches it, and collects the standard no-Gradle diagnostics snapshot.
+launches it, and runs the standard no-Gradle readiness snapshot. With
+--field-session it also starts the timed manual evidence collector.
 
 Environment:
   PHONE_SERIAL   ADB serial, default: $PHONE_SERIAL
   ANDROID_HOME   Android SDK path, default: $ANDROID_HOME
   GRADLE_TASK    Gradle task, default: $GRADLE_TASK
+  FIELD_DURATION Timed field-session seconds, default: $FIELD_DURATION
 
 Note: this script runs Gradle. It is for Eric/manual use, not agent execution.
 EOF
@@ -41,9 +44,15 @@ find_apksigner() {
 
 INSTALL=1
 LAUNCH=1
+RUN_READINESS=1
+RUN_FIELD_SESSION=0
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 		--serial)
+			[[ $# -ge 2 ]] || {
+				echo "Missing value for --serial" >&2
+				exit 64
+			}
 			PHONE_SERIAL="$2"
 			shift 2
 			;;
@@ -54,6 +63,22 @@ while [[ $# -gt 0 ]]; do
 		--no-launch)
 			LAUNCH=0
 			shift
+			;;
+		--skip-readiness)
+			RUN_READINESS=0
+			shift
+			;;
+		--field-session)
+			RUN_FIELD_SESSION=1
+			shift
+			;;
+		--field-duration)
+			[[ $# -ge 2 ]] || {
+				echo "Missing value for --field-duration" >&2
+				exit 64
+			}
+			FIELD_DURATION="$2"
+			shift 2
 			;;
 		-h|--help)
 			usage
@@ -66,6 +91,13 @@ while [[ $# -gt 0 ]]; do
 			;;
 	esac
 done
+
+case "$FIELD_DURATION" in
+	''|*[!0-9]*)
+		echo "--field-duration must be a positive integer" >&2
+		exit 64
+		;;
+esac
 
 cd "$ROOT_DIR"
 mkdir -p "$(dirname "$ARTIFACT_PATH")"
@@ -118,4 +150,35 @@ if [[ "$LAUNCH" -eq 1 ]]; then
 	adb -s "$PHONE_SERIAL" shell monkey -p "$PACKAGE_NAME" 1
 fi
 
-"$ROOT_DIR/scripts/flockfree-moto-diagnostics.sh" --serial "$PHONE_SERIAL" --logcat-lines 1000
+if [[ "$RUN_READINESS" -eq 1 && "$INSTALL" -eq 1 ]]; then
+	readiness_args=(--serial "$PHONE_SERIAL" --logcat-lines 2000)
+	if [[ "$LAUNCH" -eq 0 ]]; then
+		readiness_args+=(--no-launch)
+	fi
+	echo
+	echo "Running no-Gradle readiness gate for the installed APK..."
+	"$ROOT_DIR/scripts/flockfree-morning-readiness.sh" "${readiness_args[@]}"
+elif [[ "$RUN_READINESS" -eq 1 ]]; then
+	echo
+	echo "Skipped readiness gate because --no-install was used. Run scripts/flockfree-morning-readiness.sh after installing."
+else
+	echo
+	echo "Skipped readiness gate. Run scripts/flockfree-morning-readiness.sh when ready."
+fi
+
+if [[ "$RUN_FIELD_SESSION" -eq 1 && "$INSTALL" -eq 1 ]]; then
+	field_args=(--serial "$PHONE_SERIAL" --duration "$FIELD_DURATION")
+	if [[ "$LAUNCH" -eq 0 ]]; then
+		field_args+=(--no-launch)
+	fi
+	echo
+	echo "Starting timed FlockFree field-test evidence session..."
+	"$ROOT_DIR/scripts/flockfree-field-test-session.sh" "${field_args[@]}"
+elif [[ "$RUN_FIELD_SESSION" -eq 1 ]]; then
+	echo
+	echo "Skipped field-test session because --no-install was used. Install the APK, then run scripts/flockfree-field-test-session.sh."
+else
+	echo
+	echo "For the manual field-test evidence window, run:"
+	printf '  scripts/flockfree-field-test-session.sh --serial %q\n' "$PHONE_SERIAL"
+fi

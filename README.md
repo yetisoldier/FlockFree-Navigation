@@ -23,7 +23,7 @@ scripts/flockfree-user-build-install.sh
 
 The helper writes the copied APK and `FlockFree-build-info.txt` under `build-artifacts/` so the morning install can be traced back to a source commit and APK SHA-256.
 
-That helper runs Gradle, installs the APK over Wi-Fi ADB, launches FlockFree, and captures a diagnostic bundle.
+That helper runs Gradle, installs the APK over Wi-Fi ADB, launches FlockFree, and then runs the no-Gradle readiness gate so the generated report says whether the installed app-code is current and whether the phone is ready for feature testing. Add `--field-session` if you want the timed manual evidence collector to start immediately after the readiness pass.
 
 For source-only verification that does not run Gradle:
 
@@ -119,6 +119,12 @@ For a timed no-Gradle evidence bundle while manually walking through the route, 
 
 ```bash
 scripts/flockfree-field-test-session.sh
+```
+
+Or combine the manual rebuild/install/readiness pass with the timed evidence collector:
+
+```bash
+scripts/flockfree-user-build-install.sh --field-session
 ```
 
 It runs the readiness gate, writes manual prompts, captures filtered logcat during the test window, then captures post-session diagnostics.

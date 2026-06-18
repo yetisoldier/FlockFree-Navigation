@@ -70,7 +70,7 @@
 ## Morning First Steps
 
 1. If Wi-Fi ADB is unreachable, run `scripts/flockfree-adb-recover.sh`. If it still cannot reach `device`, check the recovery bundle's `adb-mdns-after.txt` and `ip-neigh-after.txt`, then wake the phone, confirm same-Wi-Fi and Wireless debugging, copy the current IP:port, and rerun with `--serial PHONE_IP:PORT`.
-2. Rebuild/install the latest source manually with `scripts/flockfree-user-build-install.sh` so the phone has the newest app-code changes.
+2. Rebuild/install the latest source manually with `scripts/flockfree-user-build-install.sh` so the phone has the newest app-code changes. The helper now runs the no-Gradle readiness gate after install and leaves a `logs/flockfree-readiness/.../readiness-report.txt` with APK freshness, permission, camera cache/database, launch, and crash evidence.
 3. Open the app on the Moto G Stylus. It should install as `com.yetiwurks.flockfree`.
 4. Work through or skip the first-run map download flow.
 5. Confirm camera data finishes loading on Wi-Fi.
@@ -125,6 +125,12 @@ For a timed evidence bundle while Eric performs the manual route, OSM reporting,
 
 ```bash
 scripts/flockfree-field-test-session.sh
+```
+
+To go directly from manual rebuild/install/readiness into the timed field-test window, run:
+
+```bash
+scripts/flockfree-user-build-install.sh --field-session
 ```
 
 Start with the generated `logs/flockfree-field-session/.../field-session-report.txt`; it includes the readiness gate, manual prompts, `test-area-suggestions.txt` map anchors from the bundled seed, `manual-test-results.tsv` for PASS/FAIL/SKIP notes, ready-made `manual-result-commands.txt` marker commands for that session, filtered logcat from the test window, post-session diagnostics, and a `session-summary.txt` evidence summary with explicit crash status, manual results, and missing manual checks.

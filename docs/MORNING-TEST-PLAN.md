@@ -30,7 +30,7 @@ cd /home/yetisoldier/projects/FlockFree-Navigation
 scripts/flockfree-user-build-install.sh
 ```
 
-That script builds the current APK, copies it to `build-artifacts/`, writes `build-artifacts/FlockFree-build-info.txt` with source commit, clean/dirty state, SHA-256, and signature status, installs it on the default Moto Wi-Fi ADB endpoint, launches it, and captures diagnostics.
+That script builds the current APK, copies it to `build-artifacts/`, writes `build-artifacts/FlockFree-build-info.txt` with source commit, clean/dirty state, SHA-256, and signature status, installs it on the default Moto Wi-Fi ADB endpoint, launches it, and runs the no-Gradle readiness gate so the report confirms APK freshness, permissions, camera cache/database state, and crash status.
 
 Source-only checks that do not run Gradle:
 
@@ -51,6 +51,12 @@ Timed no-Gradle evidence capture while performing the manual checklist:
 
 ```bash
 scripts/flockfree-field-test-session.sh
+```
+
+To go straight from manual build/install/readiness into the timed evidence window:
+
+```bash
+scripts/flockfree-user-build-install.sh --field-session
 ```
 
 Start with the generated `logs/flockfree-field-session/.../field-session-report.txt`. It includes a readiness gate, manual test prompts, `test-area-suggestions.txt` map anchors from the bundled seed, `manual-test-results.tsv` for PASS/FAIL/SKIP notes, ready-made `manual-result-commands.txt` marker commands for that session, filtered logcat from the test window, post-session diagnostics, and a `session-summary.txt` evidence summary with explicit crash status, manual results, and missing manual checks.

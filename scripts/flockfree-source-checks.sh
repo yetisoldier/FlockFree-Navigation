@@ -626,6 +626,43 @@ if missing:
 print("manual result marker wiring ok")
 PY
 
+log "Manual build/install helper checks"
+python3 - <<'PY'
+from pathlib import Path
+
+helper = Path("scripts/flockfree-user-build-install.sh").read_text()
+readme = Path("README.md").read_text()
+morning = Path("docs/MORNING-TEST-PLAN.md").read_text()
+handoff = Path("docs/OVERNIGHT-HANDOFF.md").read_text()
+required = [
+    "Repository AGENTS.md forbids agents from running Gradle build tasks.",
+    "RUN_READINESS=1",
+    "RUN_FIELD_SESSION=0",
+    "--skip-readiness",
+    "--field-session",
+    "--field-duration",
+    "flockfree-morning-readiness.sh",
+    "Running no-Gradle readiness gate for the installed APK",
+    "flockfree-field-test-session.sh",
+    "Starting timed FlockFree field-test evidence session",
+    "For the manual field-test evidence window",
+    "FlockFree-build-info.txt",
+]
+missing = [item for item in required if item not in helper]
+if missing:
+    raise SystemExit("manual build/install helper missing expected behavior:\n" + "\n".join(missing))
+doc_text = "\n".join([readme, morning, handoff])
+required_doc_tokens = [
+    "scripts/flockfree-user-build-install.sh --field-session",
+    "no-Gradle readiness gate",
+    "installed app-code is current",
+]
+missing_doc_tokens = [item for item in required_doc_tokens if item not in doc_text]
+if missing_doc_tokens:
+    raise SystemExit("manual build/install helper docs missing expected wording:\n" + "\n".join(missing_doc_tokens))
+print("manual build/install helper wiring ok")
+PY
+
 log "Test-area suggestion helper checks"
 python3 - <<'PY'
 from pathlib import Path
