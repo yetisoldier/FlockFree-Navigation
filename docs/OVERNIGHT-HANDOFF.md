@@ -5,7 +5,7 @@
 - Repository: `https://github.com/yetisoldier/FlockFree-Navigation`
 - Local path: `/home/yetisoldier/projects/FlockFree-Navigation`
 - Branch: `master`
-- Latest functional source: current `master` after the Gradle-enabled build/install verification pass.
+- Latest functional source: current `master` after the bundled camera seed fallback verification pass.
 - Current source includes the route camera summary hook, exposed FlockFree settings screen, camera-data spatial indexing, OSM editor tag-prefill reporting, experimental two-pass offline camera avoidance, visible applied/fallback/skipped route diagnostics, movement/navigation nearby-camera alerts, cache-only route startup for existing camera data, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, phone GPS streaming to CYD over `FYGPS`, and persisted CYD detection map/review candidates.
 
 ## Verified APK
@@ -13,12 +13,13 @@
 - APK: `OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-debug.apk`
 - Synced artifact: `build-artifacts/FlockFree-gplayFree-legacy-fat-debug.apk`
 - Package: `com.yetiwurks.flockfree`
-- SHA-256: `d3512ad42e14e3f40dce88f97bc92fb55ec2506e5f8edb9dca8d530b52d7eea2`
+- SHA-256: `ed7ecd983d1be9fcc8f2491405d836a175cd380d389a188dbb67cfa67222e210`
+- Source commit: `70296983deee589ba418aaa5b0e98d9f157b626c`
 - Signature: verifies with APK Signature Scheme v2 using the Android debug certificate
 - Phone install: succeeded over Wi-Fi ADB on `192.168.1.139:5555`
 - Launch: succeeded into `net.osmand.plus.activities.MapActivity`
 - Build info: `build-artifacts/FlockFree-build-info.txt`
-- Smoke log directory: `logs/flockfree-diagnostics/20260618-022345`
+- Smoke log directory: `logs/flockfree-diagnostics/20260618-023924`
 - Screenshot: `flockfree-latest-launch.png`
 
 ## What Is Ready To Test
@@ -29,7 +30,7 @@
 - FlockFree has a visible plugin settings screen wired into the OsmAnd plugin settings flow.
 - Camera data loader accepts the live `data.dontgetflocked.com` response, which currently uses a `.gz` URL but returns plain GeoJSON.
 - A bundled camera seed from `OsmAnd/assets/flockfree/cameras.geojson.gz` gives fresh installs a 104,902-camera fallback before the first successful network refresh.
-- Smoke log showed `CameraData Reading camera data payload; gzip=false`.
+- No-cache smoke log showed `No FlockFree camera cache found`, `Parsed 104902 camera points from bundled seed`, then a successful network refresh of the same 104,902 features.
 - Camera map layer and camera context-menu/reporting code are present in source.
 - The `Add ALPR Camera` flow now opens OsmAnd's POI editor with the selected ALPR tag preset attached to the new node.
 - Route camera summary hook:

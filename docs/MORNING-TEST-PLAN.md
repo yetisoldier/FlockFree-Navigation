@@ -2,7 +2,7 @@
 
 Goal: prove the debug APK installs over Wi-Fi ADB, launches as FlockFree, and exposes the current camera-awareness MVP without chasing unfinished features.
 
-Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The current verified APK installed successfully on the Moto G Stylus, launched to the map, and includes camera indexing, experimental two-pass camera avoidance, visible applied/fallback/skipped route diagnostics, movement/navigation camera alerts, OSM editor tag-prefill reporting, cache-backed route startup, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, phone GPS streaming to CYD, and persisted CYD detection map/review candidates.
+Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The current verified APK installed successfully on the Moto G Stylus, launched to the map, and includes camera indexing, bundled first-use camera seed fallback, experimental two-pass camera avoidance, visible applied/fallback/skipped route diagnostics, movement/navigation camera alerts, OSM editor tag-prefill reporting, cache-backed route startup, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, phone GPS streaming to CYD, and persisted CYD detection map/review candidates.
 
 ## Setup
 

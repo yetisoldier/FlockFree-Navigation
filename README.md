@@ -38,8 +38,8 @@ OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-de
 ```
 
 Verified debug package/application ID: `com.yetiwurks.flockfree`.
-Verified APK SHA-256: `d3512ad42e14e3f40dce88f97bc92fb55ec2506e5f8edb9dca8d530b52d7eea2`.
-That APK was installed and launched on a Moto G Stylus over Wi-Fi ADB. It includes camera indexing, experimental two-pass avoidance routing, location-based camera alerts, OSM editor tag-prefill reporting, CYD BLE settings controls, CYD auto-reconnect on map resume, phone GPS streaming to CYD, and CYD detection map/review candidates.
+Verified APK SHA-256: `ed7ecd983d1be9fcc8f2491405d836a175cd380d389a188dbb67cfa67222e210`.
+That APK was built from clean source commit `70296983deee589ba418aaa5b0e98d9f157b626c`, installed and launched on a Moto G Stylus over Wi-Fi ADB, and verified with cache removed so the bundled camera seed loaded before the network refresh.
 
 ## What Works Now
 
@@ -47,7 +47,7 @@ That APK was installed and launched on a Moto G Stylus over Wi-Fi ADB. It includ
 - The FlockFree plugin is registered in OsmAnd and enabled by default.
 - Camera data downloads from `https://data.dontgetflocked.com/cameras.geojson.gz`, is cached as GeoJSON, and refreshes weekly.
 - The data loader handles both gzip and plain GeoJSON because the live `.gz` endpoint currently returns plain GeoJSON.
-- A compressed bundled camera seed is included from `OsmAnd/assets/flockfree/cameras.geojson.gz`, so a fresh install can show the current 104,902-camera snapshot even if the first network refresh is unavailable.
+- A compressed bundled camera seed is included from `OsmAnd/assets/flockfree/cameras.geojson.gz`, packaged as `assets/flockfree/cameras.geojson`, so a fresh install can show the current 104,902-camera snapshot even if the first network refresh is unavailable.
 - Parsed cameras are indexed into a coarse in-memory spatial grid so map and route-corridor lookups do not scan the full camera list every time.
 - The FlockFree settings screen can manually refresh the camera data cache for morning validation or later data updates.
 - Camera points render on the map at zoom 10+ with basic vendor colors and higher-zoom labels.
