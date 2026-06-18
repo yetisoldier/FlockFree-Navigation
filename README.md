@@ -31,6 +31,14 @@ For source-only verification that does not run Gradle:
 scripts/flockfree-source-checks.sh
 ```
 
+For a one-command no-Gradle morning readiness pass using the already installed APK:
+
+```bash
+scripts/flockfree-morning-readiness.sh
+```
+
+It runs source-only checks, primes FlockFree runtime permissions on the Moto, captures diagnostics, and writes `logs/flockfree-readiness/.../readiness-report.txt`.
+
 Last verified local APK output:
 
 ```text

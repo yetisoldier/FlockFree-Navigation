@@ -102,3 +102,11 @@ For source-only checks without running Gradle, run:
 ```bash
 scripts/flockfree-source-checks.sh
 ```
+
+For the full no-Gradle morning readiness pass against the already installed APK, run:
+
+```bash
+scripts/flockfree-morning-readiness.sh
+```
+
+Start with the generated `logs/flockfree-readiness/.../readiness-report.txt`; it includes source-check status, permission-primer status, copied APK build provenance, and the latest Moto diagnostic summary.

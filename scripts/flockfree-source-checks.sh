@@ -179,6 +179,27 @@ if missing_tokens:
 print("permission primer wiring ok")
 PY
 
+log "Morning readiness wrapper checks"
+python3 - <<'PY'
+from pathlib import Path
+
+readiness = Path("scripts/flockfree-morning-readiness.sh").read_text()
+required = [
+    "flockfree-source-checks.sh",
+    "flockfree-moto-permission-primer.sh",
+    "flockfree-moto-diagnostics.sh",
+    "readiness-report.txt",
+    "FlockFree-build-info.txt",
+    "--skip-source-checks",
+    "--skip-primer",
+    "--skip-diagnostics",
+]
+missing = [item for item in required if item not in readiness]
+if missing:
+    raise SystemExit("morning readiness wrapper missing expected behavior:\n" + "\n".join(missing))
+print("morning readiness wrapper wiring ok")
+PY
+
 log "Bundled camera seed check"
 python3 - <<'PY'
 from pathlib import Path
@@ -198,6 +219,7 @@ PY
 
 log "Script syntax checks"
 bash -n scripts/flockfree-moto-diagnostics.sh \
+	scripts/flockfree-morning-readiness.sh \
 	scripts/flockfree-moto-permission-primer.sh \
 	scripts/flockfree-user-build-install.sh \
 	scripts/flockfree-source-checks.sh

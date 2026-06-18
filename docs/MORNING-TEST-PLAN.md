@@ -28,6 +28,14 @@ Source-only checks that do not run Gradle:
 scripts/flockfree-source-checks.sh
 ```
 
+Full no-Gradle readiness pass against the already installed APK:
+
+```bash
+scripts/flockfree-morning-readiness.sh
+```
+
+Start with the generated `logs/flockfree-readiness/.../readiness-report.txt`.
+
 Manual equivalent:
 
 ```bash
