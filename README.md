@@ -112,6 +112,12 @@ scripts/flockfree-field-test-session.sh
 It runs the readiness gate, writes manual prompts, captures filtered logcat during the test window, then captures post-session diagnostics.
 It also writes `test-area-suggestions.txt` with bundled-seed map anchors, prints the first anchors into the session report, creates `manual-test-results.tsv` for PASS/FAIL/SKIP notes during the walk-through, writes ready-made `manual-result-commands.txt` marker commands for the current session, and writes `session-summary.txt` with crash status, observed evidence buckets, manual results, and missing manual checks.
 
+To reopen the newest field-session summary and find its marker commands:
+
+```bash
+scripts/flockfree-latest-field-session.sh
+```
+
 To mark a visual/manual result and refresh the summary afterward:
 
 ```bash

@@ -239,6 +239,26 @@ if missing:
 print("field-test session collector wiring ok")
 PY
 
+log "Latest field-session helper checks"
+python3 - <<'PY'
+from pathlib import Path
+
+helper = Path("scripts/flockfree-latest-field-session.sh").read_text()
+required = [
+    "FlockFree latest field session",
+    "manual-result-commands.txt",
+    "session-summary.txt",
+    "field-session-report.txt",
+    "--path-only",
+    "--session-dir",
+    "--self-check",
+]
+missing = [item for item in required if item not in helper]
+if missing:
+    raise SystemExit("latest field-session helper missing expected behavior:\n" + "\n".join(missing))
+print("latest field-session helper wiring ok")
+PY
+
 log "Field-session summarizer checks"
 python3 - <<'PY'
 from pathlib import Path
@@ -327,6 +347,7 @@ PY
 log "Script syntax checks"
 bash -n scripts/flockfree-moto-diagnostics.sh \
 	scripts/flockfree-field-test-session.sh \
+	scripts/flockfree-latest-field-session.sh \
 	scripts/flockfree-morning-readiness.sh \
 	scripts/flockfree-moto-permission-primer.sh \
 	scripts/flockfree-user-build-install.sh \
@@ -343,6 +364,9 @@ scripts/flockfree-suggest-test-areas.py --limit 2 --radius-km 80 >/dev/null
 
 log "Field-session summarizer self-check"
 scripts/flockfree-summarize-session.py --self-check >/dev/null
+
+log "Latest field-session helper self-check"
+scripts/flockfree-latest-field-session.sh --self-check >/dev/null
 
 log "Manual result marker self-check"
 scripts/flockfree-mark-result.py --self-check >/dev/null
