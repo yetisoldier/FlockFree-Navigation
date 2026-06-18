@@ -246,6 +246,18 @@ capture_app_data_state() {
   log "wrote ${file}"
 }
 
+capture_permission_state() {
+  file="${OUT_DIR}/permission-state.txt"
+  shell_script="printf 'runtime permissions:\\n'; dumpsys package $PACKAGE 2>/dev/null | grep -E 'android.permission.(ACCESS_FINE_LOCATION|ACCESS_COARSE_LOCATION|BLUETOOTH_SCAN|BLUETOOTH_CONNECT|POST_NOTIFICATIONS):' || true; printf '\\nappops:\\n'; cmd appops get $PACKAGE 2>/dev/null | grep -Ei 'COARSE_LOCATION|FINE_LOCATION|POST_NOTIFICATION|BLUETOOTH_SCAN|BLUETOOTH_CONNECT' || true; printf '\\ndevice toggles:\\n'; printf 'location_mode='; settings get secure location_mode 2>/dev/null || true; printf 'bluetooth_on='; settings get global bluetooth_on 2>/dev/null || true"
+  {
+    printf '$ %q -s %q shell %q\n\n' "$ADB" "$SERIAL" "$shell_script"
+    "$ADB" -s "$SERIAL" shell "$shell_script"
+    status="$?"
+    printf '\n[exit_status=%s]\n' "$status"
+  } > "$file" 2>&1
+  log "wrote ${file}"
+}
+
 write_summary() {
   adb_state="${1:-unknown}"
   package_installed="${2:-unknown}"
@@ -253,9 +265,17 @@ write_summary() {
   activity="${4:-}"
   log_file="${OUT_DIR}/logcat-flockfree-camera-fatal.txt"
   app_data_file="${OUT_DIR}/app-data-state.txt"
+  permission_file="${OUT_DIR}/permission-state.txt"
   log_lines="0"
   camera_cache_state="not checked"
   cyd_store_state="not checked"
+  fine_location_state="not checked"
+  coarse_location_state="not checked"
+  bluetooth_scan_state="not checked"
+  bluetooth_connect_state="not checked"
+  notification_state="not checked"
+  location_toggle_state="not checked"
+  bluetooth_toggle_state="not checked"
   if [ -f "$log_file" ]; then
     log_lines="$(grep -Evc '^(\$|\[|$)' "$log_file" 2>/dev/null || true)"
   fi
@@ -273,6 +293,47 @@ write_summary() {
       cyd_store_state="missing"
     fi
   fi
+  if [ -f "$permission_file" ]; then
+    if grep -q 'ACCESS_FINE_LOCATION: granted=true' "$permission_file"; then
+      fine_location_state="granted"
+    elif grep -q 'ACCESS_FINE_LOCATION: granted=false' "$permission_file"; then
+      fine_location_state="denied"
+    fi
+    if grep -q 'ACCESS_COARSE_LOCATION: granted=true' "$permission_file"; then
+      coarse_location_state="granted"
+    elif grep -q 'ACCESS_COARSE_LOCATION: granted=false' "$permission_file"; then
+      coarse_location_state="denied"
+    fi
+    if grep -q 'BLUETOOTH_SCAN: granted=true' "$permission_file"; then
+      bluetooth_scan_state="granted"
+    elif grep -q 'BLUETOOTH_SCAN: granted=false' "$permission_file"; then
+      bluetooth_scan_state="denied"
+    fi
+    if grep -q 'BLUETOOTH_CONNECT: granted=true' "$permission_file"; then
+      bluetooth_connect_state="granted"
+    elif grep -q 'BLUETOOTH_CONNECT: granted=false' "$permission_file"; then
+      bluetooth_connect_state="denied"
+    fi
+    if grep -q 'POST_NOTIFICATIONS: granted=true' "$permission_file"; then
+      notification_state="granted"
+    elif grep -q 'POST_NOTIFICATIONS: granted=false' "$permission_file"; then
+      notification_state="denied"
+    fi
+    location_mode="$(awk -F= '/^location_mode=/ {print $2}' "$permission_file" | tail -n 1)"
+    case "$location_mode" in
+      3) location_toggle_state="on" ;;
+      0) location_toggle_state="off" ;;
+      '') ;;
+      *) location_toggle_state="mode ${location_mode}" ;;
+    esac
+    bluetooth_on="$(awk -F= '/^bluetooth_on=/ {print $2}' "$permission_file" | tail -n 1)"
+    case "$bluetooth_on" in
+      1) bluetooth_toggle_state="on" ;;
+      0) bluetooth_toggle_state="off" ;;
+      '') ;;
+      *) bluetooth_toggle_state="$bluetooth_on" ;;
+    esac
+  fi
 
   {
     printf 'FlockFree Moto diagnostics\n'
@@ -286,6 +347,11 @@ write_summary() {
     printf 'PID: %s\n' "${pid:-not running}"
     printf 'Camera cache: %s\n' "$camera_cache_state"
     printf 'CYD detection store: %s\n' "$cyd_store_state"
+    printf 'Location permissions: fine %s, coarse %s; device location %s\n' \
+      "$fine_location_state" "$coarse_location_state" "$location_toggle_state"
+    printf 'Bluetooth permissions: scan %s, connect %s; Bluetooth %s\n' \
+      "$bluetooth_scan_state" "$bluetooth_connect_state" "$bluetooth_toggle_state"
+    printf 'Notifications permission: %s\n' "$notification_state"
     printf 'Filtered logcat lines: %s\n\n' "$log_lines"
     printf 'Key files:\n'
     printf '%s\n' '- adb-devices-after.txt'
@@ -297,6 +363,7 @@ write_summary() {
     printf '%s\n' '- window.xml'
     printf '%s\n' '- ui-summary.txt'
     printf '%s\n' '- app-data-state.txt'
+    printf '%s\n' '- permission-state.txt'
     printf '%s\n' '- logcat-flockfree-camera-fatal.txt'
   } > "${OUT_DIR}/summary.txt"
   log "wrote ${OUT_DIR}/summary.txt"
@@ -350,6 +417,8 @@ capture_shell "activity-top.txt" \
 capture_ui_snapshot
 
 capture_app_data_state
+
+capture_permission_state
 
 capture_logcat_filter
 

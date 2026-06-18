@@ -81,6 +81,7 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 - [ ] Enable camera avoidance, calculate a route, and confirm FlockFree shows a route camera summary toast with `Avoidance applied`, `Avoidance fallback`, or an explicit skipped reason.
 - [ ] Reopen FlockFree settings and confirm `Last route check` preserves the same route summary/status after the toast disappears.
 - [ ] On an offline OsmAnd route through a known camera corridor, compare the route with camera avoidance off versus on and look for a one-pass reroute around camera-adjacent road objects.
+- [ ] Run `scripts/flockfree-moto-diagnostics.sh` and confirm `summary.txt` shows location and Bluetooth permissions granted before CYD/GPS testing; if denied, grant app permissions on the phone and rerun diagnostics.
 - [ ] Open the FlockFree CYD hardware settings, enable `CYD BLE`, and tap `Scan and connect CYD` with the CYD powered and advertising `CYD-Flock-You`.
 - [ ] If the CYD connects, tap `Request CYD status` and confirm the `CYD status` row refreshes in place with device, GPS, SD, detection, and radio scan details.
 - [ ] Relaunch or leave/return to the map with `CYD BLE` still enabled and confirm FlockFree starts scanning again without revisiting the CYD settings screen.
@@ -109,7 +110,7 @@ cd /home/yetisoldier/projects/FlockFree-Navigation
 scripts/flockfree-moto-diagnostics.sh
 ```
 
-The script defaults to the last verified Moto Wi-Fi ADB endpoint, `192.168.1.139:5555`, and writes local-only artifacts under `logs/flockfree-diagnostics/YYYYMMDD-HHMMSS/`. It checks `adb` device state, whether `com.yetiwurks.flockfree` is installed, current focused activity, app PID/process state, package metadata, UI screenshot/hierarchy, app-private camera cache/CYD candidate file state, and a filtered logcat snapshot for `FlockFree`, `CameraData`, `FATAL`, `AndroidRuntime`, and `com.yetiwurks.flockfree`. Start with `summary.txt` for package, activity, PID, camera-cache, CYD-store, and logcat counts, then inspect `screenshot.png`, `ui-summary.txt`, `app-data-state.txt`, `package-state.txt`, `current-activity.txt`, `process-state.txt`, and `logcat-flockfree-camera-fatal.txt`.
+The script defaults to the last verified Moto Wi-Fi ADB endpoint, `192.168.1.139:5555`, and writes local-only artifacts under `logs/flockfree-diagnostics/YYYYMMDD-HHMMSS/`. It checks `adb` device state, whether `com.yetiwurks.flockfree` is installed, current focused activity, app PID/process state, package metadata, UI screenshot/hierarchy, app-private camera cache/CYD candidate file state, runtime location/Bluetooth/notification permission state, and a filtered logcat snapshot for `FlockFree`, `CameraData`, `FATAL`, `AndroidRuntime`, and `com.yetiwurks.flockfree`. Start with `summary.txt` for package, activity, PID, camera-cache, CYD-store, permission readiness, and logcat counts, then inspect `screenshot.png`, `ui-summary.txt`, `app-data-state.txt`, `permission-state.txt`, `package-state.txt`, `current-activity.txt`, `process-state.txt`, and `logcat-flockfree-camera-fatal.txt`.
 
 If the phone IP changes:
 

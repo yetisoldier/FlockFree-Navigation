@@ -134,6 +134,13 @@ required = [
     "CYD detection store:",
     "camera_cache_state",
     "cyd_store_state",
+    "capture_permission_state()",
+    "permission-state.txt",
+    "Location permissions:",
+    "Bluetooth permissions:",
+    "Notifications permission:",
+    "ACCESS_FINE_LOCATION",
+    "BLUETOOTH_SCAN",
 ]
 missing = [item for item in required if item not in diagnostics]
 if missing:

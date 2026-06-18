@@ -83,7 +83,7 @@ For a no-Gradle diagnostic snapshot during morning validation, run:
 scripts/flockfree-moto-diagnostics.sh
 ```
 
-It writes local artifacts under ignored `logs/flockfree-diagnostics/` and checks ADB state, package install state, current activity, PID/process state, package metadata, UI screenshot/hierarchy, a FlockFree UI text summary, app-private camera cache/CYD candidate file state summarized in `summary.txt`, and filtered FlockFree/CameraData/FATAL logcat output.
+It writes local artifacts under ignored `logs/flockfree-diagnostics/` and checks ADB state, package install state, current activity, PID/process state, package metadata, UI screenshot/hierarchy, a FlockFree UI text summary, app-private camera cache/CYD candidate file state, runtime location/Bluetooth/notification permission state summarized in `summary.txt`, and filtered FlockFree/CameraData/FATAL logcat output.
 
 ## Credits
 
