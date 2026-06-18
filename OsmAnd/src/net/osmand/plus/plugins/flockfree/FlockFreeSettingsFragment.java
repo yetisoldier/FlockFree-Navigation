@@ -73,7 +73,8 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 			CydDetectionCandidate detection = manager.getLastDetection();
 			if (detection != null) {
 				preference.setSummary(getString(R.string.flockfree_cyd_status_last_detection,
-						detection.getStatusSummary(), manager.getRecentDetectionCount()));
+						detection.getStatusSummary(), manager.getRecentDetectionCount())
+						+ "\n" + manager.getStatusSummary());
 			} else {
 				preference.setSummary(manager.getStatusSummary());
 			}

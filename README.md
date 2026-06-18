@@ -51,6 +51,7 @@ The source tree has newer camera-indexing, experimental two-pass avoidance routi
 - A CYD BLE UART path exists for `FYHELLO`, `FYSTATUS`, `FYSIM`, `FYGPS`, `pair_status`, and `detection` messages.
 - If CYD BLE is enabled, returning to the map starts a scan when the CYD manager is idle.
 - Once the CYD is connected, FlockFree forwards valid phone GPS fixes over `FYGPS` about once per second so the CYD can time/location-stamp detections without DeFlock running separately.
+- The CYD settings status row reports recent phone GPS sends, making the `FYGPS` stream visible during bench testing.
 - GPS-backed CYD detections are kept as recent candidates, persisted to a small local JSON store, drawn on the map as distinct CYD markers, and can be reviewed through the existing ALPR camera reporting flow.
 
 ## Still Stubbed Or Thin

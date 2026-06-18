@@ -69,6 +69,8 @@
 	<string name="flockfree_cyd_status_not_connected">CYD is not connected.</string>
 	<string name="flockfree_cyd_status_map_unavailable">Open the map before connecting CYD hardware.</string>
 	<string name="flockfree_cyd_status_last_detection">Last detection: %1$s. %2$d mapped detection(s).</string>
+	<string name="flockfree_cyd_phone_gps_sent">Phone GPS sent %1$d seconds ago.</string>
+	<string name="flockfree_cyd_phone_gps_waiting">Phone GPS not sent yet.</string>
 	<string name="flockfree_cyd_detection_received">CYD detection received.</string>
 	<string name="flockfree_cyd_detection_name">CYD detection: %1$s</string>
 	<string name="flockfree_cyd_detection_no_gps">CYD detection has no GPS fix.</string>

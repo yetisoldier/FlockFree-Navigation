@@ -103,13 +103,16 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 	@NonNull
 	public String getStatusSummary() {
 		synchronized (lock) {
+			StringBuilder builder = new StringBuilder();
 			if (lastPairStatus != null) {
-				return lastPairStatus.getStatusSummary();
+				CydJsonUtils.appendPart(builder, lastPairStatus.getStatusSummary());
+			} else if (!Algorithms.isEmpty(lastMessage)) {
+				CydJsonUtils.appendPart(builder, lastMessage);
+			} else {
+				CydJsonUtils.appendPart(builder, app.getString(R.string.flockfree_cyd_status_idle));
 			}
-			if (!Algorithms.isEmpty(lastMessage)) {
-				return lastMessage;
-			}
-			return app.getString(R.string.flockfree_cyd_status_idle);
+			CydJsonUtils.appendPart(builder, getPhoneGpsStatusSummary(System.currentTimeMillis()));
+			return builder.toString();
 		}
 	}
 
@@ -333,6 +336,15 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 				&& !Double.isNaN(longitude) && !Double.isInfinite(longitude)
 				&& latitude >= -90d && latitude <= 90d
 				&& longitude >= -180d && longitude <= 180d;
+	}
+
+	@Nullable
+	private String getPhoneGpsStatusSummary(long nowMs) {
+		if (lastGpsSentAtMs > 0L) {
+			long ageSeconds = Math.max(0L, (nowMs - lastGpsSentAtMs) / 1000L);
+			return app.getString(R.string.flockfree_cyd_phone_gps_sent, ageSeconds);
+		}
+		return state == State.READY ? app.getString(R.string.flockfree_cyd_phone_gps_waiting) : null;
 	}
 
 	private void setState(@NonNull State state, @Nullable String message) {
