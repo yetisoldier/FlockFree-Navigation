@@ -325,7 +325,11 @@ public class FlockFreePlugin extends OsmandPlugin {
 
     @Override
     public void updateLocation(Location location) {
-        if (location == null || !shouldCheckCameraAlert(location)) {
+        if (location == null) {
+            return;
+        }
+        updateCydPhoneLocation(location);
+        if (!shouldCheckCameraAlert(location)) {
             return;
         }
         CameraData data = getCameraData();
@@ -348,6 +352,12 @@ public class FlockFreePlugin extends OsmandPlugin {
         }
         if (closest != null) {
             showCameraAlertIfNeeded(closest, closestDistance);
+        }
+    }
+
+    private void updateCydPhoneLocation(@NonNull Location location) {
+        if (CYD_BLE_ENABLED.get() && cydHardwareManager != null) {
+            cydHardwareManager.updatePhoneLocation(location);
         }
     }
 

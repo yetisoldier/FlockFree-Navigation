@@ -17,6 +17,7 @@ import android.os.ParcelUuid;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import net.osmand.Location;
 import net.osmand.PlatformUtil;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
@@ -30,11 +31,13 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.TimeZone;
 
 public final class CydHardwareManager implements AutoCloseable, CydBleUartClient.Listener {
 
 	private static final Log LOG = PlatformUtil.getLog(CydHardwareManager.class);
 	private static final long SCAN_TIMEOUT_MS = 15_000L;
+	private static final long GPS_SEND_INTERVAL_MS = 1_000L;
 	private static final int MAX_RECENT_DETECTIONS = 20;
 
 	private final OsmandApplication app;
@@ -56,6 +59,7 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 	private State state = State.IDLE;
 	@Nullable
 	private String lastMessage;
+	private long lastGpsSentAtMs;
 
 	public CydHardwareManager(@NonNull OsmandApplication app) {
 		this.app = app;
@@ -138,6 +142,7 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 		synchronized (lock) {
 			lastPairStatus = null;
 			lastDetection = null;
+			lastGpsSentAtMs = 0L;
 			scanner = bluetoothLeScanner;
 			state = State.SCANNING;
 			lastMessage = app.getString(R.string.flockfree_cyd_status_scanning);
@@ -181,6 +186,36 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 		return false;
 	}
 
+	public boolean updatePhoneLocation(@NonNull Location location) {
+		if (!client.isReady() || !isValidGpsFix(location)) {
+			return false;
+		}
+		long nowMs = System.currentTimeMillis();
+		synchronized (lock) {
+			if (nowMs - lastGpsSentAtMs < GPS_SEND_INTERVAL_MS) {
+				return false;
+			}
+			lastGpsSentAtMs = nowMs;
+		}
+		long locationTimeMs = location.getTime() > 0 ? location.getTime() : nowMs;
+		boolean sent = client.sendGpsFix(
+				location.getLatitude(),
+				location.getLongitude(),
+				location.hasAccuracy() ? location.getAccuracy() : 0f,
+				location.hasSpeed() ? Math.max(0f, location.getSpeed()) : 0f,
+				location.hasBearing() ? location.getBearing() : 0f,
+				0,
+				0f,
+				locationTimeMs / 1000L,
+				TimeZone.getDefault().getOffset(locationTimeMs) / 60_000);
+		if (!sent) {
+			synchronized (lock) {
+				lastGpsSentAtMs = 0L;
+			}
+		}
+		return sent;
+	}
+
 	public void clearDetections() {
 		synchronized (lock) {
 			lastDetection = null;
@@ -197,6 +232,9 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 	public void disconnect() {
 		stopScan();
 		client.disconnect();
+		synchronized (lock) {
+			lastGpsSentAtMs = 0L;
+		}
 		setState(State.IDLE, app.getString(R.string.flockfree_cyd_status_idle));
 	}
 
@@ -288,6 +326,15 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 		return false;
 	}
 
+	private boolean isValidGpsFix(@NonNull Location location) {
+		double latitude = location.getLatitude();
+		double longitude = location.getLongitude();
+		return !Double.isNaN(latitude) && !Double.isInfinite(latitude)
+				&& !Double.isNaN(longitude) && !Double.isInfinite(longitude)
+				&& latitude >= -90d && latitude <= 90d
+				&& longitude >= -180d && longitude <= 180d;
+	}
+
 	private void setState(@NonNull State state, @Nullable String message) {
 		synchronized (lock) {
 			this.state = state;
@@ -305,6 +352,9 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 
 	@Override
 	public void onCydReady() {
+		synchronized (lock) {
+			lastGpsSentAtMs = 0L;
+		}
 		setState(State.READY, app.getString(R.string.flockfree_cyd_status_ready));
 		app.showShortToastMessage(R.string.flockfree_cyd_status_ready);
 		client.sendStatusRequest();

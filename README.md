@@ -32,7 +32,7 @@ OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-de
 Verified debug package/application ID: `com.yetiwurks.flockfree`.
 Verified APK SHA-256: `aecab4bdb9f873649e90fc3b4d1f6ff8f8c673e599c0b902fecf4772ff168c73`.
 That APK was installed and launched on a Moto G Stylus over Wi-Fi ADB. It includes the route-summary hook and exposed FlockFree plugin settings screen.
-The source tree has newer camera-indexing, experimental two-pass avoidance routing, location-based camera alerts, OSM editor tag-prefill reporting, CYD BLE settings controls, and CYD detection map/review work after that APK. Rebuild before testing those features on-device.
+The source tree has newer camera-indexing, experimental two-pass avoidance routing, location-based camera alerts, OSM editor tag-prefill reporting, CYD BLE settings controls, phone GPS streaming to CYD, and CYD detection map/review work after that APK. Rebuild before testing those features on-device.
 
 ## What Works Now
 
@@ -49,6 +49,7 @@ The source tree has newer camera-indexing, experimental two-pass avoidance routi
 - With nearby alerts enabled, FlockFree can warn while navigating or moving when the current GPS fix is within the configured alert distance of the nearest known camera.
 - The plugin settings screen is exposed through the OsmAnd plugin settings flow for map layer visibility, route summaries, corridor radius, alert distance, and CYD BLE enablement.
 - A CYD BLE UART path exists for `FYHELLO`, `FYSTATUS`, `FYSIM`, `FYGPS`, `pair_status`, and `detection` messages.
+- Once the CYD is connected, FlockFree forwards valid phone GPS fixes over `FYGPS` about once per second so the CYD can time/location-stamp detections without DeFlock running separately.
 - GPS-backed CYD detections are kept as recent candidates, persisted to a small local JSON store, drawn on the map as distinct CYD markers, and can be reviewed through the existing ALPR camera reporting flow.
 
 ## Still Stubbed Or Thin
