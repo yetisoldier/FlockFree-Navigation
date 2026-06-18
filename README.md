@@ -104,6 +104,7 @@ scripts/flockfree-adb-recover.sh
 ```
 
 If recovery still cannot reach `device`, confirm the phone is awake, on the same Wi-Fi network, Wireless debugging is enabled, and the IP:port has not changed.
+The recovery bundle includes `adb-mdns-after.txt` and `ip-neigh-after.txt` to help spot a changed Wireless debugging port or a failed old IP.
 
 For a no-Gradle CYD/GPS permission prep pass on the Moto, run:
 

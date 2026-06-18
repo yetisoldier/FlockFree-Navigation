@@ -21,6 +21,7 @@ scripts/flockfree-adb-recover.sh
 ```
 
 If recovery still reports `No route to host` or an unknown ADB state, wake the phone, confirm it is still on the same Wi-Fi network, confirm Wireless debugging is enabled, copy the current IP:port from the phone, and rerun with `--serial PHONE_IP:PORT`.
+Review `adb-mdns-after.txt` and `ip-neigh-after.txt` in the recovery bundle if the phone may have changed Wireless debugging port or IP.
 
 For the easiest manual path, run:
 

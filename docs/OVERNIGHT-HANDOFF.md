@@ -66,7 +66,7 @@
 
 ## Morning First Steps
 
-1. If Wi-Fi ADB is unreachable, run `scripts/flockfree-adb-recover.sh`. If it still cannot reach `device`, wake the phone, confirm same-Wi-Fi and Wireless debugging, copy the current IP:port, and rerun with `--serial PHONE_IP:PORT`.
+1. If Wi-Fi ADB is unreachable, run `scripts/flockfree-adb-recover.sh`. If it still cannot reach `device`, check the recovery bundle's `adb-mdns-after.txt` and `ip-neigh-after.txt`, then wake the phone, confirm same-Wi-Fi and Wireless debugging, copy the current IP:port, and rerun with `--serial PHONE_IP:PORT`.
 2. Rebuild/install the latest source manually with `scripts/flockfree-user-build-install.sh` so the phone has the newest app-code changes.
 3. Open the app on the Moto G Stylus. It should install as `com.yetiwurks.flockfree`.
 4. Work through or skip the first-run map download flow.

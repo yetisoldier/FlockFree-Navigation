@@ -120,8 +120,16 @@ log "ADB serial: ${SERIAL}"
 log ""
 
 capture adb-devices-before.txt "$ADB" devices -l
+capture adb-mdns-before.txt "$ADB" mdns services
 
 host="$(host_from_serial)"
+if [ -n "$host" ] && command -v ip >/dev/null 2>&1; then
+  capture ip-route-host-before.txt ip route get "$host"
+  capture ip-neigh-before.txt ip neigh show
+else
+  log "Skipped route/neighbor capture: serial is not host:port or ip is unavailable."
+fi
+
 if [ -n "$host" ] && command -v ping >/dev/null 2>&1; then
   capture ping-host.txt ping -c 1 -W 2 "$host"
 else
@@ -144,6 +152,11 @@ if [[ "$SERIAL" == *:* ]]; then
 fi
 
 capture adb-devices-after.txt "$ADB" devices -l
+capture adb-mdns-after.txt "$ADB" mdns services
+if [ -n "$host" ] && command -v ip >/dev/null 2>&1; then
+  capture ip-route-host-after.txt ip route get "$host"
+  capture ip-neigh-after.txt ip neigh show
+fi
 
 state="$(get_state)"
 log ""
@@ -153,6 +166,7 @@ if [ "$state" != "device" ]; then
   log ""
   log "Recovery did not reach device state."
   log "Likely causes: phone asleep, phone off Wi-Fi, Wireless debugging off, IP/port changed, or host cannot route to the phone."
+  log "Review adb-mdns-after.txt for a changed Wireless debugging port and ip-neigh-after.txt for whether the old host is FAILED."
   log "On the phone, confirm Wireless debugging is enabled and note the current IP:port, then rerun with:"
   log "  scripts/flockfree-adb-recover.sh --serial PHONE_IP:PORT"
   exit 2
