@@ -24,6 +24,8 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 	private static final int MAX_DYNAMIC_STATUS_REFRESH_TICKS = 90;
 	private static final String CAMERA_DATA_STATUS_KEY = "flockfree_camera_data_status";
 	private static final String CAMERA_DATA_REFRESH_KEY = "flockfree_camera_data_refresh";
+	private static final String CAMERA_NEAREST_MAP_CENTER_KEY = "flockfree_camera_nearest_map_center";
+	private static final String CAMERA_NEAREST_LAST_CHECK_KEY = "flockfree_camera_nearest_last_check";
 	private static final String ROUTE_LAST_CHECK_KEY = "flockfree_route_last_check";
 	private static final String ALERT_LAST_CHECK_KEY = "flockfree_alert_last_check";
 	private static final String ALERT_CHECK_MAP_CENTER_KEY = "flockfree_alert_check_map_center";
@@ -58,6 +60,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		setupSwitchPreference(plugin.CAMERA_SHOW_LAYER.getId(),
 				R.string.flockfree_show_cameras_on_map_description);
 		setupCameraDataStatusPreference();
+		setupNearestCameraLastCheckPreference();
 		setupSwitchPreference(plugin.CAMERA_AVOIDANCE_ENABLED.getId(),
 				R.string.flockfree_camera_avoidance_enabled_description);
 		setupDistancePreference(plugin.CAMERA_AVOIDANCE_RADIUS.getId(), AVOIDANCE_RADIUS_VALUES,
@@ -114,6 +117,13 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		Preference preference = findPreference(ROUTE_LAST_CHECK_KEY);
 		if (preference != null) {
 			preference.setSummary(plugin.getLastRouteCheckSummary());
+		}
+	}
+
+	private void setupNearestCameraLastCheckPreference() {
+		Preference preference = findPreference(CAMERA_NEAREST_LAST_CHECK_KEY);
+		if (preference != null) {
+			preference.setSummary(plugin.getLastNearestCameraSummary());
 		}
 	}
 
@@ -215,6 +225,10 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 			refreshCameraData();
 			startDynamicStatusRefresh();
 			return true;
+		} else if (CAMERA_NEAREST_MAP_CENTER_KEY.equals(key)) {
+			plugin.showNearestCameraAtMapCenter(getMapActivity());
+			setupNearestCameraLastCheckPreference();
+			return true;
 		} else if (CYD_CONNECT_KEY.equals(key)) {
 			startCydScan();
 			return true;
@@ -283,6 +297,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 
 	private void refreshDynamicStatusPreferences() {
 		setupCameraDataStatusPreference();
+		setupNearestCameraLastCheckPreference();
 		setupRouteLastCheckPreference();
 		setupAlertLastCheckPreference();
 		setupReportLastDraftPreference();

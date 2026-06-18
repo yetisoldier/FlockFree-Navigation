@@ -88,6 +88,8 @@ required_xml_keys = {
     "flockfree_report_last_draft",
     "cyd_ble_enabled",
     "flockfree_camera_data_refresh",
+    "flockfree_camera_nearest_map_center",
+    "flockfree_camera_nearest_last_check",
     "flockfree_route_last_check",
     "flockfree_cyd_status",
     "flockfree_cyd_connect",
@@ -101,7 +103,10 @@ if missing_xml:
 
 required_fragments = [
     "CAMERA_DATA_REFRESH_KEY",
+    "CAMERA_NEAREST_MAP_CENTER_KEY",
+    "CAMERA_NEAREST_LAST_CHECK_KEY",
     "refreshCameraData()",
+    "setupNearestCameraLastCheckPreference()",
     "flockfree_camera_data_loaded_source_age_summary",
     "getLastLoadedSourceLabel()",
     "getLastLoadedFreshnessLabel()",
@@ -126,6 +131,7 @@ for key in [
     "CAMERA_ROUTE_LAST_CHECK_SUMMARY",
     "CAMERA_ALERT_LAST_CHECK_SUMMARY",
     "CAMERA_REPORT_LAST_DRAFT_SUMMARY",
+    "CAMERA_NEAREST_LAST_CHECK_SUMMARY",
     "DEFAULT_STATUS_SUMMARY",
 ]:
     if key not in prefs:
@@ -135,6 +141,8 @@ required_plugin_tokens = [
     "CAMERA_ROUTE_LAST_CHECK_SUMMARY.set(summary)",
     "CAMERA_ALERT_LAST_CHECK_SUMMARY.set(summary)",
     "checkCameraAlertAtMapCenter(",
+    "showNearestCameraAtMapCenter(",
+    "setLastNearestCameraSummary(",
     "checkCameraAlertAt(latitude, longitude",
     "getMapView().getLatitude()",
     "forceAlert",
@@ -146,6 +154,7 @@ if missing_plugin:
     raise SystemExit("missing persisted status preference wiring:\n" + "\n".join(missing_plugin))
 required_fragment_tokens = [
     "ALERT_CHECK_MAP_CENTER_KEY",
+    "plugin.showNearestCameraAtMapCenter(getMapActivity())",
     "plugin.checkCameraAlertAtMapCenter(getMapActivity())",
     "REPORT_MAP_CENTER_KEY",
     "showAddCameraDialogAtMapCenter(getMapActivity())",

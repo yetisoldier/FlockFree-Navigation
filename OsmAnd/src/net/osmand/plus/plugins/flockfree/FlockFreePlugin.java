@@ -4,6 +4,7 @@ import android.content.Context;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
 
 import net.osmand.Location;
 import net.osmand.plus.OsmandApplication;
@@ -41,6 +42,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     public final CommonPreference<String> CAMERA_ROUTE_LAST_CHECK_SUMMARY;
     public final CommonPreference<String> CAMERA_ALERT_LAST_CHECK_SUMMARY;
     public final CommonPreference<String> CAMERA_REPORT_LAST_DRAFT_SUMMARY;
+    public final CommonPreference<String> CAMERA_NEAREST_LAST_CHECK_SUMMARY;
 
     // Context menu item order
     private static final int CAMERA_DETAILS_ITEM_ORDER = 7800;
@@ -50,6 +52,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     private static final long CAMERA_ALERT_COOLDOWN_MS = 90_000L;
     private static final long SAME_CAMERA_ALERT_COOLDOWN_MS = 10 * 60_000L;
     private static final float MOVING_ALERT_SPEED_MPS = 2.0f;
+    private static final int MAP_CENTER_CAMERA_SEARCH_RADIUS_METERS = 5_000;
 
     private FlockFreeLayer cameraLayer;
     private CameraData cameraData;
@@ -90,6 +93,9 @@ public class FlockFreePlugin extends OsmandPlugin {
                 FlockFreePreferences.DEFAULT_STATUS_SUMMARY).makeProfile().cache();
         CAMERA_REPORT_LAST_DRAFT_SUMMARY = registerStringPreference(
                 FlockFreePreferences.CAMERA_REPORT_LAST_DRAFT_SUMMARY,
+                FlockFreePreferences.DEFAULT_STATUS_SUMMARY).makeProfile().cache();
+        CAMERA_NEAREST_LAST_CHECK_SUMMARY = registerStringPreference(
+                FlockFreePreferences.CAMERA_NEAREST_LAST_CHECK_SUMMARY,
                 FlockFreePreferences.DEFAULT_STATUS_SUMMARY).makeProfile().cache();
     }
 
@@ -180,6 +186,18 @@ public class FlockFreePlugin extends OsmandPlugin {
         CAMERA_ALERT_LAST_CHECK_SUMMARY.set(summary);
     }
 
+    @NonNull
+    public synchronized String getLastNearestCameraSummary() {
+        String summary = CAMERA_NEAREST_LAST_CHECK_SUMMARY.get();
+        return summary != null && summary.length() > 0
+                ? summary
+                : app.getString(R.string.flockfree_camera_nearest_last_check_none);
+    }
+
+    private synchronized void setLastNearestCameraSummary(@NonNull String summary) {
+        CAMERA_NEAREST_LAST_CHECK_SUMMARY.set(summary);
+    }
+
     public void checkCameraAlertAtMapCenter(@Nullable MapActivity mapActivity) {
         if (mapActivity == null || mapActivity.getMapView() == null) {
             setLastCameraAlertCheckSummary(app.getString(R.string.flockfree_alert_last_check_map_unavailable));
@@ -194,6 +212,55 @@ public class FlockFreePlugin extends OsmandPlugin {
             return;
         }
         checkCameraAlertAt(latitude, longitude, null, false, false, true);
+    }
+
+    public void showNearestCameraAtMapCenter(@Nullable MapActivity mapActivity) {
+        if (mapActivity == null || mapActivity.getMapView() == null) {
+            String summary = app.getString(R.string.flockfree_camera_nearest_map_unavailable);
+            setLastNearestCameraSummary(summary);
+            app.showShortToastMessage(summary);
+            return;
+        }
+        double latitude = mapActivity.getMapView().getLatitude();
+        double longitude = mapActivity.getMapView().getLongitude();
+        if (!isValidCoordinate(latitude, longitude)) {
+            String summary = app.getString(R.string.flockfree_camera_nearest_map_unavailable);
+            setLastNearestCameraSummary(summary);
+            app.showShortToastMessage(summary);
+            return;
+        }
+        CameraData data = getCameraData();
+        if (!data.isDataLoaded()) {
+            data.ensureDataLoaded();
+            String summary = app.getString(R.string.flockfree_camera_nearest_loading);
+            setLastNearestCameraSummary(summary);
+            app.showShortToastMessage(summary);
+            return;
+        }
+        List<CameraData.CameraPoint> cameras = data.getCamerasNear(
+                latitude, longitude, MAP_CENTER_CAMERA_SEARCH_RADIUS_METERS);
+        CameraData.CameraPoint closest = null;
+        double closestDistance = Double.MAX_VALUE;
+        for (CameraData.CameraPoint camera : cameras) {
+            double distance = MapUtils.getDistance(latitude, longitude, camera.lat, camera.lon);
+            if (distance < closestDistance) {
+                closest = camera;
+                closestDistance = distance;
+            }
+        }
+        if (closest == null) {
+            String summary = app.getString(R.string.flockfree_camera_nearest_none,
+                    MAP_CENTER_CAMERA_SEARCH_RADIUS_METERS);
+            setLastNearestCameraSummary(summary);
+            app.showShortToastMessage(summary);
+            return;
+        }
+        String brand = closest.brand != null ? closest.brand : app.getString(R.string.res_unknown);
+        int roundedDistance = Math.max(1, Math.round((float) closestDistance));
+        setLastNearestCameraSummary(app.getString(
+                R.string.flockfree_camera_nearest_last_check_found, brand, roundedDistance));
+        showCameraDetails(mapActivity, closest, closestDistance,
+                R.string.flockfree_camera_nearest_details);
     }
 
     @Override
@@ -288,9 +355,21 @@ public class FlockFreePlugin extends OsmandPlugin {
     }
 
     public void showCameraDetails(@NonNull MapActivity mapActivity, @NonNull CameraData.CameraPoint camera) {
+        showCameraDetails(mapActivity, camera, null, R.string.flockfree_alpr_camera);
+    }
+
+    private void showCameraDetails(@NonNull MapActivity mapActivity,
+                                   @NonNull CameraData.CameraPoint camera,
+                                   @Nullable Double distanceFromMapCenterMeters,
+                                   @StringRes int titleId) {
         StringBuilder sb = new StringBuilder();
         String unknown = app.getString(R.string.res_unknown);
         String na = app.getString(R.string.n_a);
+        if (distanceFromMapCenterMeters != null) {
+            sb.append(app.getString(R.string.flockfree_detail_distance_from_map_center)).append(": ")
+                    .append(Math.max(1, Math.round(distanceFromMapCenterMeters.floatValue())))
+                    .append(" ").append(app.getString(R.string.shared_string_meters)).append("\n");
+        }
         sb.append(app.getString(R.string.flockfree_detail_brand)).append(": ").append(camera.brand != null ? camera.brand : unknown).append("\n");
         sb.append(app.getString(R.string.flockfree_detail_operator)).append(": ").append(camera.operator != null ? camera.operator : unknown).append("\n");
         sb.append(app.getString(R.string.flockfree_detail_direction)).append(": ").append(camera.direction != null ? camera.direction : unknown).append("\n");
@@ -300,7 +379,7 @@ public class FlockFreePlugin extends OsmandPlugin {
         sb.append(app.getString(R.string.flockfree_detail_osm_type)).append(": ").append(camera.osmType != null ? camera.osmType : na).append("\n");
         sb.append(app.getString(R.string.flockfree_detail_last_updated)).append(": ").append(camera.osmTimestamp != null ? camera.osmTimestamp : na);
         android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(mapActivity);
-        builder.setTitle(R.string.flockfree_alpr_camera)
+        builder.setTitle(titleId)
                 .setMessage(sb.toString())
                 .setPositiveButton(R.string.shared_string_ok, null)
                 .show();
