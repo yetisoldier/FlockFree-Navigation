@@ -231,7 +231,7 @@ public class FlockFreePlugin extends OsmandPlugin {
         }
         getCameraData().ensureDataLoaded();
         if (!getCameraData().isDataLoaded()) {
-            app.showShortToastMessage("FlockFree: camera data is still loading");
+            app.showShortToastMessage(R.string.flockfree_route_camera_data_loading);
             return;
         }
         RouteCalculationResult route = app.getRoutingHelper().getRoute();
@@ -242,6 +242,6 @@ public class FlockFreePlugin extends OsmandPlugin {
         if (routeLocations == null || routeLocations.isEmpty()) {
             return;
         }
-        app.showToastMessage("FlockFree: " + getAvoidanceHelper().getRouteCameraSummaryFromLocations(routeLocations));
+        app.showToastMessage(getAvoidanceHelper().getRouteCameraSummaryFromLocations(routeLocations));
     }
 }

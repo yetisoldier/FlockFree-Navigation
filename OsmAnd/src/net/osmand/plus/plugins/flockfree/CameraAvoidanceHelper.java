@@ -7,6 +7,7 @@ import net.osmand.PlatformUtil;
 import net.osmand.binary.RouteDataObject;
 import net.osmand.data.LatLon;
 import net.osmand.plus.OsmandApplication;
+import net.osmand.plus.R;
 import net.osmand.plus.routing.RouteCalculationResult;
 import net.osmand.plus.routing.RouteSegmentSearchResult;
 import net.osmand.router.RouteSegmentResult;
@@ -170,7 +171,7 @@ public class CameraAvoidanceHelper {
     @NonNull
     public String getRouteCameraSummary(@NonNull List<LatLon> routePoints) {
         if (!isAvoidanceEnabled()) {
-            return "Camera avoidance disabled";
+            return app.getString(R.string.flockfree_route_avoidance_disabled);
         }
         int radius = getAvoidanceRadius();
         List<CameraData.CameraPoint> cameras = findCamerasNearRoute(routePoints, radius);
@@ -180,7 +181,7 @@ public class CameraAvoidanceHelper {
     @NonNull
     public String getRouteCameraSummaryFromLocations(@NonNull List<Location> routeLocations) {
         if (!isAvoidanceEnabled()) {
-            return "Camera avoidance disabled";
+            return app.getString(R.string.flockfree_route_avoidance_disabled);
         }
         int radius = getAvoidanceRadius();
         List<CameraData.CameraPoint> cameras = findCamerasNearRouteLocations(routeLocations, radius);
@@ -190,7 +191,7 @@ public class CameraAvoidanceHelper {
     @NonNull
     private String formatRouteCameraSummary(@NonNull List<CameraData.CameraPoint> cameras, int radius) {
         if (cameras.isEmpty()) {
-            return "No cameras detected within " + radius + "m of route";
+            return app.getString(R.string.flockfree_route_no_cameras_summary, radius);
         }
         int flock = 0, motorola = 0, genetec = 0, other = 0;
         for (CameraData.CameraPoint cam : cameras) {
@@ -201,11 +202,15 @@ public class CameraAvoidanceHelper {
             else other++;
         }
         StringBuilder sb = new StringBuilder();
-        sb.append(cameras.size()).append(" cameras near route (").append(radius).append("m corridor):\n");
-        if (flock > 0) sb.append("  Flock Safety: ").append(flock).append("\n");
-        if (motorola > 0) sb.append("  Motorola: ").append(motorola).append("\n");
-        if (genetec > 0) sb.append("  Genetec: ").append(genetec).append("\n");
-        if (other > 0) sb.append("  Other: ").append(other);
+        sb.append(app.getString(R.string.flockfree_route_cameras_summary, cameras.size(), radius)).append("\n");
+        if (flock > 0) appendCount(sb, R.string.flockfree_route_vendor_flock, flock);
+        if (motorola > 0) appendCount(sb, R.string.flockfree_route_vendor_motorola, motorola);
+        if (genetec > 0) appendCount(sb, R.string.flockfree_route_vendor_genetec, genetec);
+        if (other > 0) appendCount(sb, R.string.flockfree_route_vendor_other, other);
         return sb.toString().trim();
+    }
+
+    private void appendCount(@NonNull StringBuilder sb, int labelId, int count) {
+        sb.append("  ").append(app.getString(labelId)).append(": ").append(count).append("\n");
     }
 }

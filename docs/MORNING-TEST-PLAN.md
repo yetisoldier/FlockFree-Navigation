@@ -72,6 +72,31 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 
 ## Useful Diagnostics
 
+For a repeatable no-Gradle snapshot from the Moto over Wi-Fi ADB:
+
+```bash
+cd /home/yetisoldier/projects/FlockFree-Navigation
+scripts/flockfree-moto-diagnostics.sh
+```
+
+The script defaults to the last verified Moto Wi-Fi ADB endpoint, `192.168.1.139:5555`, and writes local-only artifacts under `logs/flockfree-diagnostics/YYYYMMDD-HHMMSS/`. It checks `adb` device state, whether `com.yetiwurks.flockfree` is installed, current focused activity, app PID/process state, package metadata, and a filtered logcat snapshot for `FlockFree`, `CameraData`, `FATAL`, `AndroidRuntime`, and `com.yetiwurks.flockfree`. Start with `summary.txt`, then inspect `package-state.txt`, `current-activity.txt`, `process-state.txt`, and `logcat-flockfree-camera-fatal.txt`.
+
+If the phone IP changes:
+
+```bash
+scripts/flockfree-moto-diagnostics.sh --serial PHONE_IP:5555
+```
+
+To collect a fresh launch window without keeping old logcat noise:
+
+```bash
+scripts/flockfree-moto-diagnostics.sh --clear-logcat --launch
+```
+
+The script does not upload or send anything externally. It is safe to rerun; each run creates a new ignored `logs/` subdirectory.
+
+Manual equivalents:
+
 ```bash
 adb logcat -c
 adb shell monkey -p com.yetiwurks.flockfree 1

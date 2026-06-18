@@ -26,6 +26,14 @@
 	<string name="flockfree_camera_data_loaded_summary">%1$d cameras indexed in %2$d map buckets.</string>
 	<string name="flockfree_camera_data_loading_summary">Camera data is loading.</string>
 	<string name="flockfree_camera_data_not_loaded_summary">Camera data has not loaded yet. Open the map on a network connection to start the download.</string>
+	<string name="flockfree_route_camera_data_loading">FlockFree: camera data is still loading.</string>
+	<string name="flockfree_route_avoidance_disabled">FlockFree: camera avoidance disabled.</string>
+	<string name="flockfree_route_no_cameras_summary">FlockFree: no cameras detected within %1$d meters of route.</string>
+	<string name="flockfree_route_cameras_summary">FlockFree: %1$d cameras near route (%2$d-meter corridor):</string>
+	<string name="flockfree_route_vendor_flock">Flock Safety</string>
+	<string name="flockfree_route_vendor_motorola">Motorola</string>
+	<string name="flockfree_route_vendor_genetec">Genetec</string>
+	<string name="flockfree_route_vendor_other">Other</string>
 	<string name="flockfree_alerts">Alerts</string>
 	<string name="flockfree_alert_distance">Alert distance</string>
 	<string name="flockfree_alert_distance_description">Reserved distance for future nearby-camera alerts.</string>

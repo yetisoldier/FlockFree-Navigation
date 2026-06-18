@@ -57,3 +57,11 @@
 4. Move/zoom to a camera-dense area and verify markers.
 5. Open the plugin settings, confirm the camera-data diagnostic row, enable camera avoidance, calculate a route, and verify the route-summary toast.
 6. Compare one camera-dense offline route with avoidance off and on. A successful newer build should either route around camera-adjacent road objects or fall back cleanly to the original route.
+
+For a no-Gradle device snapshot before or after those checks, run:
+
+```bash
+scripts/flockfree-moto-diagnostics.sh
+```
+
+The collector uses Wi-Fi ADB, defaults to `192.168.1.139:5555`, writes only local ignored files under `logs/flockfree-diagnostics/`, and captures ADB state, package install state, current activity, PID, package metadata, and filtered `FlockFree` / `CameraData` / `FATAL` logcat evidence.

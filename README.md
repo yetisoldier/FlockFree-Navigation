@@ -54,6 +54,14 @@ The source tree has newer camera-indexing, experimental two-pass avoidance routi
 
 Use [docs/MORNING-TEST-PLAN.md](docs/MORNING-TEST-PLAN.md). The current verified APK has been installed and launched on the Moto G Stylus over Wi-Fi ADB.
 
+For a no-Gradle diagnostic snapshot during morning validation, run:
+
+```bash
+scripts/flockfree-moto-diagnostics.sh
+```
+
+It writes local artifacts under ignored `logs/flockfree-diagnostics/` and checks ADB state, package install state, current activity, PID/process state, package metadata, and filtered FlockFree/CameraData/FATAL logcat output.
+
 ## Credits
 
 - Built on [OsmAnd](https://github.com/osmandapp/osmand) under Apache 2.0.

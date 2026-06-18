@@ -217,10 +217,14 @@ public class RouteProvider {
 		}
 
 		RouteCalculationParams avoidedParams = copyParamsForFlockFreeAvoidance(params, avoidIds);
-		RouteCalculationResult avoided = findVectorMapsRoute(avoidedParams, calcGPXRoute);
-		if (avoided.isCalculated()) {
-			log.info("FlockFree recalculated route with " + avoidIds.size() + " temporary avoid road ids");
-			return avoided;
+		try {
+			RouteCalculationResult avoided = findVectorMapsRoute(avoidedParams, calcGPXRoute);
+			if (avoided.isCalculated()) {
+				log.info("FlockFree recalculated route with " + avoidIds.size() + " temporary avoid road ids");
+				return avoided;
+			}
+		} catch (IOException e) {
+			log.warn("FlockFree temporary camera avoidance threw; returning original route", e);
 		}
 		log.warn("FlockFree temporary camera avoidance failed; returning original route");
 		return null;

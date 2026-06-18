@@ -5,6 +5,8 @@ import androidx.annotation.Nullable;
 
 import org.json.JSONObject;
 
+import java.util.Locale;
+
 public final class CydDetectionCandidate {
 
 	@NonNull
@@ -41,32 +43,32 @@ public final class CydDetectionCandidate {
 
 	private CydDetectionCandidate(@NonNull JSONObject json, long receivedAtMs) {
 		rawJson = json.toString();
-		detectionMethod = optNonEmptyString(json, "detection_method");
-		protocol = optNonEmptyString(json, "protocol");
-		macAddress = optNonEmptyString(json, "mac_address");
-		oui = optNonEmptyString(json, "oui");
-		deviceName = optNonEmptyString(json, "device_name");
-		ssid = optNonEmptyString(json, "ssid");
-		rssi = optInteger(json, "rssi");
-		channel = optInteger(json, "channel");
-		frequency = optInteger(json, "frequency");
+		detectionMethod = CydJsonUtils.optNonEmptyString(json, "detection_method");
+		protocol = CydJsonUtils.optNonEmptyString(json, "protocol");
+		macAddress = CydJsonUtils.optNonEmptyString(json, "mac_address");
+		oui = CydJsonUtils.optNonEmptyString(json, "oui");
+		deviceName = CydJsonUtils.optNonEmptyString(json, "device_name");
+		ssid = CydJsonUtils.optNonEmptyString(json, "ssid");
+		rssi = CydJsonUtils.optInteger(json, "rssi");
+		channel = CydJsonUtils.optInteger(json, "channel");
+		frequency = CydJsonUtils.optInteger(json, "frequency");
 		this.receivedAtMs = receivedAtMs;
 
 		JSONObject gps = json.optJSONObject("gps");
 		if (gps != null) {
-			latitude = optDouble(gps, "latitude");
-			longitude = optDouble(gps, "longitude");
-			Float accuracy = optFloat(gps, "accuracy");
-			accuracyMeters = accuracy != null ? accuracy : optFloat(gps, "accuracy_m");
-			gpsAgeMs = optLong(gps, "age_ms");
-			gpsSource = optNonEmptyString(gps, "source");
+			latitude = CydJsonUtils.optDouble(gps, "latitude");
+			longitude = CydJsonUtils.optDouble(gps, "longitude");
+			Float accuracy = CydJsonUtils.optFloat(gps, "accuracy");
+			accuracyMeters = accuracy != null ? accuracy : CydJsonUtils.optFloat(gps, "accuracy_m");
+			gpsAgeMs = CydJsonUtils.optLong(gps, "age_ms");
+			gpsSource = CydJsonUtils.optNonEmptyString(gps, "source");
 		} else {
-			latitude = optDouble(json, "latitude");
-			longitude = optDouble(json, "longitude");
-			Float accuracy = optFloat(json, "accuracy");
-			accuracyMeters = accuracy != null ? accuracy : optFloat(json, "accuracy_m");
-			gpsAgeMs = optLong(json, "gps_age_ms");
-			gpsSource = optNonEmptyString(json, "gps_source");
+			latitude = CydJsonUtils.optDouble(json, "latitude");
+			longitude = CydJsonUtils.optDouble(json, "longitude");
+			Float accuracy = CydJsonUtils.optFloat(json, "accuracy");
+			accuracyMeters = accuracy != null ? accuracy : CydJsonUtils.optFloat(json, "accuracy_m");
+			gpsAgeMs = CydJsonUtils.optLong(json, "gps_age_ms");
+			gpsSource = CydJsonUtils.optNonEmptyString(json, "gps_source");
 		}
 	}
 
@@ -76,39 +78,121 @@ public final class CydDetectionCandidate {
 	}
 
 	public boolean hasGpsFix() {
-		return latitude != null && longitude != null;
+		return isValidLatitude(latitude) && isValidLongitude(longitude);
 	}
 
-	private static boolean hasValue(@NonNull JSONObject json, @NonNull String key) {
-		return json.has(key) && !json.isNull(key);
-	}
-
-	@Nullable
-	private static String optNonEmptyString(@NonNull JSONObject json, @NonNull String key) {
-		if (!hasValue(json, key)) {
-			return null;
+	@NonNull
+	public String getDetectionTypeLabel() {
+		if (detectionMethod != null) {
+			return detectionMethod;
 		}
-		String value = json.optString(key, null);
-		return value == null || value.length() == 0 ? null : value;
+		if (protocol != null) {
+			return protocol;
+		}
+		return "Unknown detection";
+	}
+
+	@NonNull
+	public String getSourceLabel() {
+		if (deviceName != null) {
+			return deviceName;
+		}
+		if (ssid != null) {
+			return ssid;
+		}
+		if (macAddress != null) {
+			return macAddress;
+		}
+		return "Unknown CYD source";
 	}
 
 	@Nullable
-	private static Integer optInteger(@NonNull JSONObject json, @NonNull String key) {
-		return hasValue(json, key) ? json.optInt(key) : null;
+	public Integer getRssi() {
+		return rssi;
 	}
 
 	@Nullable
-	private static Long optLong(@NonNull JSONObject json, @NonNull String key) {
-		return hasValue(json, key) ? json.optLong(key) : null;
+	public Integer getChannel() {
+		return channel;
 	}
 
 	@Nullable
-	private static Double optDouble(@NonNull JSONObject json, @NonNull String key) {
-		return hasValue(json, key) ? json.optDouble(key) : null;
+	public Integer getFrequency() {
+		return frequency;
 	}
 
 	@Nullable
-	private static Float optFloat(@NonNull JSONObject json, @NonNull String key) {
-		return hasValue(json, key) ? (float) json.optDouble(key) : null;
+	public Double getLatitude() {
+		return latitude;
+	}
+
+	@Nullable
+	public Double getLongitude() {
+		return longitude;
+	}
+
+	@Nullable
+	public Float getAccuracyMeters() {
+		return accuracyMeters;
+	}
+
+	@Nullable
+	public Long getGpsAgeMs() {
+		return gpsAgeMs;
+	}
+
+	public long getReceivedAgeMs(long nowMs) {
+		return Math.max(0, nowMs - receivedAtMs);
+	}
+
+	@NonNull
+	public String getSignalStatus() {
+		StringBuilder builder = new StringBuilder();
+		CydJsonUtils.appendPart(builder, rssi != null ? "RSSI " + rssi + " dBm" : "RSSI unknown");
+		CydJsonUtils.appendPart(builder, channel != null ? "Channel " + channel : "Channel unknown");
+		if (frequency != null) {
+			CydJsonUtils.appendPart(builder, frequency + " MHz");
+		}
+		return builder.toString();
+	}
+
+	@NonNull
+	public String getGpsStatus() {
+		StringBuilder builder = new StringBuilder();
+		if (hasGpsFix()) {
+			CydJsonUtils.appendPart(builder, String.format(Locale.US, "%.6f, %.6f", latitude, longitude));
+			if (accuracyMeters != null) {
+				CydJsonUtils.appendPart(builder, String.format(Locale.US, "+/- %.1f m", accuracyMeters));
+			}
+		} else if (latitude != null || longitude != null) {
+			CydJsonUtils.appendPart(builder, "GPS incomplete");
+		} else {
+			CydJsonUtils.appendPart(builder, "GPS unavailable");
+		}
+		if (gpsSource != null) {
+			CydJsonUtils.appendPart(builder, "Source " + gpsSource);
+		}
+		if (gpsAgeMs != null) {
+			CydJsonUtils.appendPart(builder, "Age " + gpsAgeMs + " ms");
+		}
+		return builder.toString();
+	}
+
+	@NonNull
+	public String getStatusSummary() {
+		StringBuilder builder = new StringBuilder();
+		CydJsonUtils.appendPart(builder, getDetectionTypeLabel());
+		CydJsonUtils.appendPart(builder, getSourceLabel());
+		CydJsonUtils.appendPart(builder, getSignalStatus());
+		CydJsonUtils.appendPart(builder, getGpsStatus());
+		return builder.toString();
+	}
+
+	private static boolean isValidLatitude(@Nullable Double value) {
+		return value != null && value >= -90d && value <= 90d;
+	}
+
+	private static boolean isValidLongitude(@Nullable Double value) {
+		return value != null && value >= -180d && value <= 180d;
 	}
 }
