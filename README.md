@@ -1,61 +1,54 @@
 # FlockFree Navigation
 
-**ALPR camera-aware offline navigation. Powered by OpenStreetMap.**
+FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR camera awareness. The current branch is an early source baseline, not a finished consumer release.
 
-FlockFree Navigation is an OsmAnd fork that adds surveillance camera awareness to your everyday navigation. It shows known ALPR (Automatic License Plate Reader) cameras on the map, can route you around them, and lets you report new cameras to OpenStreetMap - all in one app.
+## Current Build Status
 
-## Features
-
-### Camera Map Layer
-- 104,000+ ALPR cameras from OpenStreetMap, pre-loaded
-- Color-coded by manufacturer (Flock Safety, Motorola, Genetec, Leonardo, and more)
-- Tap any camera for details: brand, direction, operator, last updated
-
-### Camera-Avoidance Routing
-- Toggle "Avoid cameras" and routes automatically steer around known ALPR locations
-- Configurable avoidance radius (50-500m)
-- Uses OsmAnd's native turn-by-turn navigation engine
-
-### Camera Reporting
-- One-tap reporting of new cameras to OpenStreetMap
-- Pre-configured tag presets for Flock Safety, Motorola, Genetec, and other ALPR vendors
-- Direction and orientation controls
-- Submits through OsmAnd's existing OSM changeset pipeline
-
-### CYD Hardware Integration (Optional)
-- Connects to [CYD-Flock-You](https://github.com/yetisoldier/CYD-Flock-You) ESP32 hardware sensor
-- Passive 2.4 GHz WiFi promiscuous detection of Flock Safety devices
-- Detections appear as review candidates on the map
-- Phone streams GPS coordinates to the hardware via Bluetooth LE
-
-### Offline Everything
-- Vector map tiles (tiny downloads, fast rendering)
-- Camera data cached locally (28MB, refreshed weekly)
-- Full offline navigation with voice guidance
-- No tracking, no ads, no data collection
-
-## Data Source
-
-All camera data comes from [OpenStreetMap](https://www.openstreetmap.org), exported by [DeFlock](https://deflock.org) as GeoJSON from `data.dontgetflocked.com`. FlockFree Navigation reads and writes the same OSM data - we are another client on the same network.
-
-## Building
+From the repository root:
 
 ```bash
-git clone https://github.com/yetisoldier/FlockFree-Navigation.git
-cd FlockFree-Navigation
-git clone --depth 1 https://github.com/osmandapp/OsmAnd-resources.git ../resources
+cd /home/yetisoldier/projects/FlockFree-Navigation
+git clone --depth 1 https://github.com/osmandapp/OsmAnd-resources.git ../resources  # skip if ../resources already exists
+
 ANDROID_HOME=$HOME/Android/Sdk ANDROID_SDK=$HOME/Android/Sdk \
-  ./gradlew --no-watch-fs --max-workers=1 :OsmAnd:assembleNightlyFreeLegacyFatDebug -x :OsmAnd-java:test
+  ./gradlew --no-watch-fs --max-workers=1 \
+  :OsmAnd:assembleNightlyFreeLegacyFatDebug \
+  -x :OsmAnd-java:test
 ```
 
-The debug build uses a development keystore included in the repo.
+That assemble path has compiled the FlockFree plugin successfully in local testing. The installable APK packaging path still needs cleanup: this checkout hit Android Gradle desugar/universal-package intermediates and did not leave a FlockFree APK under `OsmAnd/build/outputs/apk`.
+
+Debug package/application ID target: `com.yetiwurks.flockfree.dev`.
+
+## What Works Now
+
+- App branding and Gradle flavor are pointed at FlockFree for the `nightlyFree` debug build.
+- The FlockFree plugin is registered in OsmAnd and enabled by default.
+- Camera data downloads from `https://data.dontgetflocked.com/cameras.geojson.gz`, is cached as GeoJSON, and refreshes weekly.
+- Camera points render on the map at zoom 10+ with basic vendor colors and higher-zoom labels.
+- Tapping a rendered camera opens a simple details dialog with brand, operator, direction, mount, surveillance zone, OSM ID/type, and timestamp when present.
+- The map context menu has an `Add ALPR Camera` action that opens the current camera-reporting flow.
+- Basic preferences exist for map layer visibility, avoidance, alert distance, data timestamp, and CYD BLE enablement.
+
+## Still Stubbed Or Thin
+
+- Camera avoidance currently reports cameras near a supplied route corridor, but it is not wired into OsmAnd route calculation to block or penalize roads.
+- CYD BLE integration is preference-only in this repo state; no BLE manager/service/parser is wired in.
+- Camera storage is an in-memory parsed GeoJSON list after cache/download, not a spatial SQLite database.
+- No bundled first-run camera snapshot is present, so the first useful camera layer depends on network access to download data.
+- Widgets, quick actions, a polished settings screen, and rich camera detail UI are placeholders or not implemented.
+- Reporting depends on the current helper path and still needs end-to-end validation against OsmAnd's OSM editing flow.
+
+## Phone Test Plan
+
+Use [docs/MORNING-TEST-PLAN.md](docs/MORNING-TEST-PLAN.md) after the APK packaging path is fixed.
 
 ## Credits
 
-- Built on [OsmAnd](https://github.com/osmandapp/osmand) - Apache 2.0 licensed
-- Camera data from [DeFlock](https://deflock.org) / [OpenStreetMap](https://openstreetmap.org) contributors
-- Hardware detection by [CYD-Flock-You](https://github.com/yetisoldier/CYD-Flock-You)
+- Built on [OsmAnd](https://github.com/osmandapp/osmand) under Apache 2.0.
+- Camera data from [DeFlock](https://deflock.org) / [OpenStreetMap](https://openstreetmap.org) contributors.
+- Optional hardware direction from [CYD-Flock-You](https://github.com/yetisoldier/CYD-Flock-You).
 
 ## License
 
-Apache 2.0 (inherited from OsmAnd)
+Apache 2.0, inherited from OsmAnd.

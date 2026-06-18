@@ -14,7 +14,6 @@ import org.json.JSONObject;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,18 +31,18 @@ import java.util.zip.GZIPInputStream;
 public class CameraData {
 
     private static final Log LOG = PlatformUtil.getLog(CameraData.class);
-    private static final String TAG = "CameraData";
 
     private static final String CAMERA_DATA_URL = "https://data.dontgetflocked.com/cameras.geojson.gz";
     private static final String CACHE_FILENAME = "cameras.geojson";
     private static final long WEEK_MS = 7L * 24 * 60 * 60 * 1000;
+    private static final long MAX_GEOJSON_BYTES = 128L * 1024 * 1024;
 
     private final OsmandApplication app;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
-    private List<CameraPoint> cameras = new ArrayList<>();
-    private boolean dataLoaded = false;
-    private boolean loading = false;
+    private volatile List<CameraPoint> cameras = new ArrayList<>();
+    private volatile boolean dataLoaded = false;
+    private volatile boolean loading = false;
 
     public CameraData(@NonNull OsmandApplication app) {
         this.app = app;
@@ -64,9 +63,9 @@ public class CameraData {
         loading = true;
         executor.execute(() -> {
             try {
-                loadFromCache();
+                boolean loadedFromCache = loadFromCache();
                 long lastUpdate = getLastUpdateTimestamp();
-                if (!dataLoaded || (System.currentTimeMillis() - lastUpdate > WEEK_MS)) {
+                if (!loadedFromCache || isRefreshDue(lastUpdate)) {
                     downloadCameraData();
                 }
             } catch (Exception e) {
@@ -82,18 +81,24 @@ public class CameraData {
         return new File(dir, CACHE_FILENAME);
     }
 
-    private void loadFromCache() {
+    private boolean loadFromCache() {
         File cacheFile = getCacheFile();
         if (cacheFile.exists()) {
             try {
-                String json = readFileAsString(cacheFile);
-                parseGeoJSON(json);
+                String json = readGeoJsonFile(cacheFile);
+                if (!parseGeoJSON(json, "cache")) {
+                    return false;
+                }
                 dataLoaded = true;
-                LOG.info("Loaded " + cameras.size() + " cameras from cache");
+                LOG.info("Loaded " + cameras.size() + " cameras from cache (" + cacheFile.length() + " bytes)");
+                return true;
             } catch (Exception e) {
                 LOG.error("Failed to load camera cache", e);
             }
+        } else {
+            LOG.info("No FlockFree camera cache found");
         }
+        return false;
     }
 
     private void downloadCameraData() {
@@ -113,18 +118,21 @@ public class CameraData {
             }
 
             String json = readGeoJsonResponse(conn);
-
-            // Save to cache
-            writeStringToFile(json, cacheFile);
-
-            // Parse
-            parseGeoJSON(json);
+            if (!parseGeoJSON(json, "network")) {
+                return;
+            }
             dataLoaded = true;
 
-            // Save timestamp
-            app.getSettings().setPreference(FlockFreePreferences.CAMERA_DATA_LAST_UPDATE, System.currentTimeMillis());
+            writeStringToFile(json, cacheFile);
 
-            LOG.info("Downloaded and parsed " + cameras.size() + " cameras");
+            long updateTime = System.currentTimeMillis();
+            boolean timestampSaved = app.getSettings().setPreference(
+                    FlockFreePreferences.CAMERA_DATA_LAST_UPDATE, updateTime);
+            if (!timestampSaved) {
+                LOG.warn("Failed to save camera data update timestamp preference");
+            }
+
+            LOG.info("Downloaded and parsed " + cameras.size() + " cameras; timestampSaved=" + timestampSaved);
         } catch (Exception e) {
             LOG.error("Failed to download camera data", e);
         } finally {
@@ -134,32 +142,49 @@ public class CameraData {
         }
     }
 
-    private void parseGeoJSON(@NonNull String json) {
+    private boolean parseGeoJSON(@NonNull String json, @NonNull String source) {
         try {
             JSONObject root = new JSONObject(json);
             String type = root.optString("type", "");
             if (!"FeatureCollection".equals(type)) {
                 LOG.error("Unexpected GeoJSON type: " + type);
-                return;
+                return false;
             }
             JSONArray features = root.optJSONArray("features");
             if (features == null) {
                 LOG.error("No features in GeoJSON");
-                return;
+                return false;
             }
             List<CameraPoint> parsed = new ArrayList<>(features.length());
+            int skipped = 0;
             for (int i = 0; i < features.length(); i++) {
                 JSONObject feature = features.optJSONObject(i);
-                if (feature == null) continue;
+                if (feature == null) {
+                    skipped++;
+                    continue;
+                }
                 JSONObject geometry = feature.optJSONObject("geometry");
-                if (geometry == null) continue;
+                if (geometry == null) {
+                    skipped++;
+                    continue;
+                }
                 String geomType = geometry.optString("type", "");
-                if (!"Point".equals(geomType)) continue;
+                if (!"Point".equals(geomType)) {
+                    skipped++;
+                    continue;
+                }
                 JSONArray coords = geometry.optJSONArray("coordinates");
-                if (coords == null || coords.length() < 2) continue;
+                if (coords == null || coords.length() < 2) {
+                    skipped++;
+                    continue;
+                }
 
                 double lon = coords.getDouble(0);
                 double lat = coords.getDouble(1);
+                if (!isValidCoordinate(lat, lon)) {
+                    skipped++;
+                    continue;
+                }
 
                 JSONObject props = feature.optJSONObject("properties");
                 if (props == null) props = new JSONObject();
@@ -178,9 +203,20 @@ public class CameraData {
 
                 parsed.add(point);
             }
-            cameras = parsed;
+            if (parsed.isEmpty()) {
+                LOG.error("Parsed zero camera points from " + source + "; skipped=" + skipped
+                        + ", features=" + features.length());
+                return false;
+            }
+            synchronized (this) {
+                cameras = parsed;
+            }
+            LOG.info("Parsed " + parsed.size() + " camera points from " + source
+                    + "; skipped=" + skipped + ", features=" + features.length());
+            return true;
         } catch (Exception e) {
             LOG.error("Failed to parse GeoJSON", e);
+            return false;
         }
     }
 
@@ -197,10 +233,17 @@ public class CameraData {
     private long getLastUpdateTimestamp() {
         OsmandPreference<?> preference = app.getSettings().getPreference(FlockFreePreferences.CAMERA_DATA_LAST_UPDATE);
         if (preference != null && preference.get() instanceof Long) {
-            return (Long) preference.get();
+            long value = (Long) preference.get();
+            if (value > 0) {
+                return value;
+            }
         }
         File cacheFile = getCacheFile();
         return cacheFile.exists() ? cacheFile.lastModified() : 0L;
+    }
+
+    private boolean isRefreshDue(long lastUpdate) {
+        return lastUpdate <= 0 || System.currentTimeMillis() - lastUpdate > WEEK_MS;
     }
 
     @NonNull
@@ -229,23 +272,27 @@ public class CameraData {
         return result;
     }
 
-    private String readFileAsString(File file) throws IOException {
-        StringBuilder sb = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file)))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line).append('\n');
-            }
+    private String readGeoJsonFile(@NonNull File file) throws IOException {
+        if (file.length() > MAX_GEOJSON_BYTES) {
+            throw new IOException("Camera cache is too large: " + file.length() + " bytes");
         }
-        return sb.toString();
+        try (BufferedInputStream buffered = new BufferedInputStream(new java.io.FileInputStream(file))) {
+            return readMaybeGzipStream(buffered);
+        }
     }
 
     private String readStreamAsString(java.io.InputStream is) throws IOException {
         StringBuilder sb = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line).append('\n');
+        long total = 0;
+        char[] buffer = new char[16 * 1024];
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+            int read;
+            while ((read = reader.read(buffer)) != -1) {
+                total += read;
+                if (total > MAX_GEOJSON_BYTES) {
+                    throw new IOException("Camera data exceeds " + MAX_GEOJSON_BYTES + " bytes");
+                }
+                sb.append(buffer, 0, read);
             }
         }
         return sb.toString();
@@ -262,8 +309,17 @@ public class CameraData {
     }
 
     private String readGeoJsonResponse(@NonNull HttpURLConnection conn) throws IOException {
-        InputStream inputStream = conn.getInputStream();
-        BufferedInputStream buffered = new BufferedInputStream(inputStream);
+        int contentLength = conn.getContentLength();
+        if (contentLength > MAX_GEOJSON_BYTES) {
+            throw new IOException("Camera data response is too large: " + contentLength + " bytes");
+        }
+        try (InputStream inputStream = conn.getInputStream();
+             BufferedInputStream buffered = new BufferedInputStream(inputStream)) {
+            return readMaybeGzipStream(buffered);
+        }
+    }
+
+    private String readMaybeGzipStream(@NonNull BufferedInputStream buffered) throws IOException {
         buffered.mark(2);
         int b1 = buffered.read();
         int b2 = buffered.read();
@@ -271,10 +327,17 @@ public class CameraData {
         boolean gzipMagic = b1 == 0x1f && b2 == 0x8b;
         InputStream payload = gzipMagic ? new GZIPInputStream(buffered) : buffered;
         try {
+            LOG.info("Reading camera data payload; gzip=" + gzipMagic);
             return readStreamAsString(payload);
         } finally {
             payload.close();
         }
+    }
+
+    private static boolean isValidCoordinate(double lat, double lon) {
+        return !Double.isNaN(lat) && !Double.isNaN(lon)
+                && lat >= -90 && lat <= 90
+                && lon >= -180 && lon <= 180;
     }
 
     public static class CameraPoint {
