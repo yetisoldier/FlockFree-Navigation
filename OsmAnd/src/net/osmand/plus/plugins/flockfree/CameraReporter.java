@@ -9,7 +9,6 @@ import android.widget.EditText;
 import android.widget.Spinner;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import net.osmand.PlatformUtil;
 import net.osmand.osm.PoiType;
@@ -20,6 +19,7 @@ import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.plugins.osmedit.OsmEditingPlugin;
 import net.osmand.plus.plugins.osmedit.dialogs.EditPoiDialogFragment;
+import net.osmand.plus.settings.backend.preferences.CommonPreference;
 
 import org.apache.commons.logging.Log;
 
@@ -36,8 +36,7 @@ public class CameraReporter {
     private static final Log LOG = PlatformUtil.getLog(CameraReporter.class);
 
     private final OsmandApplication app;
-    @Nullable
-    private String lastReportDraftSummary;
+    private final CommonPreference<String> lastReportDraftSummaryPreference;
 
     // Brand presets with their OSM tag values
     private static final Map<String, Map<String, String>> BRAND_PRESETS = new LinkedHashMap<>();
@@ -87,8 +86,10 @@ public class CameraReporter {
         BRAND_PRESETS.put("Generic ALPR", generic);
     }
 
-    public CameraReporter(@NonNull OsmandApplication app) {
+    public CameraReporter(@NonNull OsmandApplication app,
+                          @NonNull CommonPreference<String> lastReportDraftSummaryPreference) {
         this.app = app;
+        this.lastReportDraftSummaryPreference = lastReportDraftSummaryPreference;
     }
 
     public Map<String, Map<String, String>> getBrandPresets() {
@@ -97,13 +98,14 @@ public class CameraReporter {
 
     @NonNull
     public synchronized String getLastReportDraftSummary() {
-        return lastReportDraftSummary != null
-                ? lastReportDraftSummary
+        String summary = lastReportDraftSummaryPreference.get();
+        return summary != null && summary.length() > 0
+                ? summary
                 : app.getString(R.string.flockfree_report_last_draft_none);
     }
 
     private synchronized void setLastReportDraftSummary(@NonNull String summary) {
-        lastReportDraftSummary = summary;
+        lastReportDraftSummaryPreference.set(summary);
     }
 
     /**

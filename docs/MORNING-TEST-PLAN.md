@@ -2,7 +2,7 @@
 
 Goal: prove the debug APK installs over Wi-Fi ADB, launches as FlockFree, and exposes the current camera-awareness MVP without chasing unfinished features.
 
-Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The last verified APK installed successfully on the Moto G Stylus and launched to the map. Current source includes camera indexing, bundled first-use camera seed fallback, camera-data source/freshness diagnostics, experimental two-pass camera avoidance, visible applied/fallback/skipped route diagnostics, movement/navigation camera alerts with retained last-check status, OSM editor tag-prefill reporting with retained report-draft status, cache-backed route startup, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, phone GPS streaming to CYD, and persisted CYD detection map/review candidates. Run `scripts/flockfree-user-build-install.sh` before morning feature testing so the installed APK matches the latest source.
+Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The last verified APK installed successfully on the Moto G Stylus and launched to the map. Current source includes camera indexing, bundled first-use camera seed fallback, camera-data source/freshness diagnostics, experimental two-pass camera avoidance, profile-persisted applied/fallback/skipped route diagnostics, movement/navigation camera alerts with profile-persisted last-check status, OSM editor tag-prefill reporting with profile-persisted report-draft status, cache-backed route startup, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, phone GPS streaming to CYD, and persisted CYD detection map/review candidates. Run `scripts/flockfree-user-build-install.sh` before morning feature testing so the installed APK matches the latest source.
 
 ## Setup
 
@@ -121,15 +121,15 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 - [ ] Tapping a camera opens the `ALPR Camera` details dialog.
 - [ ] Long-press or use map context at a location and confirm `Add ALPR Camera` is present.
 - [ ] Select an ALPR brand preset and confirm OsmAnd's POI editor opens with the surveillance/ALPR tags present in the advanced tag view.
-- [ ] Reopen FlockFree settings and confirm `Last report draft` reports the editor-opened or manual-tag-fallback path for that report attempt.
+- [ ] Reopen FlockFree settings and confirm `Last report draft` reports the editor-opened or manual-tag-fallback path for that report attempt; restart the app once and confirm the row still holds the result.
 - [ ] Open plugin/settings surfaces and confirm the FlockFree settings screen is visible.
 - [ ] Confirm the FlockFree settings screen shows a `Camera data` status row after camera data loads, including source `cache`, `bundled seed`, or `network`, plus last-refresh freshness or `Refresh due`.
 - [ ] Tap `Refresh camera data` once on Wi-Fi and confirm the status switches to loading, then refreshes in place or returns to the indexed camera count.
 - [ ] Toggle the camera layer preference if reachable, then return to the map and confirm the layer hides/shows after refresh.
 - [ ] Confirm `Nearby camera alerts`, `Alert distance`, and `Last alert check` are present, then while navigating or moving near a known camera confirm FlockFree shows a nearby-camera toast no more than once per cooldown window.
-- [ ] Reopen FlockFree settings and confirm `Last alert check` reports whether the latest location update triggered, found no camera, hit cooldown, or skipped for accuracy/movement/data reasons.
+- [ ] Reopen FlockFree settings and confirm `Last alert check` reports whether the latest location update triggered, found no camera, hit cooldown, or skipped for accuracy/movement/data reasons; restart the app once and confirm the row still holds the result.
 - [ ] Enable camera avoidance, calculate a route, and confirm FlockFree shows a route camera summary toast with `Avoidance applied`, `Avoidance fallback`, or an explicit skipped reason.
-- [ ] Reopen FlockFree settings and confirm `Last route check` preserves the same route summary/status after the toast disappears.
+- [ ] Reopen FlockFree settings and confirm `Last route check` preserves the same route summary/status after the toast disappears; restart the app once and confirm the row still holds the result.
 - [ ] On an offline OsmAnd route through a known camera corridor, compare the route with camera avoidance off versus on and look for a one-pass reroute around camera-adjacent road objects.
 - [ ] If a route corridor is not obvious, run `scripts/flockfree-suggest-test-areas.py --limit 10 --radius-km 80` and use one of the printed `Map anchor` coordinates as the route/map test area.
 - [ ] Run `scripts/flockfree-moto-permission-primer.sh` before CYD/GPS testing, then confirm the generated `summary.txt` shows location and Bluetooth permissions granted.

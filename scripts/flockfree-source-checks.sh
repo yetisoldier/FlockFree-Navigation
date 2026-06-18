@@ -65,6 +65,8 @@ import xml.etree.ElementTree as ET
 prefs_xml = Path("OsmAnd/res/xml/flockfree_preferences.xml")
 fragment = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/FlockFreeSettingsFragment.java").read_text()
 prefs = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/FlockFreePreferences.java").read_text()
+plugin = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/FlockFreePlugin.java").read_text()
+reporter = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/CameraReporter.java").read_text()
 camera_data = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/CameraData.java").read_text()
 
 root = ET.parse(prefs_xml).getroot()
@@ -116,9 +118,34 @@ missing_fragments = [item for item in required_fragments if item not in fragment
 if missing_fragments:
     raise SystemExit("missing settings fragment wiring:\n" + "\n".join(missing_fragments))
 
-for key in ["CAMERA_ALERTS_ENABLED", "CAMERA_ALERT_DISTANCE", "CYD_BLE_ENABLED"]:
+for key in [
+    "CAMERA_ALERTS_ENABLED",
+    "CAMERA_ALERT_DISTANCE",
+    "CYD_BLE_ENABLED",
+    "CAMERA_ROUTE_LAST_CHECK_SUMMARY",
+    "CAMERA_ALERT_LAST_CHECK_SUMMARY",
+    "CAMERA_REPORT_LAST_DRAFT_SUMMARY",
+    "DEFAULT_STATUS_SUMMARY",
+]:
     if key not in prefs:
         raise SystemExit(f"missing preference constant {key}")
+required_plugin_tokens = [
+    "registerStringPreference(",
+    "CAMERA_ROUTE_LAST_CHECK_SUMMARY.set(summary)",
+    "CAMERA_ALERT_LAST_CHECK_SUMMARY.set(summary)",
+    "new CameraReporter(app, CAMERA_REPORT_LAST_DRAFT_SUMMARY)",
+]
+missing_plugin = [item for item in required_plugin_tokens if item not in plugin]
+if missing_plugin:
+    raise SystemExit("missing persisted status preference wiring:\n" + "\n".join(missing_plugin))
+required_reporter_tokens = [
+    "CommonPreference<String> lastReportDraftSummaryPreference",
+    "lastReportDraftSummaryPreference.get()",
+    "lastReportDraftSummaryPreference.set(summary)",
+]
+missing_reporter = [item for item in required_reporter_tokens if item not in reporter]
+if missing_reporter:
+    raise SystemExit("missing persisted report draft wiring:\n" + "\n".join(missing_reporter))
 if "refreshData()" not in camera_data:
     raise SystemExit("missing CameraData.refreshData()")
 if '"flockfree/cameras.geojson"' not in camera_data:

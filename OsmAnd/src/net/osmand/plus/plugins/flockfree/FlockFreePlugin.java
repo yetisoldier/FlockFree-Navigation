@@ -37,6 +37,9 @@ public class FlockFreePlugin extends OsmandPlugin {
     public final CommonPreference<Integer> CAMERA_ALERT_DISTANCE;
     public final CommonPreference<Long> CAMERA_DATA_LAST_UPDATE;
     public final CommonPreference<Boolean> CYD_BLE_ENABLED;
+    public final CommonPreference<String> CAMERA_ROUTE_LAST_CHECK_SUMMARY;
+    public final CommonPreference<String> CAMERA_ALERT_LAST_CHECK_SUMMARY;
+    public final CommonPreference<String> CAMERA_REPORT_LAST_DRAFT_SUMMARY;
 
     // Context menu item order
     private static final int CAMERA_DETAILS_ITEM_ORDER = 7800;
@@ -54,11 +57,6 @@ public class FlockFreePlugin extends OsmandPlugin {
     private CydHardwareManager cydHardwareManager;
     private long lastCameraAlertTimeMs;
     private String lastCameraAlertKey;
-    @Nullable
-    private String lastRouteCheckSummary;
-    @Nullable
-    private String lastCameraAlertCheckSummary;
-
     public FlockFreePlugin(OsmandApplication app) {
         super(app);
 
@@ -83,6 +81,15 @@ public class FlockFreePlugin extends OsmandPlugin {
         CYD_BLE_ENABLED = registerBooleanPreference(
                 FlockFreePreferences.CYD_BLE_ENABLED,
                 FlockFreePreferences.DEFAULT_CYD_BLE_ENABLED).makeProfile().cache();
+        CAMERA_ROUTE_LAST_CHECK_SUMMARY = registerStringPreference(
+                FlockFreePreferences.CAMERA_ROUTE_LAST_CHECK_SUMMARY,
+                FlockFreePreferences.DEFAULT_STATUS_SUMMARY).makeProfile().cache();
+        CAMERA_ALERT_LAST_CHECK_SUMMARY = registerStringPreference(
+                FlockFreePreferences.CAMERA_ALERT_LAST_CHECK_SUMMARY,
+                FlockFreePreferences.DEFAULT_STATUS_SUMMARY).makeProfile().cache();
+        CAMERA_REPORT_LAST_DRAFT_SUMMARY = registerStringPreference(
+                FlockFreePreferences.CAMERA_REPORT_LAST_DRAFT_SUMMARY,
+                FlockFreePreferences.DEFAULT_STATUS_SUMMARY).makeProfile().cache();
     }
 
     @Override
@@ -135,7 +142,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     @NonNull
     public CameraReporter getCameraReporter() {
         if (cameraReporter == null) {
-            cameraReporter = new CameraReporter(app);
+            cameraReporter = new CameraReporter(app, CAMERA_REPORT_LAST_DRAFT_SUMMARY);
         }
         return cameraReporter;
     }
@@ -150,24 +157,26 @@ public class FlockFreePlugin extends OsmandPlugin {
 
     @NonNull
     public synchronized String getLastRouteCheckSummary() {
-        return lastRouteCheckSummary != null
-                ? lastRouteCheckSummary
+        String summary = CAMERA_ROUTE_LAST_CHECK_SUMMARY.get();
+        return summary != null && summary.length() > 0
+                ? summary
                 : app.getString(R.string.flockfree_route_last_check_none);
     }
 
     private synchronized void setLastRouteCheckSummary(@NonNull String summary) {
-        lastRouteCheckSummary = summary;
+        CAMERA_ROUTE_LAST_CHECK_SUMMARY.set(summary);
     }
 
     @NonNull
     public synchronized String getLastCameraAlertCheckSummary() {
-        return lastCameraAlertCheckSummary != null
-                ? lastCameraAlertCheckSummary
+        String summary = CAMERA_ALERT_LAST_CHECK_SUMMARY.get();
+        return summary != null && summary.length() > 0
+                ? summary
                 : app.getString(R.string.flockfree_alert_last_check_none);
     }
 
     private synchronized void setLastCameraAlertCheckSummary(@NonNull String summary) {
-        lastCameraAlertCheckSummary = summary;
+        CAMERA_ALERT_LAST_CHECK_SUMMARY.set(summary);
     }
 
     @Override
