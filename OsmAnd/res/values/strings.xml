@@ -4391,7 +4391,7 @@ You need to activate the sensor so OsmAnd can find it.</string>
     <string name="skip_map_downloading_desc">You have no offline map installed. You may select a map from the list or download maps later via \'Menu - %1$s\'.</string>
     <string name="search_another_country">Select another region</string>
     <string name="search_map">Searching maps…</string>
-    <string name="first_usage_wizard_desc">Let OsmAnd determine your location and suggest maps to download for that region.</string>
+    <string name="first_usage_wizard_desc">Let FlockFree determine your location and suggest maps to download for that region.</string>
     <string name="location_not_found">Location not found</string>
     <string name="no_inet_connection">No Internet connection</string>
     <string name="no_inet_connection_desc_map">Required to download maps.</string>
@@ -6395,7 +6395,7 @@ Download tile maps directly, or copy them as SQLite database files to OsmAnd\'s 
     <string name="shared_string_card_was_hidden">Card was hidden</string>
     <string name="shared_string_undo">Undo</string>
     <string name="shared_string_skip">Skip</string>
-    <string name="app_name_osmand">OsmAnd</string>
+    <string name="app_name_osmand">FlockFree</string>
     <string name="offline_maps_and_navigation">Offline Maps\n&amp; Navigation</string>
     <string name="commit_poi">Commit POI</string>
     <string name="tab_title_basic">Basic</string>
@@ -6608,4 +6608,11 @@ Download tile maps directly, or copy them as SQLite database files to OsmAnd\'s 
     <string name="routing_attr_freeride_policy_name">Off-piste</string>
     <string name="routing_attr_freeride_policy_description">\'Freeride\' and \'Off-piste\' are unofficial routes and passages. Typically ungroomed, unmaintained and not checked in the evening. Enter at your own risk.</string>
     <string name="voice_prompts_timetable">Voice prompts times</string>
+    <!-- FlockFree Plugin -->
+    <string name="flockfree_app_name">FlockFree</string>
+    <string name="flockfree_camera_layer">ALPR Cameras</string>
+    <string name="flockfree_camera_details">Camera Details</string>
+    <string name="flockfree_add_camera">Add ALPR Camera</string>
+    <string name="flockfree_avoidance_enabled">Camera Avoidance</string>
+    <string name="flockfree_settings">FlockFree Settings</string>
 </resources>

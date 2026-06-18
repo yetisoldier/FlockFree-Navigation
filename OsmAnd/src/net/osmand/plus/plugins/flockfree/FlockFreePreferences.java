@@ -1,0 +1,43 @@
+package net.osmand.plus.plugins.flockfree;
+
+import net.osmand.plus.OsmandApplication;
+import net.osmand.plus.settings.backend.preferences.CommonPreference;
+import net.osmand.plus.settings.backend.preferences.OsmandPreference;
+
+/**
+ * Centralized preference keys for the FlockFree plugin.
+ * All preferences are registered through FlockFreePlugin, this class
+ * provides convenient constants for key names and defaults.
+ */
+public final class FlockFreePreferences {
+
+    // Preference keys
+    public static final String CAMERA_DATA_LAST_UPDATE = "camera_data_last_update";
+    public static final String CAMERA_AVOIDANCE_ENABLED = "camera_avoidance_enabled";
+    public static final String CAMERA_AVOIDANCE_RADIUS = "camera_avoidance_radius";
+    public static final String CAMERA_SHOW_LAYER = "camera_show_layer";
+    public static final String CAMERA_ALERT_DISTANCE = "camera_alert_distance";
+    public static final String CYD_BLE_ENABLED = "cyd_ble_enabled";
+
+    // Default values
+    public static final boolean DEFAULT_CAMERA_SHOW_LAYER = true;
+    public static final boolean DEFAULT_CAMERA_AVOIDANCE_ENABLED = false;
+    public static final int DEFAULT_CAMERA_AVOIDANCE_RADIUS = 100;     // meters
+    public static final int DEFAULT_CAMERA_ALERT_DISTANCE = 300;        // meters
+    public static final long DEFAULT_CAMERA_DATA_LAST_UPDATE = 0L;
+    public static final boolean DEFAULT_CYD_BLE_ENABLED = false;
+
+    // Bounds
+    public static final int MIN_AVOIDANCE_RADIUS = 50;
+    public static final int MAX_AVOIDANCE_RADIUS = 500;
+    public static final int MIN_ALERT_DISTANCE = 100;
+    public static final int MAX_ALERT_DISTANCE = 1000;
+
+    // Data source
+    public static final String CAMERA_DATA_URL = "https://data.dontgetflocked.com/cameras.geojson.gz";
+    public static final long REFRESH_INTERVAL_MS = 7L * 24 * 60 * 60 * 1000; // 1 week
+
+    private FlockFreePreferences() {
+        // Utility class, no instances
+    }
+}
