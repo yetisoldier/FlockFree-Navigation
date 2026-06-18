@@ -5,6 +5,7 @@ OUT_ROOT="${OUT_ROOT:-logs/flockfree-field-session}"
 SESSION_DIR=""
 PATH_ONLY=0
 COMMANDS_ONLY=0
+TODO_ONLY=0
 
 usage() {
   cat <<'USAGE'
@@ -17,6 +18,7 @@ Options:
       --session-dir DIR     Show a specific session directory instead of latest.
       --path-only           Print only the selected session directory.
       --commands-only       Print only manual-result marker commands for the session.
+      --todo-only           Print remaining TODO/FAIL manual proof rows for the session.
       --self-check          Run a local self-check without using real logs.
   -h, --help                Show this help.
 USAGE
@@ -35,6 +37,12 @@ EOF
   echo "report" > "$session/field-session-report.txt"
   echo "scripts/flockfree-mark-result.py \"\$SESSION_DIR\" route_avoidance PASS --notes checked --summarize" \
     > "$session/manual-result-commands.txt"
+  cat > "$session/manual-test-results.tsv" <<'EOF'
+check_id	status	notes
+camera_data	PASS	Camera data row observed.
+route_avoidance	TODO	Needs route check.
+cyd	FAIL	CYD did not connect.
+EOF
   path_output="$(OUT_ROOT="$tmp/logs/flockfree-field-session" "$0" --path-only)" || return 1
   case "$path_output" in
     *20260101-010101*) ;;
@@ -59,6 +67,14 @@ EOF
       return 1
       ;;
   esac
+  todo_output="$(OUT_ROOT="$tmp/logs/flockfree-field-session" "$0" --todo-only)" || return 1
+  case "$todo_output" in
+    *"route_avoidance: TODO"*"cyd: FAIL"*"flockfree-mark-latest-result.sh"*) ;;
+    *)
+      echo "self-check failed: --todo-only output missing remaining proof rows" >&2
+      return 1
+      ;;
+  esac
   echo "FlockFree latest field-session self-check passed."
 }
 
@@ -75,6 +91,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --commands-only)
       COMMANDS_ONLY=1
+      shift
+      ;;
+    --todo-only)
+      TODO_ONLY=1
       shift
       ;;
     --self-check)
@@ -129,6 +149,42 @@ if [ "$COMMANDS_ONLY" -eq 1 ]; then
   fi
   echo "No manual-result command file found: $COMMANDS" >&2
   exit 1
+fi
+
+if [ "$TODO_ONLY" -eq 1 ]; then
+  if [ ! -f "$RESULTS" ]; then
+    echo "No manual result sheet found: $RESULTS" >&2
+    exit 1
+  fi
+  echo "FlockFree remaining manual proof"
+  echo "=============================="
+  echo "Session: $SESSION_DIR"
+  echo "Manual result sheet: $RESULTS"
+  echo
+  awk '
+    BEGIN {
+      FS = "\t"
+      found = 0
+    }
+    /^#/ || NF < 3 || $1 == "check_id" {
+      next
+    }
+    $2 == "TODO" || $2 == "FAIL" {
+      notes = $3
+      for (i = 4; i <= NF; i++) {
+        notes = notes "\t" $i
+      }
+      found = 1
+      printf "- %s: %s - %s\n", $1, $2, notes
+      printf "  Mark when proved: scripts/flockfree-mark-latest-result.sh %s PASS --notes \"<what you observed>\"\n", $1
+    }
+    END {
+      if (!found) {
+        print "No TODO or FAIL manual proof rows remain."
+      }
+    }
+  ' "$RESULTS"
+  exit 0
 fi
 
 echo "FlockFree latest field session"

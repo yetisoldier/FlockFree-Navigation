@@ -131,6 +131,12 @@ To print only the ready-made marker commands for the latest field-session bundle
 scripts/flockfree-latest-field-session.sh --commands-only
 ```
 
+To print only the remaining TODO/FAIL proof rows for the latest field-session bundle:
+
+```bash
+scripts/flockfree-latest-field-session.sh --todo-only
+```
+
 To mark the latest field session directly after a visual/manual check:
 
 ```bash

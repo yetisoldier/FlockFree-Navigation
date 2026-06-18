@@ -251,6 +251,7 @@ required = [
     "field-session-report.txt",
     "--path-only",
     "--commands-only",
+    "--todo-only",
     "--session-dir",
     "--self-check",
 ]
