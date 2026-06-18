@@ -10,6 +10,7 @@ import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.plugins.OsmandPlugin;
+import net.osmand.plus.plugins.flockfree.cyd.CydHardwareManager;
 import net.osmand.plus.routing.RouteCalculationResult;
 import net.osmand.plus.quickaction.QuickActionType;
 import net.osmand.plus.settings.backend.preferences.CommonPreference;
@@ -42,6 +43,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     private CameraData cameraData;
     private CameraAvoidanceHelper avoidanceHelper;
     private CameraReporter cameraReporter;
+    private CydHardwareManager cydHardwareManager;
 
     public FlockFreePlugin(OsmandApplication app) {
         super(app);
@@ -119,6 +121,14 @@ public class FlockFreePlugin extends OsmandPlugin {
             cameraReporter = new CameraReporter(app);
         }
         return cameraReporter;
+    }
+
+    @NonNull
+    public CydHardwareManager getCydHardwareManager() {
+        if (cydHardwareManager == null) {
+            cydHardwareManager = new CydHardwareManager(app);
+        }
+        return cydHardwareManager;
     }
 
     @Override
@@ -222,6 +232,15 @@ public class FlockFreePlugin extends OsmandPlugin {
     @Override
     public void mapActivityResume(@NonNull MapActivity activity) {
         getCameraData().ensureDataLoaded();
+    }
+
+    @Override
+    public void disable(@NonNull OsmandApplication app) {
+        super.disable(app);
+        if (cydHardwareManager != null) {
+            cydHardwareManager.close();
+            cydHardwareManager = null;
+        }
     }
 
     @Override

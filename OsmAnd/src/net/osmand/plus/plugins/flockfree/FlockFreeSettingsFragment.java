@@ -7,6 +7,8 @@ import androidx.preference.Preference;
 import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.cyd.CydDetectionCandidate;
+import net.osmand.plus.plugins.flockfree.cyd.CydHardwareManager;
 import net.osmand.plus.settings.fragments.BaseSettingsFragment;
 import net.osmand.plus.settings.preferences.ListPreferenceEx;
 import net.osmand.plus.settings.preferences.SwitchPreferenceEx;
@@ -14,6 +16,10 @@ import net.osmand.plus.settings.preferences.SwitchPreferenceEx;
 public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 
 	private static final String CAMERA_DATA_STATUS_KEY = "flockfree_camera_data_status";
+	private static final String CYD_STATUS_KEY = "flockfree_cyd_status";
+	private static final String CYD_CONNECT_KEY = "flockfree_cyd_connect";
+	private static final String CYD_REQUEST_STATUS_KEY = "flockfree_cyd_request_status";
+	private static final String CYD_SIMULATE_DETECTION_KEY = "flockfree_cyd_simulate_detection";
 	private static final Integer[] AVOIDANCE_RADIUS_VALUES = {50, 75, 100, 150, 200, 300, 500};
 	private static final Integer[] ALERT_DISTANCE_VALUES = {100, 200, 300, 500, 750, 1000};
 
@@ -32,6 +38,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 				R.string.flockfree_alert_distance_description);
 		setupSwitchPreference(plugin.CYD_BLE_ENABLED.getId(),
 				R.string.flockfree_cyd_ble_description);
+		setupCydStatusPreference();
 	}
 
 	private void setupSwitchPreference(@NonNull String prefId, @StringRes int descriptionId) {
@@ -52,6 +59,20 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 				preference.setSummary(R.string.flockfree_camera_data_loading_summary);
 			} else {
 				preference.setSummary(R.string.flockfree_camera_data_not_loaded_summary);
+			}
+		}
+	}
+
+	private void setupCydStatusPreference() {
+		Preference preference = findPreference(CYD_STATUS_KEY);
+		if (preference != null) {
+			CydHardwareManager manager = plugin.getCydHardwareManager();
+			CydDetectionCandidate detection = manager.getLastDetection();
+			if (detection != null) {
+				preference.setSummary(getString(R.string.flockfree_cyd_status_last_detection,
+						detection.getStatusSummary()));
+			} else {
+				preference.setSummary(manager.getStatusSummary());
 			}
 		}
 	}
@@ -78,13 +99,52 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 	@Override
 	public boolean onPreferenceChange(Preference preference, Object newValue) {
 		boolean accepted = super.onPreferenceChange(preference, newValue);
-		if (accepted && plugin.CAMERA_SHOW_LAYER.getId().equals(preference.getKey())) {
+		if (!accepted) {
+			return false;
+		}
+		if (plugin.CAMERA_SHOW_LAYER.getId().equals(preference.getKey())) {
 			MapActivity mapActivity = getMapActivity();
 			if (mapActivity != null) {
 				plugin.updateLayers(mapActivity, mapActivity);
 				mapActivity.refreshMap();
 			}
+		} else if (plugin.CYD_BLE_ENABLED.getId().equals(preference.getKey())) {
+			if (Boolean.TRUE.equals(newValue)) {
+				startCydScan();
+			} else {
+				plugin.getCydHardwareManager().disconnect();
+				setupCydStatusPreference();
+			}
 		}
-		return accepted;
+		return true;
+	}
+
+	@Override
+	public boolean onPreferenceClick(Preference preference) {
+		String key = preference.getKey();
+		if (CYD_CONNECT_KEY.equals(key)) {
+			startCydScan();
+			return true;
+		} else if (CYD_REQUEST_STATUS_KEY.equals(key)) {
+			plugin.getCydHardwareManager().requestStatus();
+			setupCydStatusPreference();
+			return true;
+		} else if (CYD_SIMULATE_DETECTION_KEY.equals(key)) {
+			plugin.getCydHardwareManager().simulateDetection();
+			setupCydStatusPreference();
+			return true;
+		}
+		return super.onPreferenceClick(preference);
+	}
+
+	private void startCydScan() {
+		MapActivity mapActivity = getMapActivity();
+		if (mapActivity == null) {
+			app.showShortToastMessage(R.string.flockfree_cyd_status_map_unavailable);
+			return;
+		}
+		plugin.CYD_BLE_ENABLED.set(true);
+		plugin.getCydHardwareManager().startScanAndConnect(mapActivity);
+		setupCydStatusPreference();
 	}
 }

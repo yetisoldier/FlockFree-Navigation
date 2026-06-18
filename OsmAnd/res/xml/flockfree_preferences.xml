@@ -73,4 +73,28 @@
 		android:summaryOn="@string/shared_string_enabled"
 		android:title="@string/flockfree_cyd_ble" />
 
+	<Preference
+		android:key="flockfree_cyd_status"
+		android:layout="@layout/preference_with_descr"
+		android:persistent="false"
+		android:title="@string/flockfree_cyd_status" />
+
+	<Preference
+		android:key="flockfree_cyd_connect"
+		android:layout="@layout/preference_with_descr"
+		android:persistent="false"
+		android:title="@string/flockfree_cyd_connect" />
+
+	<Preference
+		android:key="flockfree_cyd_request_status"
+		android:layout="@layout/preference_with_descr"
+		android:persistent="false"
+		android:title="@string/flockfree_cyd_request_status" />
+
+	<Preference
+		android:key="flockfree_cyd_simulate_detection"
+		android:layout="@layout/preference_with_descr"
+		android:persistent="false"
+		android:title="@string/flockfree_cyd_simulate_detection" />
+
 </PreferenceScreen>

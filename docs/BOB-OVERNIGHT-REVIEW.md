@@ -1,6 +1,6 @@
 # Bob Overnight Review
 
-Note: this was an overnight architecture review snapshot. Current source has since added experimental route-scoped two-pass camera avoidance, camera-data spatial indexing, and a low-level CYD BLE UART scaffold. See `docs/OVERNIGHT-HANDOFF.md` for the current handoff state.
+Note: this was an overnight architecture review snapshot. Current source has since added experimental route-scoped two-pass camera avoidance, camera-data spatial indexing, route fallback hardening, cache-only route startup for existing camera data, and a settings-driven CYD BLE scan/status/simulation path. See `docs/OVERNIGHT-HANDOFF.md` for the current handoff state.
 
 ## Recommendation
 
@@ -22,4 +22,4 @@ Turn the current route-summary toast into a guarded reroute MVP by mapping nearb
 - Blocking roads without a reliable camera-to-road mapping could produce strange or impossible routes.
 - Reusing OsmAnd's user-blocked-road storage would mix FlockFree dynamic blocks with user intent; keep FlockFree-owned state separate.
 - Camera data is still in-memory GeoJSON. It is acceptable for the morning test but should move to SQLite/geohash before broader use.
-- CYD BLE should remain explicitly documented as not wired in this fork until a foreground service and parser are implemented.
+- CYD BLE should remain explicitly documented as settings-only until a foreground service and pending-review workflow are implemented.

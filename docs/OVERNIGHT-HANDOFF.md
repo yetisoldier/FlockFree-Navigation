@@ -6,7 +6,7 @@
 - Local path: `/home/yetisoldier/projects/FlockFree-Navigation`
 - Branch: `master`
 - Latest pushed source before the final settings handoff: `9a1b0ca9db Ignore local smoke-test logs`
-- Current source includes the route camera summary hook, exposed FlockFree settings screen, camera-data spatial indexing, OSM editor tag-prefill reporting, experimental two-pass offline camera avoidance, and a low-level CYD BLE UART scaffold.
+- Current source includes the route camera summary hook, exposed FlockFree settings screen, camera-data spatial indexing, OSM editor tag-prefill reporting, experimental two-pass offline camera avoidance, cache-only route startup for existing camera data, and a settings-driven CYD BLE scan/status/simulation path.
 
 ## Verified APK
 
@@ -37,14 +37,17 @@
   - It maps cameras near the initial route to `RouteDataObject` IDs.
   - It passes those IDs as temporary per-calculation impassable roads.
   - It does not write to the user's Avoid Roads settings.
+  - It skips partial follow-me recalculations for now to avoid heavy second-pass reroutes while driving.
+  - It uses an isolated progress object for the avoided second pass so failed attempts do not poison the original route state.
+  - It can load an existing camera cache synchronously before routing, but does not block routing on a network refresh.
   - It falls back to the original route if the avoided route fails.
 - Camera data now builds a coarse in-memory spatial grid and the settings screen shows camera count/bucket diagnostics when loaded.
-- A CYD BLE UART scaffold exists under `OsmAnd/src/net/osmand/plus/plugins/flockfree/cyd/`, including Nordic UART connection handling and parsers for `pair_status` and `detection` JSON.
+- A CYD BLE path exists under `OsmAnd/src/net/osmand/plus/plugins/flockfree/cyd/`, including Nordic UART connection handling, parsers for `pair_status` and `detection` JSON, and FlockFree settings rows for scan/connect, status request, and simulated detection.
 
 ## Known Limits
 
 - Route avoidance is still experimental and only works for OsmAnd offline vector routing. It blocks whole road objects and can be coarse.
-- CYD BLE has a low-level client/parser scaffold, but no UI scanner, foreground service, or pending-review workflow yet.
+- CYD BLE has a settings-driven scanner/status/simulation MVP, but no foreground service or pending-review workflow yet.
 - Camera data is still held in memory and indexed in Java; persisted SQLite/geohash indexing is a later optimization.
 - First useful camera display needs network access for the live GeoJSON download unless a cache is already present.
 - The current OSM reporting helper pre-fills tags, but still needs end-to-end on-device validation before treating it as upload-ready.
@@ -57,6 +60,7 @@
 4. Move/zoom to a camera-dense area and verify markers.
 5. Open the plugin settings, confirm the camera-data diagnostic row, enable camera avoidance, calculate a route, and verify the route-summary toast.
 6. Compare one camera-dense offline route with avoidance off and on. A successful newer build should either route around camera-adjacent road objects or fall back cleanly to the original route.
+7. In the CYD hardware section, enable CYD BLE, scan/connect to a powered `CYD-Flock-You`, request status, and try the simulated detection command.
 
 For a no-Gradle device snapshot before or after those checks, run:
 

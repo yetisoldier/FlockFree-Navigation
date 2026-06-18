@@ -206,8 +206,14 @@ public class RouteProvider {
 		if (params.cameraAvoidanceApplied || !initial.isCalculated()) {
 			return null;
 		}
+		if (params.previousToRecalculate != null && params.onlyStartPointChanged) {
+			return null;
+		}
 		FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
-		if (plugin == null || !plugin.CAMERA_AVOIDANCE_ENABLED.get() || !plugin.getCameraData().isDataLoaded()) {
+		if (plugin == null || !plugin.CAMERA_AVOIDANCE_ENABLED.get()) {
+			return null;
+		}
+		if (!plugin.getCameraData().isDataLoaded() && !plugin.getCameraData().ensureCacheLoadedForRouting()) {
 			return null;
 		}
 		Set<Long> avoidIds = plugin.getAvoidanceHelper().collectAvoidRoadIdsForRoute(initial,
@@ -260,7 +266,12 @@ public class RouteProvider {
 		copy.extraIntermediates = params.extraIntermediates;
 		copy.initialCalculation = params.initialCalculation;
 		copy.gpxFile = params.gpxFile;
-		copy.calculationProgress = params.calculationProgress;
+		copy.calculationProgress = new RouteCalculationProgress();
+		if (params.calculationProgress != null) {
+			copy.calculationProgress.isCancelled = params.calculationProgress.isCancelled;
+			copy.calculationProgress.routeCalculationStartTime =
+					params.calculationProgress.routeCalculationStartTime;
+		}
 		copy.calculationProgressListener = params.calculationProgressListener;
 		copy.alternateResultListener = params.alternateResultListener;
 		copy.temporaryImpassableRoadIds = new LinkedHashSet<>(avoidIds);

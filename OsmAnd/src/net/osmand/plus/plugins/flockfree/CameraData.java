@@ -81,6 +81,24 @@ public class CameraData {
         });
     }
 
+    public synchronized boolean ensureCacheLoadedForRouting() {
+        if (dataLoaded) {
+            return true;
+        }
+        if (loading) {
+            return false;
+        }
+        loading = true;
+        try {
+            return loadFromCache();
+        } catch (Exception e) {
+            LOG.error("Failed to load camera cache for routing", e);
+            return false;
+        } finally {
+            loading = false;
+        }
+    }
+
     private File getCacheFile() {
         File dir = app.getCacheDir();
         return new File(dir, CACHE_FILENAME);
