@@ -5,7 +5,7 @@
 - Repository: `https://github.com/yetisoldier/FlockFree-Navigation`
 - Local path: `/home/yetisoldier/projects/FlockFree-Navigation`
 - Branch: `master`
-- Latest source: current `master` after the CYD BLE service audit fixes.
+- Latest source: `9a9fae9b3f` — camera orientation cone added to the map layer.
 - Current source includes the route camera summary hook, exposed FlockFree settings screen with live dynamic status refresh, camera-data spatial indexing with source/freshness diagnostics, OSM editor tag-prefill reporting with map-center draft action and profile-persisted report-draft status, experimental two-pass offline camera avoidance, profile-persisted applied/fallback/skipped route diagnostics, movement/navigation nearby-camera alerts with profile-persisted last-check status plus a map-center alert test action, cache-only route startup for existing camera data, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, a CYD BLE foreground service using the Android `connectedDevice` foreground-service type with permission-gated background scan restart, phone GPS streaming to CYD over `FYGPS`, local CYD simulation from phone/OsmAnd GPS or current map center when hardware is absent, and persisted CYD detection map/review candidates.
 - **Last CYD BLE foreground service proof, 2026-06-18 07:28 CDT:** source commit `81b44a6556` was built and validated on-device before the connected-device service-type audit change. That APK showed `CydBleService` starting on map resume when `cyd_ble_enabled` is true, `isForeground=true`, `foregroundId=200`, notification channel `flockfree_cyd_service` registered and visible, service surviving backgrounding with `stopIfKilled=false`, and BLE scanning active. ADB serial changed to `192.168.1.139:39183` after battery death and wireless debugging re-enablement. Rebuild current `master` before treating the new `connectedDevice` service type as on-device proven.
 
@@ -14,11 +14,11 @@
 - APK: `OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-debug.apk`
 - Synced artifact: `build-artifacts/FlockFree-gplayFree-legacy-fat-debug.apk`
 - Package: `com.yetiwurks.flockfree`
-- SHA-256: `8965af94adc4148c94daf8d9033a02865f7fdb5093ebc6947ac5fb664447eda5`
-- Source commit: `81b44a6556`
+- SHA-256: `2ce495d09dba9867d8482a8744cf7ba09b7baae37b00a50434d5e7c8f55feaa4`
+- Source commit: `9a9fae9b3f`
 - Signature: verifies with APK Signature Scheme v2 using the Android debug certificate
 - Phone install: succeeded over Wi-Fi ADB on `192.168.1.139:39183`
-- Launch: succeeded into `net.osmand.plus.activities.MapActivity`; diagnostics showed it top-resumed with PID `16569`
+- Launch: succeeded into `net.osmand.plus.activities.MapActivity`; readiness verdict READY
 - CYD BLE service: source commit `81b44a6556` started on map resume, `isForeground=true`, `foregroundId=200`, notification channel `flockfree_cyd_service` registered, and survived backgrounding. Current source has since changed the service type to `connectedDevice` and needs a fresh APK proof.
 - Build info: `build-artifacts/FlockFree-build-info.txt`
 - Diagnostic directory: `logs/flockfree-diagnostics/20260618-072703`
