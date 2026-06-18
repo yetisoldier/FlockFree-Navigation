@@ -318,6 +318,11 @@ required = [
     "--session-dir",
     "--self-check",
     "has_phone_evidence()",
+    "extract_source_commit()",
+    "current_source_commit()",
+    "commits_match()",
+    "Session source differs from current HEAD",
+    "Current CYD source note",
     "Latest attempt has no live phone evidence",
     "Last phone-evidence session:",
 ]

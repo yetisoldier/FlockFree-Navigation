@@ -41,7 +41,7 @@ EOF
 ADB state: device
 Package installed: yes
 EOF
-  echo "report" > "$session/field-session-report.txt"
+  echo "Source commit: 1111111111111111111111111111111111111111" > "$session/field-session-report.txt"
   echo "scripts/flockfree-mark-result.py \"\$SESSION_DIR\" route_avoidance PASS --notes checked --summarize" \
     > "$session/manual-result-commands.txt"
   cat > "$session/manual-test-results.tsv" <<'EOF'
@@ -57,13 +57,13 @@ FlockFree field-session summary
 Readiness: unknown
 ADB/package: unknown
 EOF
-  echo "early stop" > "$latest/field-session-report.txt"
+  echo "Source commit: 0000000000000000000000000000000000000000" > "$latest/field-session-report.txt"
   echo "scripts/flockfree-mark-result.py \"\$SESSION_DIR\" route_avoidance PASS --notes checked --summarize" \
     > "$latest/manual-result-commands.txt"
   cat > "$latest/manual-test-results.tsv" <<'EOF'
 check_id	status	notes
 route_avoidance	TODO	Needs route check.
-cyd	FAIL	CYD did not connect.
+cyd	FAIL	Use local phone-GPS simulation fallback.
 EOF
   path_output="$(OUT_ROOT="$tmp/logs/flockfree-field-session" "$0" --path-only)" || return 1
   case "$path_output" in
@@ -83,7 +83,7 @@ EOF
   esac
   summary_output="$(OUT_ROOT="$tmp/logs/flockfree-field-session" "$0")" || return 1
   case "$summary_output" in
-    *"FlockFree latest field session"*"Latest attempt has no live phone evidence"*"manual-result-commands.txt"*) ;;
+    *"FlockFree latest field session"*"Session source differs from current HEAD"*"Latest attempt has no live phone evidence"*"manual-result-commands.txt"*) ;;
     *)
       echo "self-check failed: summary output missing expected content" >&2
       return 1
@@ -99,7 +99,7 @@ EOF
   esac
   todo_output="$(OUT_ROOT="$tmp/logs/flockfree-field-session" "$0" --todo-only)" || return 1
   case "$todo_output" in
-    *"route_avoidance: TODO"*"cyd: FAIL"*"flockfree-mark-latest-result.sh"*) ;;
+    *"Session source differs from current HEAD"*"route_avoidance: TODO"*"cyd: FAIL"*"flockfree-mark-latest-result.sh"*"Current CYD source note"*) ;;
     *)
       echo "self-check failed: --todo-only output missing remaining proof rows" >&2
       return 1
@@ -133,7 +133,7 @@ while [ "$#" -gt 0 ]; do
       ;;
     --self-check)
       run_self_check
-      exit 0
+      exit $?
       ;;
     -h|--help)
       usage
@@ -160,6 +160,45 @@ has_phone_evidence() {
   [ -f "$summary_file" ] || return 1
   grep -q '^ADB state: device' "$summary_file" || return 1
   grep -q '^Package installed: yes' "$summary_file" || return 1
+}
+
+extract_source_commit() {
+  report_file="${1}/field-session-report.txt"
+  [ -f "$report_file" ] || return 0
+  sed -n 's/^Source commit: //p' "$report_file" | head -n 1
+}
+
+current_source_commit() {
+  git rev-parse HEAD 2>/dev/null || true
+}
+
+commits_match() {
+  session_commit="$1"
+  current_commit="$2"
+  [ -n "$session_commit" ] || return 1
+  [ -n "$current_commit" ] || return 1
+  case "$current_commit" in
+    "$session_commit"*) return 0 ;;
+  esac
+  case "$session_commit" in
+    "$current_commit"*) return 0 ;;
+  esac
+  return 1
+}
+
+print_source_context() {
+  session_commit="$(extract_source_commit "$SESSION_DIR")"
+  current_commit="$(current_source_commit)"
+  if [ -n "$session_commit" ]; then
+    echo "Session source: ${session_commit:0:10}"
+  fi
+  if [ -n "$current_commit" ]; then
+    echo "Current HEAD: ${current_commit:0:10}"
+  fi
+  if [ -n "$session_commit" ] && [ -n "$current_commit" ] \
+      && ! commits_match "$session_commit" "$current_commit"; then
+    echo "Session source differs from current HEAD; rerun after the latest build/install for current-source evidence."
+  fi
 }
 
 find_latest_phone_evidence_session() {
@@ -228,6 +267,7 @@ if [ "$TODO_ONLY" -eq 1 ]; then
   echo "FlockFree remaining manual proof"
   echo "=============================="
   echo "Session: $SESSION_DIR"
+  print_source_context
   if [ "$LATEST_PHONE_EVIDENCE" -eq 1 ]; then
     echo "Selection: latest session with live phone/package evidence"
   elif ! has_phone_evidence "$SESSION_DIR" && [ -n "$LAST_PHONE_EVIDENCE_SESSION" ]; then
@@ -260,12 +300,23 @@ if [ "$TODO_ONLY" -eq 1 ]; then
       }
     }
   ' "$RESULTS"
+  if awk '
+    BEGIN { FS = "\t"; found = 0 }
+    $1 == "cyd" && ($2 == "TODO" || $2 == "FAIL") && $3 ~ /local phone-GPS/ {
+      found = 1
+    }
+    END { exit found ? 0 : 1 }
+  ' "$RESULTS"; then
+    echo
+    echo "Current CYD source note: after rebuilding current HEAD, local simulation can use phone/OsmAnd GPS or the current map center."
+  fi
   exit 0
 fi
 
 echo "FlockFree latest field session"
 echo "=============================="
 echo "Session: $SESSION_DIR"
+print_source_context
 if [ "$LATEST_PHONE_EVIDENCE" -eq 1 ]; then
   echo "Selection: latest session with live phone/package evidence"
 elif ! has_phone_evidence "$SESSION_DIR" && [ -n "$LAST_PHONE_EVIDENCE_SESSION" ]; then
