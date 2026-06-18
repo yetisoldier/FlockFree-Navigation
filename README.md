@@ -32,7 +32,7 @@ OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-de
 Verified debug package/application ID: `com.yetiwurks.flockfree`.
 Verified APK SHA-256: `aecab4bdb9f873649e90fc3b4d1f6ff8f8c673e599c0b902fecf4772ff168c73`.
 That APK was installed and launched on a Moto G Stylus over Wi-Fi ADB. It includes the route-summary hook and exposed FlockFree plugin settings screen.
-The source tree has newer camera-indexing, experimental two-pass avoidance routing, OSM editor tag-prefill reporting, CYD BLE settings controls, and CYD detection map/review work after that APK. Rebuild before testing those features on-device.
+The source tree has newer camera-indexing, experimental two-pass avoidance routing, location-based camera alerts, OSM editor tag-prefill reporting, CYD BLE settings controls, and CYD detection map/review work after that APK. Rebuild before testing those features on-device.
 
 ## What Works Now
 
@@ -46,6 +46,7 @@ The source tree has newer camera-indexing, experimental two-pass avoidance routi
 - The map context menu has an `Add ALPR Camera` action that opens OsmAnd's POI editor with the selected ALPR tag preset already attached to a new node.
 - When camera avoidance is enabled, newly calculated routes get a FlockFree toast summary of cameras near the route corridor.
 - Current source can perform one experimental second-pass OsmAnd offline route calculation using temporary impassable road IDs for roads adjacent to known cameras. These IDs are route-scoped and do not pollute the user's Avoid Roads settings.
+- While navigating or moving, FlockFree can warn when the current GPS fix is within the configured alert distance of the nearest known camera.
 - The plugin settings screen is exposed through the OsmAnd plugin settings flow for map layer visibility, route summaries, corridor radius, alert distance, and CYD BLE enablement.
 - A CYD BLE UART path exists for `FYHELLO`, `FYSTATUS`, `FYSIM`, `FYGPS`, `pair_status`, and `detection` messages.
 - GPS-backed CYD detections are kept as recent candidates, persisted to a small local JSON store, drawn on the map as distinct CYD markers, and can be reviewed through the existing ALPR camera reporting flow.

@@ -41,8 +41,9 @@
 	<string name="flockfree_route_vendor_other">Other</string>
 	<string name="flockfree_alerts">Alerts</string>
 	<string name="flockfree_alert_distance">Alert distance</string>
-	<string name="flockfree_alert_distance_description">Reserved distance for future nearby-camera alerts.</string>
+	<string name="flockfree_alert_distance_description">Warn while navigating or moving when a known ALPR camera is within this distance.</string>
 	<string name="flockfree_alert_distance_default_summary">300 meters</string>
+	<string name="flockfree_nearby_camera_alert">FlockFree: %1$s camera about %2$d meters away.</string>
 	<string name="flockfree_cyd_hardware">CYD Hardware</string>
 	<string name="flockfree_cyd_ble">CYD BLE</string>
 	<string name="flockfree_cyd_ble_description">Scan for CYD-Flock-You hardware over Bluetooth Low Energy.</string>

@@ -20,6 +20,7 @@ import net.osmand.plus.settings.fragments.SettingsScreenType;
 import net.osmand.plus.views.mapwidgets.MapWidgetInfo;
 import net.osmand.plus.widgets.ctxmenu.ContextMenuAdapter;
 import net.osmand.plus.widgets.ctxmenu.data.ContextMenuItem;
+import net.osmand.util.MapUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,12 +42,17 @@ public class FlockFreePlugin extends OsmandPlugin {
     private static final int CYD_REVIEW_ITEM_ORDER = 7850;
     private static final int CYD_DETAILS_ITEM_ORDER = 7860;
     private static final int ADD_CAMERA_ITEM_ORDER = 7900;
+    private static final long CAMERA_ALERT_COOLDOWN_MS = 90_000L;
+    private static final long SAME_CAMERA_ALERT_COOLDOWN_MS = 10 * 60_000L;
+    private static final float MOVING_ALERT_SPEED_MPS = 2.0f;
 
     private FlockFreeLayer cameraLayer;
     private CameraData cameraData;
     private CameraAvoidanceHelper avoidanceHelper;
     private CameraReporter cameraReporter;
     private CydHardwareManager cydHardwareManager;
+    private long lastCameraAlertTimeMs;
+    private String lastCameraAlertKey;
 
     public FlockFreePlugin(OsmandApplication app) {
         super(app);
@@ -311,6 +317,70 @@ public class FlockFreePlugin extends OsmandPlugin {
             cydHardwareManager.close();
             cydHardwareManager = null;
         }
+    }
+
+    @Override
+    public void updateLocation(Location location) {
+        if (location == null || !shouldCheckCameraAlert(location)) {
+            return;
+        }
+        CameraData data = getCameraData();
+        if (!data.isDataLoaded()) {
+            data.ensureDataLoaded();
+            return;
+        }
+        int alertDistance = CAMERA_ALERT_DISTANCE.get();
+        List<CameraData.CameraPoint> cameras = data.getCamerasNear(
+                location.getLatitude(), location.getLongitude(), alertDistance);
+        CameraData.CameraPoint closest = null;
+        double closestDistance = Double.MAX_VALUE;
+        for (CameraData.CameraPoint camera : cameras) {
+            double distance = MapUtils.getDistance(
+                    location.getLatitude(), location.getLongitude(), camera.lat, camera.lon);
+            if (distance < closestDistance) {
+                closest = camera;
+                closestDistance = distance;
+            }
+        }
+        if (closest != null) {
+            showCameraAlertIfNeeded(closest, closestDistance);
+        }
+    }
+
+    private boolean shouldCheckCameraAlert(@NonNull Location location) {
+        int alertDistance = CAMERA_ALERT_DISTANCE.get();
+        if (alertDistance <= 0) {
+            return false;
+        }
+        if (location.hasAccuracy() && location.getAccuracy() > alertDistance) {
+            return false;
+        }
+        return app.getRoutingHelper().isFollowingMode()
+                || (location.hasSpeed() && location.getSpeed() >= MOVING_ALERT_SPEED_MPS);
+    }
+
+    private void showCameraAlertIfNeeded(@NonNull CameraData.CameraPoint camera, double distanceMeters) {
+        long now = System.currentTimeMillis();
+        String cameraKey = getCameraAlertKey(camera);
+        long cooldown = cameraKey.equals(lastCameraAlertKey)
+                ? SAME_CAMERA_ALERT_COOLDOWN_MS
+                : CAMERA_ALERT_COOLDOWN_MS;
+        if (now - lastCameraAlertTimeMs < cooldown) {
+            return;
+        }
+        lastCameraAlertTimeMs = now;
+        lastCameraAlertKey = cameraKey;
+        String brand = camera.brand != null ? camera.brand : app.getString(R.string.res_unknown);
+        app.showShortToastMessage(R.string.flockfree_nearby_camera_alert,
+                brand, Math.max(1, Math.round((float) distanceMeters)));
+    }
+
+    @NonNull
+    private String getCameraAlertKey(@NonNull CameraData.CameraPoint camera) {
+        if (camera.osmType != null && camera.osmId != null) {
+            return camera.osmType + ":" + camera.osmId;
+        }
+        return Math.round(camera.lat * 1_000_000d) + ":" + Math.round(camera.lon * 1_000_000d);
     }
 
     @Override
