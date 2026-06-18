@@ -16,6 +16,10 @@ import net.osmand.plus.plugins.flockfree.cyd.CydDetectionCandidate;
 import net.osmand.plus.plugins.flockfree.cyd.CydHardwareManager;
 import net.osmand.plus.routing.RouteCalculationResult;
 import net.osmand.plus.quickaction.QuickActionType;
+import net.osmand.plus.quickaction.actions.ShowHideCamerasAction;
+import net.osmand.plus.quickaction.actions.ToggleCameraAvoidanceAction;
+import net.osmand.plus.quickaction.actions.ToggleCameraAlertsAction;
+import net.osmand.plus.quickaction.actions.AddCameraAction;
 import net.osmand.plus.settings.backend.ApplicationMode;
 import net.osmand.plus.settings.backend.preferences.CommonPreference;
 import net.osmand.plus.settings.backend.preferences.OsmandPreference;
@@ -285,7 +289,10 @@ public class FlockFreePlugin extends OsmandPlugin {
     @Override
     protected List<QuickActionType> getQuickActionTypes() {
         List<QuickActionType> actions = new ArrayList<>();
-        // Quick action types would be registered here once the action classes are created
+        actions.add(ShowHideCamerasAction.TYPE);
+        actions.add(ToggleCameraAvoidanceAction.TYPE);
+        actions.add(ToggleCameraAlertsAction.TYPE);
+        actions.add(AddCameraAction.TYPE);
         return actions;
     }
 
