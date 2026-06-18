@@ -42,7 +42,7 @@ Timed no-Gradle evidence capture while performing the manual checklist:
 scripts/flockfree-field-test-session.sh
 ```
 
-Start with the generated `logs/flockfree-field-session/.../field-session-report.txt`. It includes a readiness gate, manual test prompts, `test-area-suggestions.txt` map anchors from the bundled seed, `manual-test-results.tsv` for PASS/FAIL/SKIP notes, filtered logcat from the test window, post-session diagnostics, and a `session-summary.txt` evidence summary with explicit crash status, manual results, and missing manual checks.
+Start with the generated `logs/flockfree-field-session/.../field-session-report.txt`. It includes a readiness gate, manual test prompts, `test-area-suggestions.txt` map anchors from the bundled seed, `manual-test-results.tsv` for PASS/FAIL/SKIP notes, ready-made `manual-result-commands.txt` marker commands for that session, filtered logcat from the test window, post-session diagnostics, and a `session-summary.txt` evidence summary with explicit crash status, manual results, and missing manual checks.
 
 Offline camera-dense route-test anchors:
 
@@ -149,7 +149,7 @@ To capture evidence while performing route, OSM reporting, and CYD checks:
 scripts/flockfree-field-test-session.sh --duration 900
 ```
 
-During or immediately after the walk-through, edit the generated `manual-test-results.tsv` statuses to `PASS`, `FAIL`, or `SKIP` for any checks that were visually confirmed but did not produce distinctive log evidence. Rerun `scripts/flockfree-summarize-session.py logs/flockfree-field-session/...` to fold those manual results into the summary.
+During or immediately after the walk-through, use the generated `manual-result-commands.txt` commands or edit the generated `manual-test-results.tsv` statuses to `PASS`, `FAIL`, or `SKIP` for any checks that were visually confirmed but did not produce distinctive log evidence. Rerun `scripts/flockfree-summarize-session.py logs/flockfree-field-session/...` to fold any hand-edited TSV results into the summary.
 
 You can also update one row and refresh the summary without opening an editor:
 

@@ -133,6 +133,7 @@ SESSION_LOGCAT="${OUT_DIR}/session-logcat-filtered.txt"
 SESSION_SUMMARY="${OUT_DIR}/session-summary.txt"
 PROMPTS="${OUT_DIR}/manual-test-prompts.txt"
 MANUAL_RESULTS="${OUT_DIR}/manual-test-results.tsv"
+MANUAL_COMMANDS="${OUT_DIR}/manual-result-commands.txt"
 TEST_AREAS="${OUT_DIR}/test-area-suggestions.txt"
 READINESS_DIR="${OUT_DIR}/readiness"
 POST_DIAG_DIR="${OUT_DIR}/post-diagnostics"
@@ -209,6 +210,30 @@ cyd	TODO	Connect/simulate CYD and confirm status, phone GPS, marker, or review f
 RESULTS
 }
 
+write_manual_result_commands() {
+  {
+    echo "# FlockFree manual result marker commands"
+    echo "# Run from the repository root after a visual/manual check."
+    echo "# Replace PASS with FAIL, SKIP, or TODO if needed."
+    printf 'SESSION_DIR=%q\n\n' "$OUT_DIR"
+    printf '%s\n' "# Camera data row settled with source/freshness visible."
+    printf 'scripts/flockfree-mark-result.py "$SESSION_DIR" camera_data PASS --notes %q --summarize\n\n' \
+      "Camera data row settled with source/freshness visible"
+    printf '%s\n' "# Route avoidance reported applied/fallback/skipped status."
+    printf 'scripts/flockfree-mark-result.py "$SESSION_DIR" route_avoidance PASS --notes %q --summarize\n\n' \
+      "Avoidance applied/fallback/skipped status observed"
+    printf '%s\n' "# Nearby alert behavior observed near a known camera."
+    printf 'scripts/flockfree-mark-result.py "$SESSION_DIR" nearby_alerts PASS --notes %q --summarize\n\n' \
+      "Nearby camera alert behavior observed"
+    printf '%s\n' "# OSM editor opened with ALPR/surveillance tags."
+    printf 'scripts/flockfree-mark-result.py "$SESSION_DIR" osm_reporting PASS --notes %q --summarize\n\n' \
+      "ALPR/surveillance tag prefill observed in OSM editor"
+    printf '%s\n' "# CYD connect/status/GPS/marker/review flow observed."
+    printf 'scripts/flockfree-mark-result.py "$SESSION_DIR" cyd PASS --notes %q --summarize\n' \
+      "CYD status, GPS, marker, or review flow observed"
+  } > "$MANUAL_COMMANDS"
+}
+
 source_commit="$(git rev-parse HEAD 2>/dev/null || echo unknown)"
 source_state="dirty"
 if git diff --quiet && git diff --cached --quiet; then
@@ -229,8 +254,10 @@ append_report ""
 write_test_areas
 write_prompts
 write_manual_results_template
+write_manual_result_commands
 append_report "Manual prompts: ${PROMPTS}"
 append_report "Manual result sheet: ${MANUAL_RESULTS}"
+append_report "Manual result marker commands: ${MANUAL_COMMANDS}"
 append_report "Test-area suggestions: ${TEST_AREAS}"
 if [ -f "$TEST_AREAS" ]; then
   append_report "Suggested map anchors:"
