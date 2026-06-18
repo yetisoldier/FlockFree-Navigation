@@ -233,6 +233,19 @@ PY
   log "wrote ${ui_summary}"
 }
 
+capture_app_data_state() {
+  file="${OUT_DIR}/app-data-state.txt"
+  run_as_script='echo "run-as package:"; pwd; echo ""; echo "cache directory:"; ls -l cache 2>/dev/null || true; echo ""; echo "files directory:"; ls -l files 2>/dev/null || true; echo ""; echo "camera cache:"; if [ -f cache/cameras.geojson ]; then ls -l cache/cameras.geojson; wc -c cache/cameras.geojson; else echo "cache/cameras.geojson missing"; fi; echo ""; echo "CYD detection store:"; if [ -f files/flockfree-cyd-detections.json ]; then ls -l files/flockfree-cyd-detections.json; wc -c files/flockfree-cyd-detections.json; else echo "files/flockfree-cyd-detections.json missing"; fi'
+  shell_command="run-as $PACKAGE sh -c '$run_as_script'"
+  {
+    printf '$ %q -s %q shell %q\n\n' "$ADB" "$SERIAL" "$shell_command"
+    "$ADB" -s "$SERIAL" shell "$shell_command"
+    status="$?"
+    printf '\n[exit_status=%s]\n' "$status"
+  } > "$file" 2>&1
+  log "wrote ${file}"
+}
+
 write_summary() {
   adb_state="${1:-unknown}"
   package_installed="${2:-unknown}"
@@ -264,6 +277,7 @@ write_summary() {
     printf '%s\n' '- screenshot.png'
     printf '%s\n' '- window.xml'
     printf '%s\n' '- ui-summary.txt'
+    printf '%s\n' '- app-data-state.txt'
     printf '%s\n' '- logcat-flockfree-camera-fatal.txt'
   } > "${OUT_DIR}/summary.txt"
   log "wrote ${OUT_DIR}/summary.txt"
@@ -315,6 +329,8 @@ capture_shell "activity-top.txt" \
   "dumpsys activity top 2>/dev/null | head -200 || true"
 
 capture_ui_snapshot
+
+capture_app_data_state
 
 capture_logcat_filter
 

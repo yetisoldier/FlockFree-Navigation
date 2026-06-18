@@ -119,6 +119,24 @@ if '"flockfree/cameras.geojson"' not in camera_data:
 print("preference wiring ok")
 PY
 
+log "Diagnostics script checks"
+python3 - <<'PY'
+from pathlib import Path
+
+diagnostics = Path("scripts/flockfree-moto-diagnostics.sh").read_text()
+required = [
+    "capture_ui_snapshot()",
+    "capture_app_data_state()",
+    "app-data-state.txt",
+    "cache/cameras.geojson",
+    "flockfree-cyd-detections.json",
+]
+missing = [item for item in required if item not in diagnostics]
+if missing:
+    raise SystemExit("missing diagnostics script wiring:\n" + "\n".join(missing))
+print("diagnostics script wiring ok")
+PY
+
 log "Bundled camera seed check"
 python3 - <<'PY'
 from pathlib import Path
