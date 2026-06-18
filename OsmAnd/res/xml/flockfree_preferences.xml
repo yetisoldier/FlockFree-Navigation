@@ -1,46 +1,71 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
-    android:title="FlockFree Settings">
+	xmlns:tools="http://schemas.android.com/tools"
+	android:title="@string/flockfree_settings">
 
-    <PreferenceCategory android:title="Map Display">
-        <SwitchPreferenceCompat
-            android:key="camera_show_layer"
-            android:title="Show cameras on map"
-            android:summary="Display ALPR camera markers from dontgetflocked.com"
-            android:defaultValue="true" />
-    </PreferenceCategory>
+	<PreferenceCategory
+		android:key="flockfree_map_display"
+		android:layout="@layout/preference_category_with_descr"
+		android:title="Map Display" />
 
-    <PreferenceCategory android:title="Camera Avoidance Routing">
-        <SwitchPreferenceCompat
-            android:key="camera_avoidance_enabled"
-            android:title="Enable camera avoidance routing"
-            android:summary="Route around known ALPR camera zones"
-            android:defaultValue="false" />
-        <SeekBarPreference
-            android:key="camera_avoidance_radius"
-            android:title="Avoidance radius"
-            android:summary="Radius around route to check for cameras (50-500m)"
-            android:defaultValue="100"
-            android:min="50"
-            android:max="500" />
-    </PreferenceCategory>
+	<net.osmand.plus.settings.preferences.SwitchPreferenceEx
+		android:key="camera_show_layer"
+		android:layout="@layout/preference_with_descr_dialog_and_switch"
+		android:summaryOff="@string/shared_string_disabled"
+		android:summaryOn="@string/shared_string_enabled"
+		android:title="Show cameras on map" />
 
-    <PreferenceCategory android:title="Alerts">
-        <SeekBarPreference
-            android:key="camera_alert_distance"
-            android:title="Alert distance"
-            android:summary="Distance at which to alert about nearby cameras (100-1000m)"
-            android:defaultValue="300"
-            android:min="100"
-            android:max="1000" />
-    </PreferenceCategory>
+	<Preference
+		android:layout="@layout/simple_divider_item"
+		android:selectable="false" />
 
-    <PreferenceCategory android:title="CYD Hardware">
-        <SwitchPreferenceCompat
-            android:key="cyd_ble_enabled"
-            android:title="Connect CYD hardware (BLE)"
-            android:summary="Connect to Can You Detect hardware via Bluetooth Low Energy"
-            android:defaultValue="false" />
-    </PreferenceCategory>
+	<PreferenceCategory
+		android:key="flockfree_camera_avoidance"
+		android:layout="@layout/preference_category_with_descr"
+		android:title="Camera Avoidance Routing" />
+
+	<net.osmand.plus.settings.preferences.SwitchPreferenceEx
+		android:key="camera_avoidance_enabled"
+		android:layout="@layout/preference_with_descr_dialog_and_switch"
+		android:summaryOff="@string/shared_string_disabled"
+		android:summaryOn="@string/shared_string_enabled"
+		android:title="Enable camera avoidance routing" />
+
+	<net.osmand.plus.settings.preferences.ListPreferenceEx
+		android:key="camera_avoidance_radius"
+		android:layout="@layout/preference_with_descr"
+		android:title="Avoidance radius"
+		tools:summary="100 meters" />
+
+	<Preference
+		android:layout="@layout/simple_divider_item"
+		android:selectable="false" />
+
+	<PreferenceCategory
+		android:key="flockfree_alerts"
+		android:layout="@layout/preference_category_with_descr"
+		android:title="Alerts" />
+
+	<net.osmand.plus.settings.preferences.ListPreferenceEx
+		android:key="camera_alert_distance"
+		android:layout="@layout/preference_with_descr"
+		android:title="Alert distance"
+		tools:summary="300 meters" />
+
+	<Preference
+		android:layout="@layout/simple_divider_item"
+		android:selectable="false" />
+
+	<PreferenceCategory
+		android:key="flockfree_cyd_hardware"
+		android:layout="@layout/preference_category_with_descr"
+		android:title="CYD Hardware" />
+
+	<net.osmand.plus.settings.preferences.SwitchPreferenceEx
+		android:key="cyd_ble_enabled"
+		android:layout="@layout/preference_with_descr_dialog_and_switch"
+		android:summaryOff="@string/shared_string_disabled"
+		android:summaryOn="@string/shared_string_enabled"
+		android:title="Connect CYD hardware (BLE)" />
 
 </PreferenceScreen>

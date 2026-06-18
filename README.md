@@ -22,8 +22,8 @@ OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-de
 ```
 
 Verified debug package/application ID: `com.yetiwurks.flockfree`.
-Verified APK SHA-256: `f578dc2f5b14e063ceb53e0171a222a5ef4a1377d276b00e3352a56663ed1791`.
-That APK was installed and launched on a Moto G Stylus over Wi-Fi ADB. The source tree has newer route-summary work after that packaged APK, so rebuild before testing route-summary behavior.
+Verified APK SHA-256: `aecab4bdb9f873649e90fc3b4d1f6ff8f8c673e599c0b902fecf4772ff168c73`.
+That APK was installed and launched on a Moto G Stylus over Wi-Fi ADB. It includes the route-summary hook and exposed FlockFree plugin settings screen.
 
 ## What Works Now
 
@@ -35,7 +35,7 @@ That APK was installed and launched on a Moto G Stylus over Wi-Fi ADB. The sourc
 - Tapping a rendered camera opens a simple details dialog with brand, operator, direction, mount, surveillance zone, OSM ID/type, and timestamp when present.
 - The map context menu has an `Add ALPR Camera` action that opens the current camera-reporting flow.
 - When camera avoidance is enabled, newly calculated routes get a FlockFree toast summary of cameras near the route corridor.
-- Basic preferences exist for map layer visibility, avoidance, alert distance, data timestamp, and CYD BLE enablement.
+- The plugin settings screen is exposed through the OsmAnd plugin settings flow for map layer visibility, route summaries, corridor radius, alert distance, and CYD BLE enablement.
 
 ## Still Stubbed Or Thin
 
@@ -43,12 +43,12 @@ That APK was installed and launched on a Moto G Stylus over Wi-Fi ADB. The sourc
 - CYD BLE integration is preference-only in this repo state; no BLE manager/service/parser is wired in.
 - Camera storage is an in-memory parsed GeoJSON list after cache/download, not a spatial SQLite database.
 - No bundled first-run camera snapshot is present, so the first useful camera layer depends on network access to download data.
-- Widgets, quick actions, a polished settings screen, and rich camera detail UI are placeholders or not implemented.
+- Widgets, quick actions, final settings polish, and rich camera detail UI are placeholders or not implemented.
 - Reporting depends on the current helper path and still needs end-to-end validation against OsmAnd's OSM editing flow.
 
 ## Phone Test Plan
 
-Use [docs/MORNING-TEST-PLAN.md](docs/MORNING-TEST-PLAN.md). The first verified APK has been installed and launched on the Moto G Stylus over Wi-Fi ADB.
+Use [docs/MORNING-TEST-PLAN.md](docs/MORNING-TEST-PLAN.md). The current verified APK has been installed and launched on the Moto G Stylus over Wi-Fi ADB.
 
 ## Credits
 

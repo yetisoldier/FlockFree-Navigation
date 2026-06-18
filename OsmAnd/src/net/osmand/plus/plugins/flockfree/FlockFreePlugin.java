@@ -77,7 +77,12 @@ public class FlockFreePlugin extends OsmandPlugin {
     @Nullable
     @Override
     public SettingsScreenType getSettingsScreenType() {
-        return null; // We use custom preferences screen
+        return SettingsScreenType.FLOCKFREE_SETTINGS;
+    }
+
+    @Override
+    public String getPrefsDescription() {
+        return "Configure ALPR camera display, route camera summaries, and CYD hardware options.";
     }
 
     @NonNull
