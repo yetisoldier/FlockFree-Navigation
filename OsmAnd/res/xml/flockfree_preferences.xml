@@ -97,4 +97,10 @@
 		android:persistent="false"
 		android:title="@string/flockfree_cyd_simulate_detection" />
 
+	<Preference
+		android:key="flockfree_cyd_clear_detections"
+		android:layout="@layout/preference_with_descr"
+		android:persistent="false"
+		android:title="@string/flockfree_cyd_clear_detections" />
+
 </PreferenceScreen>

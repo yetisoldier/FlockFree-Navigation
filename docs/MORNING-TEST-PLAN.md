@@ -2,7 +2,7 @@
 
 Goal: prove the debug APK installs over Wi-Fi ADB, launches as FlockFree, and exposes the current camera-awareness MVP without chasing unfinished features.
 
-Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The current verified APK installed successfully on the Moto G Stylus and launched into the FlockFree first-run screen. It includes the route-summary hook and exposed FlockFree plugin settings screen. Source now includes newer camera indexing, experimental two-pass camera avoidance, visible applied/fallback/skipped route diagnostics, OSM editor tag-prefill reporting, cache-backed route startup, and a settings-driven CYD BLE scan/status/simulation path after that APK, so rebuild before testing those newer features.
+Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The current verified APK installed successfully on the Moto G Stylus and launched into the FlockFree first-run screen. It includes the route-summary hook and exposed FlockFree plugin settings screen. Source now includes newer camera indexing, experimental two-pass camera avoidance, visible applied/fallback/skipped route diagnostics, OSM editor tag-prefill reporting, cache-backed route startup, a settings-driven CYD BLE scan/status/simulation path, and CYD detection map/review candidates after that APK, so rebuild before testing those newer features.
 
 ## Setup
 
@@ -64,12 +64,15 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 - [ ] Open the FlockFree CYD hardware settings, enable `CYD BLE`, and tap `Scan and connect CYD` with the CYD powered and advertising `CYD-Flock-You`.
 - [ ] If the CYD connects, tap `Request CYD status` and confirm the `CYD status` row updates with device, GPS, SD, detection, and radio scan details.
 - [ ] Tap `Simulate CYD detection` and confirm the status row updates with a detection summary or the app shows `CYD detection received`.
+- [ ] Return to the map and confirm a GPS-backed CYD detection appears as a cyan diamond `CYD` marker.
+- [ ] Tap the CYD marker and choose `Review as ALPR camera`; confirm the normal ALPR report dialog opens at the detection location.
+- [ ] Use `Clear CYD detections` before a real drive if old bench-test markers are still on the map.
 
 ## Known Non-Goals For This Morning
 
 - Do not expect camera avoidance to work for BRouter or online routing. The experimental reroute path only applies to OsmAnd offline vector routing.
 - Do not expect camera avoidance to be subtle. It blocks whole route road objects and falls back to the original route if the avoided route fails.
-- Do not expect a polished CYD foreground service or pending-review workflow yet. Current source can scan/connect/request status/simulate from settings, but detections are surfaced as status/toast only.
+- Do not expect a polished CYD foreground service, background auto-reconnect, or persisted pending queue yet. Current source can scan/connect/request status/simulate from settings and review recent GPS-backed detections from the map, but those candidates are in memory only.
 - Do not expect offline first-run camera data before the GeoJSON download succeeds.
 - Do not expect polished widgets, quick actions, or a final settings UI beyond the exposed MVP preferences.
 
@@ -107,4 +110,4 @@ adb logcat -d | rg -i 'flockfree|CameraData|FlockFreePlugin|AndroidRuntime|FATAL
 adb shell pidof com.yetiwurks.flockfree
 ```
 
-Pass condition: the app launches, reaches the map, does not crash, camera data indexes, the add-camera flow pre-fills the OSM editor with ALPR tags, the CYD settings path can connect or fail cleanly with a clear status, and the experimental offline reroute visibly reports that it applied, fell back, or skipped for a specific reason.
+Pass condition: the app launches, reaches the map, does not crash, camera data indexes, the add-camera flow pre-fills the OSM editor with ALPR tags, the CYD settings path can connect or fail cleanly with a clear status, GPS-backed CYD detections become reviewable map candidates, and the experimental offline reroute visibly reports that it applied, fell back, or skipped for a specific reason.

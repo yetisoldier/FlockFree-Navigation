@@ -26,12 +26,15 @@ import net.osmand.util.Algorithms;
 
 import org.apache.commons.logging.Log;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public final class CydHardwareManager implements AutoCloseable, CydBleUartClient.Listener {
 
 	private static final Log LOG = PlatformUtil.getLog(CydHardwareManager.class);
 	private static final long SCAN_TIMEOUT_MS = 15_000L;
+	private static final int MAX_RECENT_DETECTIONS = 20;
 
 	private final OsmandApplication app;
 	private final Handler handler = new Handler(Looper.getMainLooper());
@@ -46,6 +49,8 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 	private CydPairStatus lastPairStatus;
 	@Nullable
 	private CydDetectionCandidate lastDetection;
+	@NonNull
+	private List<CydDetectionCandidate> recentDetections = Collections.emptyList();
 	@NonNull
 	private State state = State.IDLE;
 	@Nullable
@@ -73,6 +78,19 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 	public CydDetectionCandidate getLastDetection() {
 		synchronized (lock) {
 			return lastDetection;
+		}
+	}
+
+	@NonNull
+	public List<CydDetectionCandidate> getRecentDetections() {
+		synchronized (lock) {
+			return new ArrayList<>(recentDetections);
+		}
+	}
+
+	public int getRecentDetectionCount() {
+		synchronized (lock) {
+			return recentDetections.size();
 		}
 	}
 
@@ -159,6 +177,17 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 		}
 		app.showShortToastMessage(R.string.flockfree_cyd_status_not_connected);
 		return false;
+	}
+
+	public void clearDetections() {
+		synchronized (lock) {
+			lastDetection = null;
+			recentDetections = Collections.emptyList();
+			if (lastPairStatus == null) {
+				lastMessage = app.getString(R.string.flockfree_cyd_status_idle);
+			}
+		}
+		refreshMap();
 	}
 
 	@SuppressLint("MissingPermission")
@@ -302,9 +331,18 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 	public void onCydDetection(@NonNull CydDetectionCandidate candidate) {
 		synchronized (lock) {
 			lastDetection = candidate;
+			if (candidate.hasGpsFix()) {
+				ArrayList<CydDetectionCandidate> updated = new ArrayList<>(recentDetections);
+				updated.add(0, candidate);
+				while (updated.size() > MAX_RECENT_DETECTIONS) {
+					updated.remove(updated.size() - 1);
+				}
+				recentDetections = Collections.unmodifiableList(updated);
+			}
 			lastMessage = candidate.getStatusSummary();
 		}
 		app.showShortToastMessage(R.string.flockfree_cyd_detection_received);
+		refreshMap();
 	}
 
 	@Override
@@ -317,6 +355,10 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 	public void close() {
 		disconnect();
 		client.close();
+	}
+
+	private void refreshMap() {
+		handler.post(() -> app.getOsmandMap().refreshMap());
 	}
 
 	public enum State {

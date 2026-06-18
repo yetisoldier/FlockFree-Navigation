@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.PointF;
 
 import androidx.annotation.NonNull;
@@ -13,7 +14,9 @@ import net.osmand.data.LatLon;
 import net.osmand.data.PointDescription;
 import net.osmand.data.QuadRect;
 import net.osmand.data.RotatedTileBox;
+import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
+import net.osmand.plus.plugins.flockfree.cyd.CydDetectionCandidate;
 import net.osmand.plus.views.layers.ContextMenuLayer;
 import net.osmand.plus.views.layers.MapSelectionResult;
 import net.osmand.plus.views.layers.MapSelectionRules;
@@ -28,10 +31,11 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
 
     private final FlockFreePlugin plugin;
     private final Paint markerPaint;
+    private final Paint candidatePaint;
     private final Paint textPaint;
 
     private List<CameraData.CameraPoint> visibleCameras = new java.util.ArrayList<>();
-    private CameraData.CameraPoint tappedCamera;
+    private List<CydDetectionCandidate> visibleDetections = new java.util.ArrayList<>();
 
     public FlockFreeLayer(@NonNull Context context, @NonNull FlockFreePlugin plugin) {
         super(context);
@@ -41,6 +45,10 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         markerPaint.setStyle(Paint.Style.FILL);
         markerPaint.setAntiAlias(true);
         markerPaint.setStrokeWidth(dpToPx(2));
+
+        candidatePaint = new Paint();
+        candidatePaint.setAntiAlias(true);
+        candidatePaint.setStrokeWidth(dpToPx(2));
 
         textPaint = new Paint();
         textPaint.setAntiAlias(true);
@@ -54,38 +62,27 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         if (!plugin.CAMERA_SHOW_LAYER.get()) {
             return;
         }
-        if (tileBox.getZoom() < MIN_ZOOM_TO_SHOW) {
-            return;
-        }
-        CameraData cameraData = plugin.getCameraData();
-        if (!cameraData.isDataLoaded()) {
-            return;
-        }
 
         QuadRect screenArea = tileBox.getLatLonBounds();
-        List<CameraData.CameraPoint> cameras = cameraData.getCamerasInBoundingBox(
-                screenArea.top, screenArea.left, screenArea.bottom, screenArea.right);
-
-        visibleCameras = cameras;
-
-        for (CameraData.CameraPoint camera : cameras) {
-            float x = tileBox.getPixXFromLatLon(camera.lat, camera.lon);
-            float y = tileBox.getPixYFromLatLon(camera.lat, camera.lon);
-            int color = getBrandColor(camera.brand);
-            markerPaint.setColor(color);
-            float radius = dpToPx(6);
-            canvas.drawCircle(x, y, radius, markerPaint);
-            // Draw a darker outline
-            markerPaint.setStyle(Paint.Style.STROKE);
-            markerPaint.setColor(darkenColor(color));
-            canvas.drawCircle(x, y, radius, markerPaint);
-            markerPaint.setStyle(Paint.Style.FILL);
-
-            // Draw brand label at higher zoom
-            if (tileBox.getZoom() >= 15) {
-                String label = getShortBrandName(camera.brand);
-                canvas.drawText(label, x, y - radius - dpToPx(2), textPaint);
+        if (tileBox.getZoom() >= MIN_ZOOM_TO_SHOW) {
+            CameraData cameraData = plugin.getCameraData();
+            if (cameraData.isDataLoaded()) {
+                List<CameraData.CameraPoint> cameras = cameraData.getCamerasInBoundingBox(
+                        screenArea.top, screenArea.left, screenArea.bottom, screenArea.right);
+                visibleCameras = cameras;
+                for (CameraData.CameraPoint camera : cameras) {
+                    drawCamera(canvas, tileBox, camera);
+                }
+            } else {
+                visibleCameras = new java.util.ArrayList<>();
             }
+        } else {
+            visibleCameras = new java.util.ArrayList<>();
+        }
+
+        visibleDetections = getVisibleDetections(screenArea);
+        for (CydDetectionCandidate detection : visibleDetections) {
+            drawCydDetection(canvas, tileBox, detection);
         }
     }
 
@@ -114,6 +111,14 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
             }
             return true;
         }
+        CydDetectionCandidate detection = findClosestDetection(point, tileBox);
+        if (detection != null) {
+            MapActivity mapActivity = getMapActivity();
+            if (mapActivity != null) {
+                plugin.showCydDetectionDetails(mapActivity, detection);
+            }
+            return true;
+        }
         return false;
     }
 
@@ -133,6 +138,10 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         if (camera != null) {
             result.collect(camera, this);
         }
+        CydDetectionCandidate detection = findClosestDetection(point, tileBox);
+        if (detection != null) {
+            result.collect(detection, this);
+        }
     }
 
     @Nullable
@@ -141,6 +150,13 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         if (o instanceof CameraData.CameraPoint) {
             CameraData.CameraPoint cam = (CameraData.CameraPoint) o;
             return new LatLon(cam.lat, cam.lon);
+        } else if (o instanceof CydDetectionCandidate) {
+            CydDetectionCandidate detection = (CydDetectionCandidate) o;
+            Double lat = detection.getLatitude();
+            Double lon = detection.getLongitude();
+            if (lat != null && lon != null) {
+                return new LatLon(lat, lon);
+            }
         }
         return null;
     }
@@ -149,8 +165,12 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     public PointDescription getObjectName(Object o) {
         if (o instanceof CameraData.CameraPoint) {
             CameraData.CameraPoint cam = (CameraData.CameraPoint) o;
-            String brand = cam.brand != null ? cam.brand : "ALPR Camera";
+            String brand = cam.brand != null ? cam.brand : getString(R.string.flockfree_alpr_camera);
             return new PointDescription(PointDescription.POINT_TYPE_POI, brand);
+        } else if (o instanceof CydDetectionCandidate) {
+            CydDetectionCandidate detection = (CydDetectionCandidate) o;
+            return new PointDescription(PointDescription.POINT_TYPE_POI,
+                    getString(R.string.flockfree_cyd_detection_name, detection.getDetectionTypeLabel()));
         }
         return null;
     }
@@ -172,6 +192,101 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
             }
         }
         return closest;
+    }
+
+    @Nullable
+    private CydDetectionCandidate findClosestDetection(@NonNull PointF point, @NonNull RotatedTileBox tileBox) {
+        LatLon latLon = tileBox.getLatLonFromPixel(point.x, point.y);
+        CydDetectionCandidate closest = null;
+        double closestDist = Double.MAX_VALUE;
+        for (CydDetectionCandidate detection : visibleDetections) {
+            Double lat = detection.getLatitude();
+            Double lon = detection.getLongitude();
+            if (lat == null || lon == null) {
+                continue;
+            }
+            double dist = MapUtils.getDistance(lat, lon, latLon.getLatitude(), latLon.getLongitude());
+            if (dist < getTapRadiusMeters(tileBox) && dist < closestDist) {
+                closestDist = dist;
+                closest = detection;
+            }
+        }
+        return closest;
+    }
+
+    @NonNull
+    private List<CydDetectionCandidate> getVisibleDetections(@NonNull QuadRect screenArea) {
+        List<CydDetectionCandidate> detections = new java.util.ArrayList<>();
+        for (CydDetectionCandidate detection : plugin.getCydHardwareManager().getRecentDetections()) {
+            Double lat = detection.getLatitude();
+            Double lon = detection.getLongitude();
+            if (lat != null && lon != null && isInBounds(screenArea, lat, lon)) {
+                detections.add(detection);
+            }
+        }
+        return detections;
+    }
+
+    private boolean isInBounds(@NonNull QuadRect screenArea, double lat, double lon) {
+        double top = Math.max(screenArea.top, screenArea.bottom);
+        double bottom = Math.min(screenArea.top, screenArea.bottom);
+        boolean latitudeInBounds = lat >= bottom && lat <= top;
+        if (!latitudeInBounds) {
+            return false;
+        }
+        if (screenArea.left <= screenArea.right) {
+            return lon >= screenArea.left && lon <= screenArea.right;
+        }
+        return lon >= screenArea.left || lon <= screenArea.right;
+    }
+
+    private void drawCamera(@NonNull Canvas canvas, @NonNull RotatedTileBox tileBox,
+                            @NonNull CameraData.CameraPoint camera) {
+        float x = tileBox.getPixXFromLatLon(camera.lat, camera.lon);
+        float y = tileBox.getPixYFromLatLon(camera.lat, camera.lon);
+        int color = getBrandColor(camera.brand);
+        markerPaint.setColor(color);
+        float radius = dpToPx(6);
+        canvas.drawCircle(x, y, radius, markerPaint);
+        markerPaint.setStyle(Paint.Style.STROKE);
+        markerPaint.setColor(darkenColor(color));
+        canvas.drawCircle(x, y, radius, markerPaint);
+        markerPaint.setStyle(Paint.Style.FILL);
+
+        if (tileBox.getZoom() >= 15) {
+            String label = getShortBrandName(camera.brand);
+            canvas.drawText(label, x, y - radius - dpToPx(2), textPaint);
+        }
+    }
+
+    private void drawCydDetection(@NonNull Canvas canvas, @NonNull RotatedTileBox tileBox,
+                                  @NonNull CydDetectionCandidate detection) {
+        Double lat = detection.getLatitude();
+        Double lon = detection.getLongitude();
+        if (lat == null || lon == null) {
+            return;
+        }
+        float x = tileBox.getPixXFromLatLon(lat, lon);
+        float y = tileBox.getPixYFromLatLon(lat, lon);
+        float radius = dpToPx(8);
+        Path diamond = new Path();
+        diamond.moveTo(x, y - radius);
+        diamond.lineTo(x + radius, y);
+        diamond.lineTo(x, y + radius);
+        diamond.lineTo(x - radius, y);
+        diamond.close();
+
+        candidatePaint.setStyle(Paint.Style.FILL);
+        candidatePaint.setColor(Color.parseColor("#00ACC1"));
+        canvas.drawPath(diamond, candidatePaint);
+        candidatePaint.setStyle(Paint.Style.STROKE);
+        candidatePaint.setColor(Color.parseColor("#004D60"));
+        canvas.drawPath(diamond, candidatePaint);
+        candidatePaint.setStyle(Paint.Style.FILL);
+
+        if (tileBox.getZoom() >= 14) {
+            canvas.drawText("CYD", x, y - radius - dpToPx(2), textPaint);
+        }
     }
 
     private double getTapRadiusMeters(@NonNull RotatedTileBox tileBox) {

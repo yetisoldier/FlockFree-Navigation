@@ -20,6 +20,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 	private static final String CYD_CONNECT_KEY = "flockfree_cyd_connect";
 	private static final String CYD_REQUEST_STATUS_KEY = "flockfree_cyd_request_status";
 	private static final String CYD_SIMULATE_DETECTION_KEY = "flockfree_cyd_simulate_detection";
+	private static final String CYD_CLEAR_DETECTIONS_KEY = "flockfree_cyd_clear_detections";
 	private static final Integer[] AVOIDANCE_RADIUS_VALUES = {50, 75, 100, 150, 200, 300, 500};
 	private static final Integer[] ALERT_DISTANCE_VALUES = {100, 200, 300, 500, 750, 1000};
 
@@ -70,7 +71,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 			CydDetectionCandidate detection = manager.getLastDetection();
 			if (detection != null) {
 				preference.setSummary(getString(R.string.flockfree_cyd_status_last_detection,
-						detection.getStatusSummary()));
+						detection.getStatusSummary(), manager.getRecentDetectionCount()));
 			} else {
 				preference.setSummary(manager.getStatusSummary());
 			}
@@ -132,6 +133,14 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		} else if (CYD_SIMULATE_DETECTION_KEY.equals(key)) {
 			plugin.getCydHardwareManager().simulateDetection();
 			setupCydStatusPreference();
+			return true;
+		} else if (CYD_CLEAR_DETECTIONS_KEY.equals(key)) {
+			plugin.getCydHardwareManager().clearDetections();
+			setupCydStatusPreference();
+			MapActivity mapActivity = getMapActivity();
+			if (mapActivity != null) {
+				mapActivity.refreshMap();
+			}
 			return true;
 		}
 		return super.onPreferenceClick(preference);

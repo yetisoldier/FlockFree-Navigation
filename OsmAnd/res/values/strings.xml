@@ -50,6 +50,7 @@
 	<string name="flockfree_cyd_connect">Scan and connect CYD</string>
 	<string name="flockfree_cyd_request_status">Request CYD status</string>
 	<string name="flockfree_cyd_simulate_detection">Simulate CYD detection</string>
+	<string name="flockfree_cyd_clear_detections">Clear CYD detections</string>
 	<string name="flockfree_cyd_status_idle">CYD not connected.</string>
 	<string name="flockfree_cyd_status_permission_requested">Bluetooth permission requested.</string>
 	<string name="flockfree_cyd_status_no_adapter">Bluetooth adapter unavailable.</string>
@@ -64,8 +65,18 @@
 	<string name="flockfree_cyd_status_disconnected">CYD disconnected.</string>
 	<string name="flockfree_cyd_status_not_connected">CYD is not connected.</string>
 	<string name="flockfree_cyd_status_map_unavailable">Open the map before connecting CYD hardware.</string>
-	<string name="flockfree_cyd_status_last_detection">Last detection: %1$s</string>
+	<string name="flockfree_cyd_status_last_detection">Last detection: %1$s. %2$d mapped detection(s).</string>
 	<string name="flockfree_cyd_detection_received">CYD detection received.</string>
+	<string name="flockfree_cyd_detection_name">CYD detection: %1$s</string>
+	<string name="flockfree_cyd_detection_no_gps">CYD detection has no GPS fix.</string>
+	<string name="flockfree_cyd_detection_details">CYD detection details</string>
+	<string name="flockfree_cyd_review_detection">Review as ALPR camera</string>
+	<string name="flockfree_cyd_detail_type">Type</string>
+	<string name="flockfree_cyd_detail_source">Source</string>
+	<string name="flockfree_cyd_detail_signal">Signal</string>
+	<string name="flockfree_cyd_detail_gps">GPS</string>
+	<string name="flockfree_cyd_detail_channel">Channel</string>
+	<string name="flockfree_cyd_detail_received_age">Received</string>
 	<string name="flockfree_alpr_camera">ALPR Camera</string>
 	<string name="flockfree_report_brand_label">Brand:</string>
 	<string name="flockfree_report_direction_label">Direction (optional):</string>

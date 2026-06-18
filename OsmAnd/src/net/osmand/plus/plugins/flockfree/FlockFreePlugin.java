@@ -10,6 +10,7 @@ import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.plugins.OsmandPlugin;
+import net.osmand.plus.plugins.flockfree.cyd.CydDetectionCandidate;
 import net.osmand.plus.plugins.flockfree.cyd.CydHardwareManager;
 import net.osmand.plus.routing.RouteCalculationResult;
 import net.osmand.plus.quickaction.QuickActionType;
@@ -37,6 +38,8 @@ public class FlockFreePlugin extends OsmandPlugin {
 
     // Context menu item order
     private static final int CAMERA_DETAILS_ITEM_ORDER = 7800;
+    private static final int CYD_REVIEW_ITEM_ORDER = 7850;
+    private static final int CYD_DETAILS_ITEM_ORDER = 7860;
     private static final int ADD_CAMERA_ITEM_ORDER = 7900;
 
     private FlockFreeLayer cameraLayer;
@@ -193,6 +196,24 @@ public class FlockFreePlugin extends OsmandPlugin {
                         showCameraDetails(mapActivity, (CameraData.CameraPoint) selectedObj);
                         return true;
                     }));
+        } else if (selectedObj instanceof CydDetectionCandidate) {
+            CydDetectionCandidate detection = (CydDetectionCandidate) selectedObj;
+            adapter.addItem(new ContextMenuItem(PLUGIN_ID + ".cyd_review")
+                    .setTitle(app.getString(R.string.flockfree_cyd_review_detection))
+                    .setIcon(R.drawable.ic_action_plus_dark)
+                    .setOrder(CYD_REVIEW_ITEM_ORDER)
+                    .setListener((uiAdapter, view, item, isChecked) -> {
+                        showCydDetectionReport(mapActivity, detection);
+                        return true;
+                    }));
+            adapter.addItem(new ContextMenuItem(PLUGIN_ID + ".cyd_details")
+                    .setTitle(app.getString(R.string.flockfree_cyd_detection_details))
+                    .setIcon(R.drawable.ic_action_info_dark)
+                    .setOrder(CYD_DETAILS_ITEM_ORDER)
+                    .setListener((uiAdapter, view, item, isChecked) -> {
+                        showCydDetectionDetails(mapActivity, detection);
+                        return true;
+                    }));
         }
         adapter.addItem(new ContextMenuItem(PLUGIN_ID + ".add_camera")
                 .setTitle(app.getString(R.string.flockfree_add_camera))
@@ -221,6 +242,55 @@ public class FlockFreePlugin extends OsmandPlugin {
                 .setMessage(sb.toString())
                 .setPositiveButton(R.string.shared_string_ok, null)
                 .show();
+    }
+
+    public void showCydDetectionDetails(@NonNull MapActivity mapActivity,
+                                        @NonNull CydDetectionCandidate detection) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(app.getString(R.string.flockfree_cyd_detail_type)).append(": ")
+                .append(detection.getDetectionTypeLabel()).append("\n");
+        sb.append(app.getString(R.string.flockfree_cyd_detail_source)).append(": ")
+                .append(detection.getSourceLabel()).append("\n");
+        sb.append(app.getString(R.string.flockfree_cyd_detail_signal)).append(": ")
+                .append(detection.getSignalStatus()).append("\n");
+        sb.append(app.getString(R.string.flockfree_cyd_detail_gps)).append(": ")
+                .append(detection.getGpsStatus());
+        Integer channel = detection.getChannel();
+        Integer frequency = detection.getFrequency();
+        if (channel != null || frequency != null) {
+            sb.append("\n").append(app.getString(R.string.flockfree_cyd_detail_channel)).append(": ");
+            if (channel != null) {
+                sb.append(channel);
+            }
+            if (frequency != null) {
+                if (channel != null) {
+                    sb.append(" / ");
+                }
+                sb.append(frequency).append(" MHz");
+            }
+        }
+        long ageMs = detection.getReceivedAgeMs(System.currentTimeMillis());
+        sb.append("\n").append(app.getString(R.string.flockfree_cyd_detail_received_age)).append(": ")
+                .append(ageMs / 1000L).append(" s");
+
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(mapActivity);
+        builder.setTitle(R.string.flockfree_cyd_detection_details)
+                .setMessage(sb.toString())
+                .setPositiveButton(R.string.flockfree_cyd_review_detection,
+                        (dialog, which) -> showCydDetectionReport(mapActivity, detection))
+                .setNegativeButton(R.string.shared_string_close, null)
+                .show();
+    }
+
+    private void showCydDetectionReport(@NonNull MapActivity mapActivity,
+                                        @NonNull CydDetectionCandidate detection) {
+        Double lat = detection.getLatitude();
+        Double lon = detection.getLongitude();
+        if (lat == null || lon == null) {
+            app.showShortToastMessage(R.string.flockfree_cyd_detection_no_gps);
+            return;
+        }
+        getCameraReporter().showAddCameraDialog(mapActivity, lat, lon);
     }
 
     @Override
