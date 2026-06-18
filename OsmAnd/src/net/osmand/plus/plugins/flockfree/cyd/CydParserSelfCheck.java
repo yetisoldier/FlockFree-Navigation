@@ -14,6 +14,7 @@ final class CydParserSelfCheck {
 		checkPartialPairStatus();
 		checkInvalidDetectionGps();
 		checkTopLevelDetectionGps();
+		checkMapCenterLocalDetectionGps();
 		checkDetectionStoreRoundTrip();
 		System.out.println("CydParserSelfCheck passed");
 	}
@@ -70,6 +71,20 @@ final class CydParserSelfCheck {
 		check(candidate.hasGpsFix(), "valid top-level GPS should count as a fix");
 		check(candidate.rssi != null && candidate.rssi == -61, "string RSSI should parse when numeric");
 		check(candidate.channel != null && candidate.channel == 6, "string channel should parse when numeric");
+	}
+
+	private static void checkMapCenterLocalDetectionGps() {
+		CydMessageParser.ParsedMessage message = CydMessageParser.parseLine(
+				"{\"event\":\"detection\",\"detection_method\":\"Simulated CYD\","
+						+ "\"device_name\":\"FlockFree local test\",\"gps\":{\"latitude\":45.17,"
+						+ "\"longitude\":-93.22,\"source\":\"map-center-local-test\"}}");
+		check(message.type == CydMessageParser.MessageType.DETECTION,
+				"map-center local detection should parse");
+		CydDetectionCandidate candidate = message.detectionCandidate;
+		check(candidate != null, "map-center detection candidate should be available");
+		check(candidate.hasGpsFix(), "valid map-center GPS should count as a fix");
+		check(candidate.getGpsStatus().contains("map-center-local-test"),
+				"map-center source should be visible in status");
 	}
 
 	private static void checkDetectionStoreRoundTrip() {

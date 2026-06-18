@@ -190,11 +190,11 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 		return false;
 	}
 
-	public boolean simulateDetection() {
+	public boolean simulateDetection(@Nullable MapActivity activity) {
 		if (client.isReady()) {
 			return client.sendSimulationRequest();
 		}
-		return simulateLocalDetection();
+		return simulateLocalDetection(activity);
 	}
 
 	public boolean updatePhoneLocation(@NonNull Location location) {
@@ -241,31 +241,23 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 		}
 	}
 
-	private boolean simulateLocalDetection() {
+	private boolean simulateLocalDetection(@Nullable MapActivity activity) {
 		rememberLastKnownLocationIfAvailable();
-		Double latitude;
-		Double longitude;
-		Float accuracy;
-		long locationAtMs;
-		synchronized (lock) {
-			latitude = lastPhoneLatitude;
-			longitude = lastPhoneLongitude;
-			accuracy = lastPhoneAccuracy;
-			locationAtMs = lastPhoneLocationAtMs;
-		}
-		if (latitude == null || longitude == null) {
-			setState(State.ERROR, app.getString(R.string.flockfree_cyd_phone_gps_unavailable));
-			app.showShortToastMessage(R.string.flockfree_cyd_phone_gps_unavailable);
+		LocalSimulationFix simulationFix = getLocalSimulationFix(activity);
+		if (simulationFix == null) {
+			setState(State.ERROR, app.getString(R.string.flockfree_cyd_local_location_unavailable));
+			app.showShortToastMessage(R.string.flockfree_cyd_local_location_unavailable);
 			return false;
 		}
 		try {
 			long nowMs = System.currentTimeMillis();
 			JSONObject gps = new JSONObject()
-					.put("latitude", latitude)
-					.put("longitude", longitude)
-					.put("accuracy", accuracy != null ? accuracy : JSONObject.NULL)
-					.put("age_ms", Math.max(0L, nowMs - locationAtMs))
-					.put("source", "phone-local-test");
+					.put("latitude", simulationFix.latitude)
+					.put("longitude", simulationFix.longitude)
+					.put("accuracy", simulationFix.accuracyMeters != null
+							? simulationFix.accuracyMeters : JSONObject.NULL)
+					.put("age_ms", Math.max(0L, nowMs - simulationFix.locationAtMs))
+					.put("source", simulationFix.source);
 			JSONObject json = new JSONObject()
 					.put("event", "detection")
 					.put("detection_method", "Simulated CYD")
@@ -282,6 +274,26 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 			app.showShortToastMessage(R.string.flockfree_cyd_status_not_connected);
 			return false;
 		}
+	}
+
+	@Nullable
+	private LocalSimulationFix getLocalSimulationFix(@Nullable MapActivity activity) {
+		synchronized (lock) {
+			if (lastPhoneLatitude != null && lastPhoneLongitude != null
+					&& isValidCoordinate(lastPhoneLatitude, lastPhoneLongitude)) {
+				return new LocalSimulationFix(lastPhoneLatitude, lastPhoneLongitude, lastPhoneAccuracy,
+						lastPhoneLocationAtMs, "phone-local-test");
+			}
+		}
+		if (activity != null && activity.getMapView() != null) {
+			double latitude = activity.getMapView().getLatitude();
+			double longitude = activity.getMapView().getLongitude();
+			if (isValidCoordinate(latitude, longitude)) {
+				return new LocalSimulationFix(latitude, longitude, null,
+						System.currentTimeMillis(), "map-center-local-test");
+			}
+		}
+		return null;
 	}
 
 	private void rememberLastKnownLocationIfAvailable() {
@@ -405,8 +417,10 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 	}
 
 	private boolean isValidGpsFix(@NonNull Location location) {
-		double latitude = location.getLatitude();
-		double longitude = location.getLongitude();
+		return isValidCoordinate(location.getLatitude(), location.getLongitude());
+	}
+
+	private boolean isValidCoordinate(double latitude, double longitude) {
 		return !Double.isNaN(latitude) && !Double.isInfinite(latitude)
 				&& !Double.isNaN(longitude) && !Double.isInfinite(longitude)
 				&& latitude >= -90d && latitude <= 90d
@@ -558,5 +572,25 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 		CONNECTING,
 		READY,
 		ERROR
+	}
+
+	private static final class LocalSimulationFix {
+		private final double latitude;
+		private final double longitude;
+		@Nullable
+		private final Float accuracyMeters;
+		private final long locationAtMs;
+		@NonNull
+		private final String source;
+
+		private LocalSimulationFix(double latitude, double longitude,
+		                           @Nullable Float accuracyMeters, long locationAtMs,
+		                           @NonNull String source) {
+			this.latitude = latitude;
+			this.longitude = longitude;
+			this.accuracyMeters = accuracyMeters;
+			this.locationAtMs = locationAtMs;
+			this.source = source;
+		}
 	}
 }

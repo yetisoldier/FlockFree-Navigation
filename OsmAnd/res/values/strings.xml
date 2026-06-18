@@ -102,6 +102,7 @@
 	<string name="flockfree_cyd_phone_gps_ready">Phone GPS ready %1$d seconds ago.</string>
 	<string name="flockfree_cyd_phone_gps_waiting">Phone GPS not sent yet.</string>
 	<string name="flockfree_cyd_phone_gps_unavailable">Phone GPS fix unavailable.</string>
+	<string name="flockfree_cyd_local_location_unavailable">Phone GPS and map center unavailable.</string>
 	<string name="flockfree_cyd_local_simulated_detection">Local CYD test detection created.</string>
 	<string name="flockfree_cyd_detection_received">CYD detection received.</string>
 	<string name="flockfree_cyd_detection_name">CYD detection: %1$s</string>

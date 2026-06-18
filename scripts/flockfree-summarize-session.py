@@ -20,7 +20,7 @@ EVIDENCE_ORDER = list(EVIDENCE_PATTERNS.keys()) + ["CYD"]
 CYD_EVIDENCE_PATTERN = re.compile(
     r"\b(FYSTATUS|FYGPS|FYSIM|pair_status|CYD detection received|Phone GPS sent|"
     r"Phone GPS ready|Local CYD test detection created|FlockFree local test|"
-    r"Connected to CYD|CYD status|Simulate CYD detection)\b",
+    r"map-center-local-test|Connected to CYD|CYD status|Simulate CYD detection)\b",
     re.I,
 )
 FATAL_CRASH_PATTERN = re.compile(r"FATAL EXCEPTION|AndroidRuntime.*FATAL EXCEPTION", re.I)
@@ -256,7 +256,7 @@ def self_check() -> int:
         (root / "session-logcat-filtered.txt").write_text(
             "01-01 I CameraData: loaded\n"
             "01-01 I FlockFree: Avoidance applied\n"
-            "01-01 I FlockFree: Local CYD test detection created\n",
+            "01-01 I FlockFree: Local CYD test detection created source=map-center-local-test\n",
             encoding="utf-8",
         )
         (root / "manual-test-results.tsv").write_text(

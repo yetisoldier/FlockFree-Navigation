@@ -148,16 +148,21 @@ missing_reporter = [item for item in required_reporter_tokens if item not in rep
 if missing_reporter:
     raise SystemExit("missing persisted report draft wiring:\n" + "\n".join(missing_reporter))
 required_cyd_tokens = [
-    "simulateLocalDetection()",
+    "simulateLocalDetection(",
+    "getLocalSimulationFix(",
+    "map-center-local-test",
     "rememberLastKnownLocationIfAvailable()",
     "getLastStaleKnownLocation()",
+    "activity.getMapView().getLatitude()",
     "flockfree_cyd_local_simulated_detection",
+    "flockfree_cyd_local_location_unavailable",
     "flockfree_cyd_phone_gps_ready",
-    "flockfree_cyd_phone_gps_unavailable",
 ]
 missing_cyd = [item for item in required_cyd_tokens if item not in cyd_manager]
 if missing_cyd:
     raise SystemExit("missing local CYD simulation wiring:\n" + "\n".join(missing_cyd))
+if "simulateDetection(getMapActivity())" not in fragment:
+    raise SystemExit("settings simulate button does not pass map activity for map-center fallback")
 if "refreshData()" not in camera_data:
     raise SystemExit("missing CameraData.refreshData()")
 if '"flockfree/cameras.geojson"' not in camera_data:
@@ -281,7 +286,7 @@ required = [
     "Last report draft",
     "Nearby camera alert behavior and Last alert check status observed",
     "ALPR/surveillance tag prefill and Last report draft status observed",
-    "local phone-GPS simulation fallback",
+    "local phone/map-center simulation fallback",
     "Map anchor coordinates",
     "Suggested map anchors:",
     "--duration",
@@ -367,6 +372,7 @@ required = [
     "Phone GPS ready",
     "Local CYD test detection created",
     "FlockFree local test",
+    "map-center-local-test",
     "--self-check",
     "Timed fatal crash evidence lines:",
 ]

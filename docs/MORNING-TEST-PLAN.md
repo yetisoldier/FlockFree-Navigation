@@ -2,7 +2,7 @@
 
 Goal: prove the debug APK installs over Wi-Fi ADB, launches as FlockFree, and exposes the current camera-awareness MVP without chasing unfinished features.
 
-Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The last verified APK installed successfully on the Moto G Stylus and launched to the map. Current source includes camera indexing, bundled first-use camera seed fallback, camera-data source/freshness diagnostics, experimental two-pass camera avoidance, profile-persisted applied/fallback/skipped route diagnostics, movement/navigation camera alerts with profile-persisted last-check status, OSM editor tag-prefill reporting with profile-persisted report-draft status, cache-backed route startup, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, phone GPS streaming to CYD, local phone-GPS CYD simulation when hardware is absent, and persisted CYD detection map/review candidates. Run `scripts/flockfree-user-build-install.sh` before morning feature testing so the installed APK matches the latest source.
+Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The last verified APK installed successfully on the Moto G Stylus and launched to the map. Current source includes camera indexing, bundled first-use camera seed fallback, camera-data source/freshness diagnostics, experimental two-pass camera avoidance, profile-persisted applied/fallback/skipped route diagnostics, movement/navigation camera alerts with profile-persisted last-check status, OSM editor tag-prefill reporting with profile-persisted report-draft status, cache-backed route startup, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, phone GPS streaming to CYD, local CYD simulation from phone/OsmAnd GPS or current map center when hardware is absent, and persisted CYD detection map/review candidates. Run `scripts/flockfree-user-build-install.sh` before morning feature testing so the installed APK matches the latest source.
 
 ## Setup
 
@@ -154,7 +154,7 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 - [ ] Relaunch or leave/return to the map with `CYD BLE` still enabled and confirm FlockFree starts scanning again without revisiting the CYD settings screen.
 - [ ] After FlockFree has a valid phone GPS fix, wait roughly one second and confirm the `CYD status` row says `Phone GPS sent ... seconds ago` when connected or `Phone GPS ready ... seconds ago` before hardware is connected.
 - [ ] Tap `Request CYD status` and confirm the CYD itself reports phone GPS as available.
-- [ ] Tap `Simulate CYD detection`; with hardware connected it should request `FYSIM`, and without hardware it should create a local GPS-backed test marker or report that phone GPS is unavailable.
+- [ ] Tap `Simulate CYD detection`; with hardware connected it should request `FYSIM`, and without hardware it should create a local test marker from phone/OsmAnd GPS or the current map center.
 - [ ] Return to the map and confirm a GPS-backed CYD detection appears as a cyan diamond `CYD` marker.
 - [ ] Tap the CYD marker and choose `Review as ALPR camera`; confirm the normal ALPR report dialog opens at the detection location.
 - [ ] Relaunch the app and confirm recent CYD detection markers are restored before clearing them.
@@ -164,7 +164,7 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 
 - Do not expect camera avoidance to work for BRouter or online routing. The experimental reroute path only applies to OsmAnd offline vector routing.
 - Do not expect camera avoidance to be subtle. It blocks whole route road objects and falls back to the original route if the avoided route fails.
-- Do not expect a polished CYD foreground service or sync. Current source can scan/connect/request status/simulate from settings, can create a local phone-GPS test marker when hardware is absent, can scan again from the map when CYD BLE is enabled and idle, and can review recent GPS-backed detections from the map; those candidates are persisted only in app-private local storage.
+- Do not expect a polished CYD foreground service or sync. Current source can scan/connect/request status/simulate from settings, can create a local phone/map-center test marker when hardware is absent, can scan again from the map when CYD BLE is enabled and idle, and can review recent GPS-backed detections from the map; those candidates are persisted only in app-private local storage.
 - Offline first-run camera data should now be available from the bundled seed snapshot, but `Refresh camera data` is still needed to prove live network update behavior.
 - Do not expect polished widgets, quick actions, or a final settings UI beyond the exposed MVP preferences.
 
@@ -236,4 +236,4 @@ adb logcat -d | rg -i 'flockfree|CameraData|FlockFreePlugin|AndroidRuntime|FATAL
 adb shell pidof com.yetiwurks.flockfree
 ```
 
-Pass condition: the app launches, reaches the map, does not crash, camera data indexes and can be manually refreshed, camera proximity alerts fire while navigating or moving near a known camera and preserve a `Last alert check` result, the add-camera flow pre-fills the OSM editor with ALPR tags and preserves a `Last report draft` result, the CYD settings path can connect or fail cleanly with a clear status, the status row shows recent phone GPS sends or cached GPS readiness, phone GPS reaches the CYD after connection, GPS-backed CYD detections or local GPS-backed CYD test markers become reviewable map candidates, and the experimental offline reroute visibly reports and preserves whether it applied, fell back, or skipped for a specific reason.
+Pass condition: the app launches, reaches the map, does not crash, camera data indexes and can be manually refreshed, camera proximity alerts fire while navigating or moving near a known camera and preserve a `Last alert check` result, the add-camera flow pre-fills the OSM editor with ALPR tags and preserves a `Last report draft` result, the CYD settings path can connect or fail cleanly with a clear status, the status row shows recent phone GPS sends or cached GPS readiness, phone GPS reaches the CYD after connection, GPS-backed CYD detections or local phone/map-center CYD test markers become reviewable map candidates, and the experimental offline reroute visibly reports and preserves whether it applied, fell back, or skipped for a specific reason.

@@ -200,7 +200,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 			startDynamicStatusRefresh();
 			return true;
 		} else if (CYD_SIMULATE_DETECTION_KEY.equals(key)) {
-			plugin.getCydHardwareManager().simulateDetection();
+			plugin.getCydHardwareManager().simulateDetection(getMapActivity());
 			setupCydStatusPreference();
 			startDynamicStatusRefresh();
 			return true;
