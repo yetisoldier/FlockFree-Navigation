@@ -31,6 +31,15 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 - **Brand presets** — Automatic tagging for known ALPR manufacturers (Flock Safety, Motorola Solutions, etc.)
 - **Draft persistence** — Report drafts survive app restarts
 
+### Quick Actions
+- **Show/hide cameras** — Toggle the camera map layer from the quick action menu
+- **Toggle camera avoidance** — Enable or disable route avoidance on the fly
+- **Toggle camera alerts** — Enable or disable proximity alerts
+- **Add camera** — Open the ALPR reporting dialog at the current map center
+
+### Map Widget
+- **Camera proximity widget** — Shows the count of known ALPR cameras within 1 km and the distance to the nearest one, updating in real time as you move
+
 ### Branding
 - **FlockFree identity** — Custom blue/white FF road mark on navy splash, cyan headers, red toggles
 - **All asset densities** — Launcher, adaptive, and splash icons in mdpi through xxxhdpi
@@ -167,6 +176,8 @@ Use **Simulate CYD detection** in Settings to create a test marker from your cur
 | CYD BLE hardware | Enable CYD Bluetooth connection |
 | Simulate CYD detection | Create a test detection marker |
 | Request CYD status | Query CYD for telemetry |
+| Camera proximity widget | Add to map screen for at-a-glance camera awareness |
+| Quick actions | Toggle cameras, avoidance, alerts, or add a camera from the quick action menu |
 
 ## Verification Scripts
 

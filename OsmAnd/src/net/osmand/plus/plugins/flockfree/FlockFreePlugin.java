@@ -15,6 +15,7 @@ import net.osmand.plus.plugins.flockfree.cyd.CydBleService;
 import net.osmand.plus.plugins.flockfree.cyd.CydDetectionCandidate;
 import net.osmand.plus.plugins.flockfree.cyd.CydHardwareManager;
 import net.osmand.plus.routing.RouteCalculationResult;
+import net.osmand.plus.plugins.flockfree.widgets.CameraProximityWidget;
 import net.osmand.plus.quickaction.QuickActionType;
 import net.osmand.plus.quickaction.actions.ShowHideCamerasAction;
 import net.osmand.plus.quickaction.actions.ToggleCameraAvoidanceAction;
@@ -25,6 +26,10 @@ import net.osmand.plus.settings.backend.preferences.CommonPreference;
 import net.osmand.plus.settings.backend.preferences.OsmandPreference;
 import net.osmand.plus.settings.fragments.SettingsScreenType;
 import net.osmand.plus.views.mapwidgets.MapWidgetInfo;
+import net.osmand.plus.views.mapwidgets.WidgetInfoCreator;
+import net.osmand.plus.views.mapwidgets.WidgetType;
+import net.osmand.plus.views.mapwidgets.WidgetsPanel;
+import net.osmand.plus.views.mapwidgets.widgets.MapWidget;
 import net.osmand.plus.widgets.ctxmenu.ContextMenuAdapter;
 import net.osmand.plus.widgets.ctxmenu.data.ContextMenuItem;
 import net.osmand.util.MapUtils;
@@ -334,7 +339,21 @@ public class FlockFreePlugin extends OsmandPlugin {
     public void createWidgets(@NonNull MapActivity activity, @NonNull List<MapWidgetInfo> widgetInfos,
                               @NonNull net.osmand.plus.settings.backend.ApplicationMode appMode,
                               @Nullable net.osmand.plus.settings.enums.ScreenLayoutMode layoutMode) {
-        // Widget registration would go here once CameraCountWidget is implemented
+        WidgetInfoCreator creator = new WidgetInfoCreator(app, appMode, layoutMode);
+        MapWidget cameraWidget = createMapWidgetForParams(activity, WidgetType.CAMERA_PROXIMITY);
+        if (cameraWidget != null) {
+            widgetInfos.add(creator.createWidgetInfo(cameraWidget));
+        }
+    }
+
+    @Nullable
+    @Override
+    protected MapWidget createMapWidgetForParams(@NonNull MapActivity mapActivity, @NonNull WidgetType widgetType,
+                                                  @Nullable String customId, @Nullable WidgetsPanel widgetsPanel) {
+        if (widgetType == WidgetType.CAMERA_PROXIMITY) {
+            return new CameraProximityWidget(mapActivity, customId, widgetsPanel);
+        }
+        return null;
     }
 
     @Override

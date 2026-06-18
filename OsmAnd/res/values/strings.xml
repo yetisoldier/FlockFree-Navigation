@@ -6769,4 +6769,8 @@ Download tile maps directly, or copy them as SQLite database files to OsmAnd\'s 
     <string name="flockfree_add_camera">Add ALPR Camera</string>
     <string name="flockfree_avoidance_enabled">Camera Avoidance</string>
     <string name="flockfree_settings">FlockFree Settings</string>
+    <string name="flockfree_widget_camera_proximity">Camera proximity</string>
+    <string name="flockfree_widget_camera_proximity_desc">Shows the count of known ALPR cameras within 1 km and the distance to the nearest one.</string>
+    <string name="flockfree_widget_no_cameras">No cameras nearby</string>
+    <string name="flockfree_widget_nearest">Nearest: %1$s</string>
 </resources>
