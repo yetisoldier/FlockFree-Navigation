@@ -41,6 +41,7 @@ The source tree has newer camera-indexing, experimental two-pass avoidance routi
 - Camera data downloads from `https://data.dontgetflocked.com/cameras.geojson.gz`, is cached as GeoJSON, and refreshes weekly.
 - The data loader handles both gzip and plain GeoJSON because the live `.gz` endpoint currently returns plain GeoJSON.
 - Parsed cameras are indexed into a coarse in-memory spatial grid so map and route-corridor lookups do not scan the full camera list every time.
+- The FlockFree settings screen can manually refresh the camera data cache for morning validation or later data updates.
 - Camera points render on the map at zoom 10+ with basic vendor colors and higher-zoom labels.
 - Tapping a rendered camera opens a simple details dialog with brand, operator, direction, mount, surveillance zone, OSM ID/type, and timestamp when present.
 - The map context menu has an `Add ALPR Camera` action that opens OsmAnd's POI editor with the selected ALPR tag preset already attached to a new node.

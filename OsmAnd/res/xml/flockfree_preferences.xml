@@ -21,6 +21,12 @@
 		android:title="@string/flockfree_camera_data_status" />
 
 	<Preference
+		android:key="flockfree_camera_data_refresh"
+		android:layout="@layout/preference_with_descr"
+		android:persistent="false"
+		android:title="@string/flockfree_camera_data_refresh" />
+
+	<Preference
 		android:layout="@layout/simple_divider_item"
 		android:selectable="false" />
 

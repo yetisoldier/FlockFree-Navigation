@@ -69,6 +69,7 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 - [ ] Select an ALPR brand preset and confirm OsmAnd's POI editor opens with the surveillance/ALPR tags present in the advanced tag view.
 - [ ] Open plugin/settings surfaces and confirm the FlockFree settings screen is visible.
 - [ ] Confirm the FlockFree settings screen shows a `Camera data` status row after camera data loads.
+- [ ] Tap `Refresh camera data` once on Wi-Fi and confirm the status switches to loading or returns to the indexed camera count.
 - [ ] Toggle the camera layer preference if reachable, then return to the map and confirm the layer hides/shows after refresh.
 - [ ] Confirm `Nearby camera alerts` and `Alert distance` are present, then while navigating or moving near a known camera confirm FlockFree shows a nearby-camera toast no more than once per cooldown window.
 - [ ] Enable camera avoidance, calculate a route, and confirm FlockFree shows a route camera summary toast with `Avoidance applied`, `Avoidance fallback`, or an explicit skipped reason.
@@ -126,4 +127,4 @@ adb logcat -d | rg -i 'flockfree|CameraData|FlockFreePlugin|AndroidRuntime|FATAL
 adb shell pidof com.yetiwurks.flockfree
 ```
 
-Pass condition: the app launches, reaches the map, does not crash, camera data indexes, camera proximity alerts fire while navigating or moving near a known camera, the add-camera flow pre-fills the OSM editor with ALPR tags, the CYD settings path can connect or fail cleanly with a clear status, the status row shows recent phone GPS sends, phone GPS reaches the CYD after connection, GPS-backed CYD detections become reviewable map candidates, and the experimental offline reroute visibly reports that it applied, fell back, or skipped for a specific reason.
+Pass condition: the app launches, reaches the map, does not crash, camera data indexes and can be manually refreshed, camera proximity alerts fire while navigating or moving near a known camera, the add-camera flow pre-fills the OSM editor with ALPR tags, the CYD settings path can connect or fail cleanly with a clear status, the status row shows recent phone GPS sends, phone GPS reaches the CYD after connection, GPS-backed CYD detections become reviewable map candidates, and the experimental offline reroute visibly reports that it applied, fell back, or skipped for a specific reason.

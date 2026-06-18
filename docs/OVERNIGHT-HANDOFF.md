@@ -43,6 +43,7 @@
   - It can load an existing camera cache synchronously before routing, but does not block routing on a network refresh.
   - It falls back to the original route if the avoided route fails.
 - Camera data now builds a coarse in-memory spatial grid and the settings screen shows camera count/bucket diagnostics when loaded.
+- The settings screen now includes `Refresh camera data`, which starts an explicit network refresh and leaves existing loaded data in place if the refresh fails.
 - The `Nearby camera alerts` switch and `Alert distance` preference are now active: while navigating or moving, FlockFree checks the nearest indexed camera and shows a cooldown-limited nearby-camera toast.
 - A CYD BLE path exists under `OsmAnd/src/net/osmand/plus/plugins/flockfree/cyd/`, including Nordic UART connection handling, idle auto-scan on map resume when CYD BLE is enabled, parsers for `pair_status` and `detection` JSON, outbound `FYGPS` phone-location streaming, and FlockFree settings rows for scan/connect, status request, simulated detection, clearing recent detections, and visible phone-GPS-send status.
 - GPS-backed CYD detections are now retained in memory, persisted to `flockfree-cyd-detections.json` in app-private storage, drawn on the map as CYD diamond markers, selectable from the map/context menu, and can be handed to the existing `Add ALPR Camera` reporting flow.
@@ -62,15 +63,16 @@
 3. Work through or skip the first-run map download flow.
 4. Confirm camera data finishes loading on Wi-Fi.
 5. Move/zoom to a camera-dense area and verify markers.
-6. Open the plugin settings, confirm the camera-data diagnostic row, and confirm the `Nearby camera alerts` / `Alert distance` rows are present.
-7. While navigating or moving near a known camera, verify FlockFree shows a nearby-camera toast and does not repeat it continuously.
-8. Enable camera avoidance, calculate a route, and verify the route-summary toast includes an applied/fallback/skipped status line.
-9. Compare one camera-dense offline route with avoidance off and on. A successful newer build should either route around camera-adjacent road objects, fall back cleanly to the original route, or say why avoidance was skipped.
-10. In the CYD hardware section, enable CYD BLE, scan/connect to a powered `CYD-Flock-You`, request status, and try the simulated detection command.
-11. Relaunch or leave/return to the map with `CYD BLE` still enabled and confirm FlockFree starts scanning again without visiting the settings screen.
-12. After connecting, confirm the FlockFree `CYD status` row reports `Phone GPS sent ... seconds ago` once FlockFree has a valid GPS fix.
-13. Request status and confirm the CYD reports `gps:true` once FlockFree has had roughly one second to send the fix over `FYGPS`.
-14. After a GPS-backed CYD detection, return to the map, confirm a CYD diamond marker appears near the detection location, tap it, and choose `Review as ALPR camera` to open the normal ALPR report flow.
+6. Open the plugin settings, confirm the camera-data diagnostic row, tap `Refresh camera data` on Wi-Fi, and confirm the row returns to an indexed camera count.
+7. Confirm the `Nearby camera alerts` / `Alert distance` rows are present.
+8. While navigating or moving near a known camera, verify FlockFree shows a nearby-camera toast and does not repeat it continuously.
+9. Enable camera avoidance, calculate a route, and verify the route-summary toast includes an applied/fallback/skipped status line.
+10. Compare one camera-dense offline route with avoidance off and on. A successful newer build should either route around camera-adjacent road objects, fall back cleanly to the original route, or say why avoidance was skipped.
+11. In the CYD hardware section, enable CYD BLE, scan/connect to a powered `CYD-Flock-You`, request status, and try the simulated detection command.
+12. Relaunch or leave/return to the map with `CYD BLE` still enabled and confirm FlockFree starts scanning again without visiting the settings screen.
+13. After connecting, confirm the FlockFree `CYD status` row reports `Phone GPS sent ... seconds ago` once FlockFree has a valid GPS fix.
+14. Request status and confirm the CYD reports `gps:true` once FlockFree has had roughly one second to send the fix over `FYGPS`.
+15. After a GPS-backed CYD detection, return to the map, confirm a CYD diamond marker appears near the detection location, tap it, and choose `Review as ALPR camera` to open the normal ALPR report flow.
 
 For a no-Gradle device snapshot before or after those checks, run:
 

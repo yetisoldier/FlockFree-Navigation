@@ -81,6 +81,26 @@ public class CameraData {
         });
     }
 
+    public synchronized boolean refreshData() {
+        if (loading) {
+            return false;
+        }
+        loading = true;
+        executor.execute(() -> {
+            try {
+                boolean refreshed = downloadCameraData();
+                if (!refreshed && !dataLoaded) {
+                    loadFromCache();
+                }
+            } catch (Exception e) {
+                LOG.error("Failed to refresh camera data", e);
+            } finally {
+                loading = false;
+            }
+        });
+        return true;
+    }
+
     public synchronized boolean ensureCacheLoadedForRouting() {
         if (dataLoaded) {
             return true;
@@ -124,7 +144,7 @@ public class CameraData {
         return false;
     }
 
-    private void downloadCameraData() {
+    private boolean downloadCameraData() {
         File cacheFile = getCacheFile();
         HttpURLConnection conn = null;
         try {
@@ -137,12 +157,12 @@ public class CameraData {
             int responseCode = conn.getResponseCode();
             if (responseCode != HttpURLConnection.HTTP_OK) {
                 LOG.error("HTTP error: " + responseCode);
-                return;
+                return false;
             }
 
             String json = readGeoJsonResponse(conn);
             if (!parseGeoJSON(json, "network")) {
-                return;
+                return false;
             }
             dataLoaded = true;
 
@@ -156,8 +176,10 @@ public class CameraData {
             }
 
             LOG.info("Downloaded and parsed " + cameras.size() + " cameras; timestampSaved=" + timestampSaved);
+            return true;
         } catch (Exception e) {
             LOG.error("Failed to download camera data", e);
+            return false;
         } finally {
             if (conn != null) {
                 conn.disconnect();

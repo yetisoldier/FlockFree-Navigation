@@ -16,6 +16,7 @@ import net.osmand.plus.settings.preferences.SwitchPreferenceEx;
 public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 
 	private static final String CAMERA_DATA_STATUS_KEY = "flockfree_camera_data_status";
+	private static final String CAMERA_DATA_REFRESH_KEY = "flockfree_camera_data_refresh";
 	private static final String CYD_STATUS_KEY = "flockfree_cyd_status";
 	private static final String CYD_CONNECT_KEY = "flockfree_cyd_connect";
 	private static final String CYD_REQUEST_STATUS_KEY = "flockfree_cyd_request_status";
@@ -126,7 +127,10 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 	@Override
 	public boolean onPreferenceClick(Preference preference) {
 		String key = preference.getKey();
-		if (CYD_CONNECT_KEY.equals(key)) {
+		if (CAMERA_DATA_REFRESH_KEY.equals(key)) {
+			refreshCameraData();
+			return true;
+		} else if (CYD_CONNECT_KEY.equals(key)) {
 			startCydScan();
 			return true;
 		} else if (CYD_REQUEST_STATUS_KEY.equals(key)) {
@@ -147,6 +151,15 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 			return true;
 		}
 		return super.onPreferenceClick(preference);
+	}
+
+	private void refreshCameraData() {
+		CameraData cameraData = plugin.getCameraData();
+		boolean started = cameraData.refreshData();
+		app.showShortToastMessage(started
+				? R.string.flockfree_camera_data_refresh_requested
+				: R.string.flockfree_camera_data_loading_summary);
+		setupCameraDataStatusPreference();
 	}
 
 	private void startCydScan() {
