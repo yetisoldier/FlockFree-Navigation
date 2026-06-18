@@ -196,6 +196,72 @@ if '"flockfree/cameras.geojson"' not in camera_data:
 print("preference wiring ok")
 PY
 
+log "Camera database checks"
+python3 - <<'PY'
+from pathlib import Path
+
+camera_data = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/CameraData.java").read_text()
+camera_db_path = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/CameraDatabaseHelper.java")
+camera_db = camera_db_path.read_text()
+strings = Path("OsmAnd/res/values/strings.xml").read_text()
+readme = Path("README.md").read_text()
+handoff = Path("docs/OVERNIGHT-HANDOFF.md").read_text()
+data_notes = Path("docs/DATA-LAYER-NOTES.md").read_text()
+
+required_db = [
+    "extends SQLiteOpenHelper",
+    "flockfree_cameras.db",
+    "idx_cameras_lat_lon",
+    "replaceAllCameras(",
+    "getCamerasInBoundingBox(",
+    "queryCamerasInBoundingBox(",
+    "getCamerasNear(",
+    "getAllCameras()",
+    "if (left > right)",
+    "COL_LAT + \" >= ?",
+    "COL_LON + \" >= ?",
+]
+missing_db = [item for item in required_db if item not in camera_db]
+if missing_db:
+    raise SystemExit("missing camera database helper wiring:\n" + "\n".join(missing_db))
+
+required_data = [
+    "private final CameraDatabaseHelper databaseHelper",
+    "private volatile boolean databaseReady",
+    "loadFromDatabase()",
+    "databaseHelper.getAllCameras()",
+    "persistParsedCameras(parsed, source)",
+    "databaseHelper.replaceAllCameras(parsed)",
+    "DataSource.DATABASE",
+    "R.string.flockfree_camera_data_source_database",
+    "databaseReady = true",
+    "databaseReady = false",
+    "databaseHelper.getCamerasInBoundingBox(top, left, bottom, right)",
+    "databaseHelper.getCamerasNear(lat, lon, radiusMeters)",
+]
+missing_data = [item for item in required_data if item not in camera_data]
+if missing_data:
+    raise SystemExit("missing CameraData SQLite persistence wiring:\n" + "\n".join(missing_data))
+
+if "flockfree_camera_data_source_database" not in strings:
+    raise SystemExit("missing database camera-data source string")
+
+stale_phrases = [
+    "not a persisted SQLite/geohash database",
+    "persisted SQLite/geohash indexing is a later optimization",
+    "Move camera storage to SQLite",
+]
+for phrase in stale_phrases:
+    for path, text in {
+        "README.md": readme,
+        "docs/OVERNIGHT-HANDOFF.md": handoff,
+        "docs/DATA-LAYER-NOTES.md": data_notes,
+    }.items():
+        if phrase in text:
+            raise SystemExit(f"stale camera database wording in {path}: {phrase}")
+print("camera database wiring ok")
+PY
+
 log "Diagnostics script checks"
 python3 - <<'PY'
 from pathlib import Path

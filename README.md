@@ -58,8 +58,8 @@ That APK was built from clean source commit `f5751c5cda9bcaff62fc0d47838ce4f87e8
 - Camera data downloads from `https://data.dontgetflocked.com/cameras.geojson.gz`, is cached as GeoJSON, and refreshes weekly.
 - The data loader handles both gzip and plain GeoJSON because the live `.gz` endpoint currently returns plain GeoJSON.
 - A compressed bundled camera seed is included from `OsmAnd/assets/flockfree/cameras.geojson.gz`, packaged as `assets/flockfree/cameras.geojson`, so a fresh install can show the current 104,902-camera snapshot even if the first network refresh is unavailable.
-- Parsed cameras are indexed into a coarse in-memory spatial grid so map and route-corridor lookups do not scan the full camera list every time.
-- The FlockFree settings screen shows whether camera data was loaded from cache, bundled seed, or network, includes last-refresh freshness/refresh-due status, refreshes active status rows while loading/scanning, and can manually refresh the camera data cache for morning validation or later data updates.
+- Parsed cameras are persisted to an app-private SQLite database and mirrored into a coarse in-memory spatial grid, so cold starts can reload without reparsing GeoJSON and map/route-corridor lookups avoid full-list scans.
+- The FlockFree settings screen shows whether camera data was loaded from database, cache, bundled seed, or network, includes last-refresh freshness/refresh-due status, refreshes active status rows while loading/scanning, and can manually refresh the camera data cache/database for morning validation or later data updates.
 - Camera points render on the map at zoom 10+ with basic vendor colors and higher-zoom labels.
 - Tapping a rendered camera opens a simple details dialog with brand, operator, direction, mount, surveillance zone, OSM ID/type, and timestamp when present.
 - The map context menu has an `Add ALPR Camera` action that opens OsmAnd's POI editor with the selected ALPR tag preset already attached to a new node.
@@ -81,7 +81,7 @@ That APK was built from clean source commit `f5751c5cda9bcaff62fc0d47838ce4f87e8
 
 - Camera avoidance is experimental and applies only to OsmAnd offline vector routing. It blocks whole route road objects, which can be coarse on long roads, and falls back to the original route if the avoided route fails.
 - CYD BLE integration now has a foreground service source path with permission-gated background scan restart. The foreground path was validated on-device at an earlier source commit, but the current `connectedDevice` service-type fix still needs a fresh APK proof. Recent detection candidates are persisted locally but not synced anywhere.
-- Camera storage is an in-memory parsed GeoJSON list with a spatial grid, not a persisted SQLite/geohash database.
+- Camera storage now has app-private SQLite persistence plus an in-memory route/helper mirror. It is not a full geohash/tile store yet, and the SQLite source path needs a fresh APK proof before treating it as on-device validated.
 - The bundled camera seed is a snapshot. `Refresh camera data` or the normal weekly refresh is still needed for the latest live camera data.
 - Widgets, quick actions, final settings polish, and rich camera detail UI are placeholders or not implemented.
 - Reporting now pre-fills OsmAnd's OSM POI editor with ALPR tags, but still needs end-to-end on-device validation against the save/upload flow.

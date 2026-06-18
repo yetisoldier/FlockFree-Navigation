@@ -50,8 +50,8 @@
   - It uses an isolated progress object for the avoided second pass so failed attempts do not poison the original route state.
   - It can load an existing camera cache synchronously before routing, but does not block routing on a network refresh.
   - It falls back to the original route if the avoided route fails.
-- Camera data now builds a coarse in-memory spatial grid and the settings screen shows camera count/bucket diagnostics when loaded.
-- The camera-data diagnostic row now shows whether the active data came from cache, bundled seed, or network, plus last-refresh age and whether refresh is current or due.
+- Camera data now persists parsed cameras to an app-private SQLite database, rebuilds a coarse in-memory spatial grid for route/helper fallbacks, and the settings screen shows camera count/bucket diagnostics when loaded.
+- The camera-data diagnostic row now shows whether the active data came from database, cache, bundled seed, or network, plus last-refresh age and whether refresh is current or due.
 - The settings fragment refreshes dynamic status rows in place while camera data is loading or CYD scan/connect/status is active, so morning testers do not need to leave and re-enter the screen to see status settle.
 - The settings screen now includes `Refresh camera data`, which starts an explicit network refresh and leaves existing loaded data in place if the refresh fails.
 - The `Nearby camera alerts` switch and `Alert distance` preference are now active: while navigating or moving, FlockFree checks the nearest indexed camera and shows a cooldown-limited nearby-camera toast. `Check map center alert` runs the nearest-camera check at the current map center and forces a toast when a camera is within range, making bench validation possible from a suggested anchor. The profile-persisted `Last alert check` settings row preserves the last trigger, no-camera, cooldown, or skipped reason after the toast disappears.
@@ -63,7 +63,7 @@
 
 - Route avoidance is still experimental and only works for OsmAnd offline vector routing. It blocks whole road objects and can be coarse.
 - CYD BLE has a map-activity/settings-driven scanner/status/simulation/review MVP with idle scan-on-resume, a foreground service that keeps BLE alive in the background, local phone/map-center simulation fallback, and local candidate persistence, but no sync yet. The background service was validated on-device at source commit `81b44a6556`; current source now uses the Android `connectedDevice` foreground-service type and needs a fresh APK proof.
-- Camera data is still held in memory and indexed in Java; persisted SQLite/geohash indexing is a later optimization.
+- Camera data now has app-private SQLite persistence and Java fallback indexing. A full geohash/tile store is still later work, and the SQLite source path needs fresh APK proof.
 - The bundled camera seed is a snapshot. Live freshness still depends on the weekly or manual `Refresh camera data` network path.
 - The current OSM reporting helper pre-fills tags, but still needs end-to-end on-device validation before treating it as upload-ready.
 

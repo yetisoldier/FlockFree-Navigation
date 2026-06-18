@@ -45,16 +45,19 @@ public class CameraData {
 
     private final OsmandApplication app;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final CameraDatabaseHelper databaseHelper;
 
     private volatile List<CameraPoint> cameras = new ArrayList<>();
     private volatile Map<Long, List<CameraPoint>> cameraGrid = new HashMap<>();
     private volatile boolean dataLoaded = false;
     private volatile boolean loading = false;
+    private volatile boolean databaseReady = false;
     @NonNull
     private volatile DataSource lastLoadedSource = DataSource.NONE;
 
     public CameraData(@NonNull OsmandApplication app) {
         this.app = app;
+        this.databaseHelper = new CameraDatabaseHelper(app);
     }
 
     public boolean isDataLoaded() {
@@ -72,12 +75,15 @@ public class CameraData {
         loading = true;
         executor.execute(() -> {
             try {
-                boolean loadedFromCache = loadFromCache();
-                if (!loadedFromCache) {
-                    loadFromBundledSeed();
+                boolean loadedFromDb = loadFromDatabase();
+                if (!loadedFromDb) {
+                    boolean loadedFromCache = loadFromCache();
+                    if (!loadedFromCache) {
+                        loadFromBundledSeed();
+                    }
                 }
                 long lastUpdate = getLastUpdateTimestamp();
-                if (!loadedFromCache || isRefreshDue(lastUpdate)) {
+                if (!dataLoaded || isRefreshDue(lastUpdate)) {
                     downloadCameraData();
                 }
             } catch (Exception e) {
@@ -117,7 +123,7 @@ public class CameraData {
         }
         loading = true;
         try {
-            return loadFromCacheOrSeed();
+            return loadFromDatabase() || loadFromCacheOrSeed();
         } catch (Exception e) {
             LOG.error("Failed to load camera cache for routing", e);
             return false;
@@ -129,6 +135,41 @@ public class CameraData {
     private File getCacheFile() {
         File dir = app.getCacheDir();
         return new File(dir, CACHE_FILENAME);
+    }
+
+    /**
+     * Loads camera data from the SQLite database.
+     * This is the fastest path — no GeoJSON parsing needed.
+     *
+     * @return true if data was loaded from the database
+     */
+    private boolean loadFromDatabase() {
+        try {
+            if (!databaseHelper.hasData()) {
+                LOG.info("Camera database is empty");
+                return false;
+            }
+            int count = databaseHelper.getCameraCount();
+            if (count <= 0) {
+                return false;
+            }
+            List<CameraPoint> loaded = databaseHelper.getAllCameras();
+            if (loaded.isEmpty()) {
+                return false;
+            }
+            synchronized (this) {
+                cameras = loaded;
+                cameraGrid = buildSpatialGrid(loaded);
+                lastLoadedSource = DataSource.DATABASE;
+                databaseReady = true;
+            }
+            dataLoaded = true;
+            LOG.info("Loaded " + loaded.size() + " cameras from SQLite database");
+            return true;
+        } catch (Exception e) {
+            LOG.error("Failed to load cameras from database", e);
+            return false;
+        }
     }
 
     private boolean loadFromCache() {
@@ -195,7 +236,6 @@ public class CameraData {
             dataLoaded = true;
 
             writeStringToFile(json, cacheFile);
-
             long updateTime = System.currentTimeMillis();
             boolean timestampSaved = app.getSettings().setPreference(
                     FlockFreePreferences.CAMERA_DATA_LAST_UPDATE, updateTime);
@@ -285,7 +325,9 @@ public class CameraData {
                 cameras = parsed;
                 cameraGrid = buildSpatialGrid(parsed);
                 lastLoadedSource = source;
+                databaseReady = false;
             }
+            persistParsedCameras(parsed, source);
             LOG.info("Parsed " + parsed.size() + " camera points from " + source.logName
                     + "; skipped=" + skipped + ", features=" + features.length()
                     + ", buckets=" + cameraGrid.size());
@@ -293,6 +335,19 @@ public class CameraData {
         } catch (Exception e) {
             LOG.error("Failed to parse GeoJSON", e);
             return false;
+        }
+    }
+
+    private void persistParsedCameras(@NonNull List<CameraPoint> parsed, @NonNull DataSource source) {
+        if (source == DataSource.DATABASE) {
+            return;
+        }
+        boolean persisted = databaseHelper.replaceAllCameras(parsed);
+        databaseReady = persisted;
+        if (persisted) {
+            LOG.info("Persisted " + parsed.size() + " cameras to SQLite database from " + source.logName);
+        } else {
+            LOG.warn("Failed to persist " + parsed.size() + " cameras to SQLite database from " + source.logName);
         }
     }
 
@@ -324,6 +379,14 @@ public class CameraData {
 
     @NonNull
     public synchronized List<CameraPoint> getCamerasInBoundingBox(double top, double left, double bottom, double right) {
+        // When the database has data, query it directly for the bounding box.
+        // This avoids iterating over all 104K in-memory cameras.
+        if (databaseReady) {
+            List<CameraPoint> databaseResult = databaseHelper.getCamerasInBoundingBox(top, left, bottom, right);
+            if (!databaseResult.isEmpty() || cameras.isEmpty()) {
+                return databaseResult;
+            }
+        }
         if (top < bottom) {
             double temp = top;
             top = bottom;
@@ -382,7 +445,8 @@ public class CameraData {
     }
 
     public synchronized int getCameraCount() {
-        return cameras.size();
+        int count = cameras.size();
+        return count > 0 || !databaseReady ? count : databaseHelper.getCameraCount();
     }
 
     public synchronized int getSpatialBucketCount() {
@@ -424,6 +488,13 @@ public class CameraData {
     }
 
     public synchronized List<CameraPoint> getCamerasNear(double lat, double lon, double radiusMeters) {
+        // When the database has data, query it directly with radius filtering.
+        if (databaseReady) {
+            List<CameraPoint> databaseResult = databaseHelper.getCamerasNear(lat, lon, radiusMeters);
+            if (!databaseResult.isEmpty() || cameras.isEmpty()) {
+                return databaseResult;
+            }
+        }
         double latitudeDelta = radiusMeters / 111_000d;
         double longitudeScale = Math.max(0.01d, Math.cos(Math.toRadians(lat)));
         double longitudeDelta = radiusMeters / (111_000d * longitudeScale);
@@ -576,7 +647,8 @@ public class CameraData {
         NONE("unknown", R.string.flockfree_camera_data_source_unknown),
         CACHE("cache", R.string.flockfree_camera_data_source_cache),
         BUNDLED_SEED("bundled seed", R.string.flockfree_camera_data_source_bundled_seed),
-        NETWORK("network", R.string.flockfree_camera_data_source_network);
+        NETWORK("network", R.string.flockfree_camera_data_source_network),
+        DATABASE("database", R.string.flockfree_camera_data_source_database);
 
         @NonNull
         private final String logName;
