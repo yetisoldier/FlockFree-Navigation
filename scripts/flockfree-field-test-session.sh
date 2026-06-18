@@ -236,6 +236,27 @@ write_manual_result_commands() {
   } > "$MANUAL_COMMANDS"
 }
 
+summarize_session() {
+  if "$ROOT_DIR/scripts/flockfree-summarize-session.py" "$OUT_DIR" > "$SESSION_SUMMARY" 2>&1; then
+    sed 's/^/  /' "$SESSION_SUMMARY" | tee -a "$REPORT"
+  else
+    append_report "  failed to summarize session; see ${SESSION_SUMMARY}"
+  fi
+}
+
+finish_early() {
+  status="$1"
+  shift
+  append_report ""
+  append_report "Session stopped early: $*"
+  append_report ""
+  append_report "Session evidence summary:"
+  summarize_session
+  append_report ""
+  append_report "Done with attention. Start with ${REPORT}"
+  exit "$status"
+}
+
 source_commit="$(git rev-parse HEAD 2>/dev/null || echo unknown)"
 source_state="dirty"
 if git diff --quiet && git diff --cached --quiet; then
@@ -273,7 +294,11 @@ if [ "$RUN_READINESS" -eq 1 ]; then
     readiness_args+=(--no-connect)
   fi
   run_step "morning readiness gate" "${OUT_DIR}/readiness-run.txt" \
-    "$ROOT_DIR/scripts/flockfree-morning-readiness.sh" "${readiness_args[@]}" || exit $?
+    "$ROOT_DIR/scripts/flockfree-morning-readiness.sh" "${readiness_args[@]}"
+  readiness_status="$?"
+  if [ "$readiness_status" -ne 0 ]; then
+    finish_early "$readiness_status" "morning readiness gate failed; see ${OUT_DIR}/readiness-run.txt"
+  fi
   append_report ""
   if [ -f "${READINESS_DIR}/readiness-report.txt" ]; then
     append_report "Readiness gate verdict:"
@@ -287,14 +312,18 @@ else
 fi
 
 if [ "$CONNECT" -eq 1 ] && [[ "$SERIAL" == *:* ]]; then
-  run_step "adb connect" "${OUT_DIR}/adb-connect.txt" "$ADB" connect "$SERIAL" || exit $?
+  run_step "adb connect" "${OUT_DIR}/adb-connect.txt" "$ADB" connect "$SERIAL"
+  connect_status="$?"
+  if [ "$connect_status" -ne 0 ]; then
+    finish_early "$connect_status" "adb connect failed; see ${OUT_DIR}/adb-connect.txt"
+  fi
 fi
 
 ADB_STATE="$("$ADB" -s "$SERIAL" get-state 2>/dev/null | tr -d '\r' || true)"
 append_report "ADB state before timed capture: ${ADB_STATE:-unknown}"
 if [ "$ADB_STATE" != "device" ]; then
   append_report "ATTENTION: ADB state is not 'device'; reconnect or authorize the Moto, then rerun."
-  exit 2
+  finish_early 2 "ADB state is '${ADB_STATE:-unknown}', not 'device'"
 fi
 
 if [ "$CLEAR_LOGCAT" -eq 1 ]; then
@@ -348,11 +377,7 @@ fi
 
 append_report ""
 append_report "Session evidence summary:"
-if "$ROOT_DIR/scripts/flockfree-summarize-session.py" "$OUT_DIR" > "$SESSION_SUMMARY" 2>&1; then
-  sed 's/^/  /' "$SESSION_SUMMARY" | tee -a "$REPORT"
-else
-  append_report "  failed to summarize session; see ${SESSION_SUMMARY}"
-fi
+summarize_session
 
 append_report ""
 append_report "Done. Start with ${REPORT}"
