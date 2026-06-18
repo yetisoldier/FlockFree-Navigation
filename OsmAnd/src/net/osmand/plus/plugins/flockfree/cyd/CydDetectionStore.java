@@ -3,6 +3,7 @@ package net.osmand.plus.plugins.flockfree.cyd;
 import androidx.annotation.NonNull;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedInputStream;
@@ -32,7 +33,12 @@ final class CydDetectionStore {
 		if (file.length() > MAX_STORE_BYTES) {
 			throw new IOException("CYD detection store is too large: " + file.length() + " bytes");
 		}
-		JSONArray array = new JSONArray(readFile(file));
+		JSONArray array;
+		try {
+			array = new JSONArray(readFile(file));
+		} catch (JSONException e) {
+			throw new IOException("Malformed CYD detection store", e);
+		}
 		ArrayList<CydDetectionCandidate> detections = new ArrayList<>();
 		for (int i = 0; i < array.length() && detections.size() < maxCount; i++) {
 			JSONObject item = array.optJSONObject(i);
@@ -64,10 +70,14 @@ final class CydDetectionStore {
 			if (!detection.hasGpsFix()) {
 				continue;
 			}
-			JSONObject item = new JSONObject();
-			item.put("raw", detection.rawJson);
-			item.put("received_at_ms", detection.receivedAtMs);
-			array.put(item);
+			try {
+				JSONObject item = new JSONObject();
+				item.put("raw", detection.rawJson);
+				item.put("received_at_ms", detection.receivedAtMs);
+				array.put(item);
+			} catch (JSONException e) {
+				// Skip this detection if serialization fails.
+			}
 		}
 		writeFileAtomically(file, array.toString());
 	}
