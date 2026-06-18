@@ -148,6 +148,37 @@ if missing:
 print("diagnostics script wiring ok")
 PY
 
+log "Permission primer checks"
+python3 - <<'PY'
+from pathlib import Path
+
+manifest = Path("OsmAnd/AndroidManifest.xml").read_text()
+primer = Path("scripts/flockfree-moto-permission-primer.sh").read_text()
+required_permissions = [
+    "android.permission.ACCESS_FINE_LOCATION",
+    "android.permission.ACCESS_COARSE_LOCATION",
+    "android.permission.BLUETOOTH_SCAN",
+    "android.permission.BLUETOOTH_CONNECT",
+    "android.permission.POST_NOTIFICATIONS",
+]
+missing_manifest = [permission for permission in required_permissions if permission not in manifest]
+if missing_manifest:
+    raise SystemExit("permission primer references permissions missing from manifest:\n" + "\n".join(missing_manifest))
+missing_primer = [permission for permission in required_permissions if permission not in primer]
+if missing_primer:
+    raise SystemExit("permission primer missing grant commands:\n" + "\n".join(missing_primer))
+required_primer_tokens = [
+    "cmd appops set",
+    "flockfree-moto-diagnostics.sh",
+    "--no-diagnostics",
+    "--no-launch",
+]
+missing_tokens = [token for token in required_primer_tokens if token not in primer]
+if missing_tokens:
+    raise SystemExit("permission primer missing expected behavior:\n" + "\n".join(missing_tokens))
+print("permission primer wiring ok")
+PY
+
 log "Bundled camera seed check"
 python3 - <<'PY'
 from pathlib import Path
@@ -166,7 +197,10 @@ print(f"bundled camera seed ok: {len(features)} features, {asset.stat().st_size}
 PY
 
 log "Script syntax checks"
-bash -n scripts/flockfree-moto-diagnostics.sh scripts/flockfree-user-build-install.sh scripts/flockfree-source-checks.sh
+bash -n scripts/flockfree-moto-diagnostics.sh \
+	scripts/flockfree-moto-permission-primer.sh \
+	scripts/flockfree-user-build-install.sh \
+	scripts/flockfree-source-checks.sh
 
 log "CYD parser/store self-check"
 ANNOTATION_JAR="${ANNOTATION_JAR:-$(find_first_jar '*androidx.annotation/annotation-jvm*')}"

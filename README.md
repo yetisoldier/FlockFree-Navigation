@@ -85,6 +85,14 @@ scripts/flockfree-moto-diagnostics.sh
 
 It writes local artifacts under ignored `logs/flockfree-diagnostics/` and checks ADB state, package install state, current activity, PID/process state, package metadata, UI screenshot/hierarchy, a FlockFree UI text summary, app-private camera cache/CYD candidate file state, runtime location/Bluetooth/notification permission state summarized in `summary.txt`, and filtered FlockFree/CameraData/FATAL logcat output.
 
+For a no-Gradle CYD/GPS permission prep pass on the Moto, run:
+
+```bash
+scripts/flockfree-moto-permission-primer.sh
+```
+
+It grants only FlockFree's declared location, Bluetooth, and notification runtime permissions, then runs the standard diagnostics collector so `summary.txt` confirms whether CYD/GPS testing is permission-ready.
+
 ## Credits
 
 - Built on [OsmAnd](https://github.com/osmandapp/osmand) under Apache 2.0.

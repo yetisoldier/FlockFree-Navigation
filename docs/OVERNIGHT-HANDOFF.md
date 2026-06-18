@@ -89,6 +89,14 @@ scripts/flockfree-moto-diagnostics.sh
 
 The collector uses Wi-Fi ADB, defaults to `192.168.1.139:5555`, writes only local ignored files under `logs/flockfree-diagnostics/`, and captures ADB state, package install state, current activity, PID, package metadata, screenshot/UI hierarchy evidence, a FlockFree UI text summary, app-private camera cache/CYD candidate file state, runtime location/Bluetooth/notification permission state summarized in `summary.txt`, and filtered `FlockFree` / `CameraData` / `FATAL` logcat evidence.
 
+For a no-Gradle permission prep pass before CYD/GPS checks, run:
+
+```bash
+scripts/flockfree-moto-permission-primer.sh
+```
+
+The primer grants only FlockFree's declared location, Bluetooth, and notification runtime permissions, then runs the diagnostics collector so the resulting `summary.txt` proves whether CYD/GPS testing is permission-ready.
+
 For source-only checks without running Gradle, run:
 
 ```bash
