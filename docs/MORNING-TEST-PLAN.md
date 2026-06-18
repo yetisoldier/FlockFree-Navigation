@@ -2,7 +2,7 @@
 
 Goal: prove the debug APK installs over Wi-Fi ADB, launches as FlockFree, and exposes the current camera-awareness MVP without chasing unfinished features.
 
-Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The current verified APK installed successfully on the Moto G Stylus and launched into the FlockFree first-run screen. It includes the route-summary hook and exposed FlockFree plugin settings screen. Source now includes newer camera indexing, experimental two-pass camera avoidance, visible applied/fallback/skipped route diagnostics, OSM editor tag-prefill reporting, cache-backed route startup, a settings-driven CYD BLE scan/status/simulation path, and CYD detection map/review candidates after that APK, so rebuild before testing those newer features.
+Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The current verified APK installed successfully on the Moto G Stylus and launched into the FlockFree first-run screen. It includes the route-summary hook and exposed FlockFree plugin settings screen. Source now includes newer camera indexing, experimental two-pass camera avoidance, visible applied/fallback/skipped route diagnostics, OSM editor tag-prefill reporting, cache-backed route startup, a settings-driven CYD BLE scan/status/simulation path, and persisted CYD detection map/review candidates after that APK, so rebuild before testing those newer features.
 
 ## Setup
 
@@ -66,13 +66,14 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 - [ ] Tap `Simulate CYD detection` and confirm the status row updates with a detection summary or the app shows `CYD detection received`.
 - [ ] Return to the map and confirm a GPS-backed CYD detection appears as a cyan diamond `CYD` marker.
 - [ ] Tap the CYD marker and choose `Review as ALPR camera`; confirm the normal ALPR report dialog opens at the detection location.
+- [ ] Relaunch the app and confirm recent CYD detection markers are restored before clearing them.
 - [ ] Use `Clear CYD detections` before a real drive if old bench-test markers are still on the map.
 
 ## Known Non-Goals For This Morning
 
 - Do not expect camera avoidance to work for BRouter or online routing. The experimental reroute path only applies to OsmAnd offline vector routing.
 - Do not expect camera avoidance to be subtle. It blocks whole route road objects and falls back to the original route if the avoided route fails.
-- Do not expect a polished CYD foreground service, background auto-reconnect, or persisted pending queue yet. Current source can scan/connect/request status/simulate from settings and review recent GPS-backed detections from the map, but those candidates are in memory only.
+- Do not expect a polished CYD foreground service, background auto-reconnect, or sync. Current source can scan/connect/request status/simulate from settings and review recent GPS-backed detections from the map; those candidates are persisted only in app-private local storage.
 - Do not expect offline first-run camera data before the GeoJSON download succeeds.
 - Do not expect polished widgets, quick actions, or a final settings UI beyond the exposed MVP preferences.
 

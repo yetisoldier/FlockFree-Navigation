@@ -1,5 +1,6 @@
 package net.osmand.plus.plugins.flockfree.cyd;
 
+import java.io.File;
 import java.util.List;
 
 final class CydParserSelfCheck {
@@ -13,6 +14,7 @@ final class CydParserSelfCheck {
 		checkPartialPairStatus();
 		checkInvalidDetectionGps();
 		checkTopLevelDetectionGps();
+		checkDetectionStoreRoundTrip();
 		System.out.println("CydParserSelfCheck passed");
 	}
 
@@ -68,6 +70,32 @@ final class CydParserSelfCheck {
 		check(candidate.hasGpsFix(), "valid top-level GPS should count as a fix");
 		check(candidate.rssi != null && candidate.rssi == -61, "string RSSI should parse when numeric");
 		check(candidate.channel != null && candidate.channel == 6, "string channel should parse when numeric");
+	}
+
+	private static void checkDetectionStoreRoundTrip() {
+		try {
+			File file = File.createTempFile("cyd-detections", ".json");
+			if (!file.delete()) {
+				throw new AssertionError("temp file cleanup failed before store check");
+			}
+			CydMessageParser.ParsedMessage message = CydMessageParser.parseLine(
+					"{\"event\":\"detection\",\"latitude\":45.1,\"longitude\":-93.2,"
+							+ "\"accuracy_m\":8.5,\"rssi\":\"-61\",\"channel\":\"6\"}");
+			check(message.detectionCandidate != null, "store check should have a detection candidate");
+			CydDetectionStore.save(file, java.util.Collections.singletonList(message.detectionCandidate), 20);
+			List<CydDetectionCandidate> loaded = CydDetectionStore.load(file, 20);
+			check(loaded.size() == 1, "store should load one detection");
+			check(loaded.get(0).hasGpsFix(), "stored detection should keep GPS");
+			check(loaded.get(0).getReceivedAgeMs(System.currentTimeMillis()) >= 0,
+					"stored detection should keep received time");
+			CydDetectionStore.clear(file);
+			check(CydDetectionStore.load(file, 20).isEmpty(), "store clear should remove detections");
+			if (file.exists() && !file.delete()) {
+				throw new AssertionError("temp file cleanup failed after store check");
+			}
+		} catch (Exception e) {
+			throw new AssertionError("store round trip failed", e);
+		}
 	}
 
 	private static void check(boolean condition, String message) {

@@ -6,7 +6,7 @@
 - Local path: `/home/yetisoldier/projects/FlockFree-Navigation`
 - Branch: `master`
 - Latest functional source: current `master` after the CYD detection map/review source pass.
-- Current source includes the route camera summary hook, exposed FlockFree settings screen, camera-data spatial indexing, OSM editor tag-prefill reporting, experimental two-pass offline camera avoidance, visible applied/fallback/skipped route diagnostics, cache-only route startup for existing camera data, a settings-driven CYD BLE scan/status/simulation path, and in-memory CYD detection map/review candidates.
+- Current source includes the route camera summary hook, exposed FlockFree settings screen, camera-data spatial indexing, OSM editor tag-prefill reporting, experimental two-pass offline camera avoidance, visible applied/fallback/skipped route diagnostics, cache-only route startup for existing camera data, a settings-driven CYD BLE scan/status/simulation path, and persisted CYD detection map/review candidates.
 
 ## Verified APK
 
@@ -44,12 +44,12 @@
   - It falls back to the original route if the avoided route fails.
 - Camera data now builds a coarse in-memory spatial grid and the settings screen shows camera count/bucket diagnostics when loaded.
 - A CYD BLE path exists under `OsmAnd/src/net/osmand/plus/plugins/flockfree/cyd/`, including Nordic UART connection handling, parsers for `pair_status` and `detection` JSON, and FlockFree settings rows for scan/connect, status request, simulated detection, and clearing recent detections.
-- GPS-backed CYD detections are now retained in memory, drawn on the map as CYD diamond markers, selectable from the map/context menu, and can be handed to the existing `Add ALPR Camera` reporting flow.
+- GPS-backed CYD detections are now retained in memory, persisted to `flockfree-cyd-detections.json` in app-private storage, drawn on the map as CYD diamond markers, selectable from the map/context menu, and can be handed to the existing `Add ALPR Camera` reporting flow.
 
 ## Known Limits
 
 - Route avoidance is still experimental and only works for OsmAnd offline vector routing. It blocks whole road objects and can be coarse.
-- CYD BLE has a settings-driven scanner/status/simulation/review MVP, but no foreground service, background auto-reconnect, or persisted pending queue yet.
+- CYD BLE has a settings-driven scanner/status/simulation/review MVP with local candidate persistence, but no foreground service, background auto-reconnect, or sync.
 - Camera data is still held in memory and indexed in Java; persisted SQLite/geohash indexing is a later optimization.
 - First useful camera display needs network access for the live GeoJSON download unless a cache is already present.
 - The current OSM reporting helper pre-fills tags, but still needs end-to-end on-device validation before treating it as upload-ready.

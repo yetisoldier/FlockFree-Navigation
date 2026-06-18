@@ -26,6 +26,7 @@ import net.osmand.util.Algorithms;
 
 import org.apache.commons.logging.Log;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -58,6 +59,7 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 
 	public CydHardwareManager(@NonNull OsmandApplication app) {
 		this.app = app;
+		loadPersistedDetections();
 	}
 
 	@NonNull
@@ -187,6 +189,7 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 				lastMessage = app.getString(R.string.flockfree_cyd_status_idle);
 			}
 		}
+		clearPersistedDetections();
 		refreshMap();
 	}
 
@@ -342,6 +345,7 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 			lastMessage = candidate.getStatusSummary();
 		}
 		app.showShortToastMessage(R.string.flockfree_cyd_detection_received);
+		persistRecentDetections();
 		refreshMap();
 	}
 
@@ -359,6 +363,47 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 
 	private void refreshMap() {
 		handler.post(() -> app.getOsmandMap().refreshMap());
+	}
+
+	@NonNull
+	private File getDetectionStoreFile() {
+		return new File(app.getFilesDir(), "flockfree-cyd-detections.json");
+	}
+
+	private void loadPersistedDetections() {
+		try {
+			List<CydDetectionCandidate> detections =
+					CydDetectionStore.load(getDetectionStoreFile(), MAX_RECENT_DETECTIONS);
+			if (!detections.isEmpty()) {
+				synchronized (lock) {
+					recentDetections = detections;
+					lastDetection = detections.get(0);
+					lastMessage = lastDetection.getStatusSummary();
+				}
+			}
+		} catch (Exception e) {
+			LOG.warn("Unable to load persisted CYD detections", e);
+		}
+	}
+
+	private void persistRecentDetections() {
+		List<CydDetectionCandidate> detections;
+		synchronized (lock) {
+			detections = new ArrayList<>(recentDetections);
+		}
+		try {
+			CydDetectionStore.save(getDetectionStoreFile(), detections, MAX_RECENT_DETECTIONS);
+		} catch (Exception e) {
+			LOG.warn("Unable to persist CYD detections", e);
+		}
+	}
+
+	private void clearPersistedDetections() {
+		try {
+			CydDetectionStore.clear(getDetectionStoreFile());
+		} catch (Exception e) {
+			LOG.warn("Unable to clear persisted CYD detections", e);
+		}
 	}
 
 	public enum State {

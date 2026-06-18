@@ -40,12 +40,12 @@ The source tree has newer camera-indexing, experimental two-pass avoidance routi
 - Current source can perform one experimental second-pass OsmAnd offline route calculation using temporary impassable road IDs for roads adjacent to known cameras. These IDs are route-scoped and do not pollute the user's Avoid Roads settings.
 - The plugin settings screen is exposed through the OsmAnd plugin settings flow for map layer visibility, route summaries, corridor radius, alert distance, and CYD BLE enablement.
 - A CYD BLE UART path exists for `FYHELLO`, `FYSTATUS`, `FYSIM`, `FYGPS`, `pair_status`, and `detection` messages.
-- GPS-backed CYD detections are held as recent in-memory candidates, drawn on the map as distinct CYD markers, and can be reviewed through the existing ALPR camera reporting flow.
+- GPS-backed CYD detections are kept as recent candidates, persisted to a small local JSON store, drawn on the map as distinct CYD markers, and can be reviewed through the existing ALPR camera reporting flow.
 
 ## Still Stubbed Or Thin
 
 - Camera avoidance is experimental and applies only to OsmAnd offline vector routing. It blocks whole route road objects, which can be coarse on long roads, and falls back to the original route if the avoided route fails.
-- CYD BLE integration is settings-driven. It has no foreground service or background auto-reconnect yet, and recent detection candidates are not persisted across app restarts.
+- CYD BLE integration is settings-driven. It has no foreground service or background auto-reconnect yet, and recent detection candidates are persisted locally but not synced anywhere.
 - Camera storage is an in-memory parsed GeoJSON list with a spatial grid, not a persisted SQLite/geohash database.
 - No bundled first-run camera snapshot is present, so the first useful camera layer depends on network access to download data.
 - Widgets, quick actions, final settings polish, and rich camera detail UI are placeholders or not implemented.

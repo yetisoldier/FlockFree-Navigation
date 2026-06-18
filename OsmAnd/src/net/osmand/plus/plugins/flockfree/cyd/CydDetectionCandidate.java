@@ -77,6 +77,11 @@ public final class CydDetectionCandidate {
 		return new CydDetectionCandidate(json, System.currentTimeMillis());
 	}
 
+	@NonNull
+	static CydDetectionCandidate fromJson(@NonNull JSONObject json, long receivedAtMs) {
+		return new CydDetectionCandidate(json, receivedAtMs);
+	}
+
 	public boolean hasGpsFix() {
 		return isValidLatitude(latitude) && isValidLongitude(longitude);
 	}
