@@ -215,9 +215,11 @@ required = [
     "flockfree-morning-readiness.sh",
     "flockfree-moto-diagnostics.sh",
     "field-session-report.txt",
+    "session-summary.txt",
     "manual-test-prompts.txt",
     "session-logcat-filtered.txt",
     "post-diagnostics",
+    "flockfree-summarize-session.py",
     "--duration",
     "--skip-readiness",
     "FlockFree|CameraData|CYD|Avoidance",
@@ -228,6 +230,25 @@ missing = [item for item in required if item not in session]
 if missing:
     raise SystemExit("field-test session collector missing expected behavior:\n" + "\n".join(missing))
 print("field-test session collector wiring ok")
+PY
+
+log "Field-session summarizer checks"
+python3 - <<'PY'
+from pathlib import Path
+
+summarizer = Path("scripts/flockfree-summarize-session.py").read_text()
+required = [
+    "FlockFree field-session summary",
+    "Observed evidence buckets:",
+    "Not observed in captured artifacts:",
+    "Suggested next manual checks:",
+    "--self-check",
+    "Timed fatal crash evidence lines:",
+]
+missing = [item for item in required if item not in summarizer]
+if missing:
+    raise SystemExit("field-session summarizer missing expected behavior:\n" + "\n".join(missing))
+print("field-session summarizer wiring ok")
 PY
 
 log "Test-area suggestion helper checks"
@@ -275,8 +296,16 @@ bash -n scripts/flockfree-moto-diagnostics.sh \
 	scripts/flockfree-user-build-install.sh \
 	scripts/flockfree-source-checks.sh
 
+log "Python helper syntax checks"
+python3 -m py_compile \
+	scripts/flockfree-suggest-test-areas.py \
+	scripts/flockfree-summarize-session.py
+
 log "Test-area helper smoke check"
 scripts/flockfree-suggest-test-areas.py --limit 2 --radius-km 80 >/dev/null
+
+log "Field-session summarizer self-check"
+scripts/flockfree-summarize-session.py --self-check >/dev/null
 
 log "CYD parser/store self-check"
 ANNOTATION_JAR="${ANNOTATION_JAR:-$(find_first_jar '*androidx.annotation/annotation-jvm*')}"

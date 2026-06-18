@@ -130,6 +130,7 @@ mkdir -p "$OUT_DIR" || {
 
 REPORT="${OUT_DIR}/field-session-report.txt"
 SESSION_LOGCAT="${OUT_DIR}/session-logcat-filtered.txt"
+SESSION_SUMMARY="${OUT_DIR}/session-summary.txt"
 PROMPTS="${OUT_DIR}/manual-test-prompts.txt"
 READINESS_DIR="${OUT_DIR}/readiness"
 POST_DIAG_DIR="${OUT_DIR}/post-diagnostics"
@@ -277,6 +278,14 @@ if [ -f "${POST_DIAG_DIR}/summary.txt" ]; then
   sed 's/^/  /' "${POST_DIAG_DIR}/summary.txt" | tee -a "$REPORT"
 else
   append_report "  missing post-session diagnostics summary"
+fi
+
+append_report ""
+append_report "Session evidence summary:"
+if "$ROOT_DIR/scripts/flockfree-summarize-session.py" "$OUT_DIR" > "$SESSION_SUMMARY" 2>&1; then
+  sed 's/^/  /' "$SESSION_SUMMARY" | tee -a "$REPORT"
+else
+  append_report "  failed to summarize session; see ${SESSION_SUMMARY}"
 fi
 
 append_report ""
