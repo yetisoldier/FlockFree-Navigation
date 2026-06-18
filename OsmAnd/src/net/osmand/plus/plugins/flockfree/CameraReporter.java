@@ -9,6 +9,7 @@ import android.widget.EditText;
 import android.widget.Spinner;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import net.osmand.PlatformUtil;
 import net.osmand.osm.PoiType;
@@ -106,6 +107,22 @@ public class CameraReporter {
 
     private synchronized void setLastReportDraftSummary(@NonNull String summary) {
         lastReportDraftSummaryPreference.set(summary);
+    }
+
+    public void showAddCameraDialogAtMapCenter(@Nullable MapActivity mapActivity) {
+        if (mapActivity == null || mapActivity.getMapView() == null) {
+            setLastReportDraftSummary(app.getString(R.string.flockfree_report_last_draft_map_unavailable));
+            app.showShortToastMessage(R.string.flockfree_report_last_draft_map_unavailable);
+            return;
+        }
+        double lat = mapActivity.getMapView().getLatitude();
+        double lon = mapActivity.getMapView().getLongitude();
+        if (!isValidCoordinate(lat, lon)) {
+            setLastReportDraftSummary(app.getString(R.string.flockfree_report_last_draft_map_unavailable));
+            app.showShortToastMessage(R.string.flockfree_report_last_draft_map_unavailable);
+            return;
+        }
+        showAddCameraDialog(mapActivity, lat, lon);
     }
 
     /**
@@ -238,5 +255,12 @@ public class CameraReporter {
         generic.put("camera:type", "fixed");
         generic.put("surveillance:zone", "traffic");
         return generic;
+    }
+
+    private boolean isValidCoordinate(double lat, double lon) {
+        return !Double.isNaN(lat) && !Double.isInfinite(lat)
+                && !Double.isNaN(lon) && !Double.isInfinite(lon)
+                && lat >= -90d && lat <= 90d
+                && lon >= -180d && lon <= 180d;
     }
 }

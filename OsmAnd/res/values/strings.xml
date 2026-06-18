@@ -118,6 +118,10 @@
 	<string name="flockfree_cyd_detail_gps">GPS</string>
 	<string name="flockfree_cyd_detail_channel">Channel</string>
 	<string name="flockfree_cyd_detail_received_age">Received</string>
+	<string name="flockfree_cyd_service_channel_name">FlockFree CYD Hardware</string>
+	<string name="flockfree_cyd_service_channel_desc">Keeps the CYD BLE connection alive in the background.</string>
+	<string name="flockfree_cyd_service_notification_title">FlockFree CYD Active</string>
+	<string name="flockfree_cyd_service_notification_text">Monitoring for CYD-Flock-You hardware</string>
 	<string name="flockfree_alpr_camera">ALPR Camera</string>
 	<string name="flockfree_report_brand_label">Brand:</string>
 	<string name="flockfree_report_direction_label">Direction (optional):</string>
@@ -126,7 +130,10 @@
 	<string name="flockfree_report_operator_hint">Operator name</string>
 	<string name="flockfree_reporting">Reporting</string>
 	<string name="flockfree_report_last_draft">Last report draft</string>
+	<string name="flockfree_report_map_center">Draft report at map center</string>
+	<string name="flockfree_report_map_center_description">Open the ALPR report dialog at the current map center.</string>
 	<string name="flockfree_report_last_draft_none">No ALPR report draft opened yet.</string>
+	<string name="flockfree_report_last_draft_map_unavailable">ALPR report skipped: map center unavailable.</string>
 	<string name="flockfree_report_last_draft_dialog">ALPR report dialog opened at %1$.5f, %2$.5f.</string>
 	<string name="flockfree_report_last_draft_editor">OSM editor opened for %1$s at %2$.5f, %3$.5f with %4$d tags.</string>
 	<string name="flockfree_report_last_draft_fallback">Manual tag fallback shown for %1$s at %2$.5f, %3$.5f with %4$d tags.</string>

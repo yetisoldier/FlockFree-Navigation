@@ -147,14 +147,19 @@ if missing_plugin:
 required_fragment_tokens = [
     "ALERT_CHECK_MAP_CENTER_KEY",
     "plugin.checkCameraAlertAtMapCenter(getMapActivity())",
+    "REPORT_MAP_CENTER_KEY",
+    "showAddCameraDialogAtMapCenter(getMapActivity())",
 ]
 missing_fragment = [item for item in required_fragment_tokens if item not in fragment]
 if missing_fragment:
-    raise SystemExit("missing map-center alert settings wiring:\n" + "\n".join(missing_fragment))
+    raise SystemExit("missing map-center settings wiring:\n" + "\n".join(missing_fragment))
 required_reporter_tokens = [
     "CommonPreference<String> lastReportDraftSummaryPreference",
     "lastReportDraftSummaryPreference.get()",
     "lastReportDraftSummaryPreference.set(summary)",
+    "showAddCameraDialogAtMapCenter(",
+    "flockfree_report_last_draft_map_unavailable",
+    "mapActivity.getMapView().getLatitude()",
 ]
 missing_reporter = [item for item in required_reporter_tokens if item not in reporter]
 if missing_reporter:
@@ -297,8 +302,9 @@ required = [
     "Last alert check",
     "Check map center alert",
     "Last report draft",
+    "Draft report at map center",
     "Map-center or live nearby camera alert behavior and Last alert check status observed",
-    "ALPR/surveillance tag prefill and Last report draft status observed",
+    "Map-center or context-menu ALPR/surveillance tag prefill and Last report draft status observed",
     "local phone/map-center simulation fallback",
     "Map anchor coordinates",
     "Suggested map anchors:",

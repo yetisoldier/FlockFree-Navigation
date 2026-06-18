@@ -6,7 +6,7 @@
 - Local path: `/home/yetisoldier/projects/FlockFree-Navigation`
 - Branch: `master`
 - Latest functional source: current `master` after the map-center CYD simulation fallback pass.
-- Current source includes the route camera summary hook, exposed FlockFree settings screen with live dynamic status refresh, camera-data spatial indexing with source/freshness diagnostics, OSM editor tag-prefill reporting with profile-persisted report-draft status, experimental two-pass offline camera avoidance, profile-persisted applied/fallback/skipped route diagnostics, movement/navigation nearby-camera alerts with profile-persisted last-check status plus a map-center alert test action, cache-only route startup for existing camera data, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, phone GPS streaming to CYD over `FYGPS`, local CYD simulation from phone/OsmAnd GPS or current map center when hardware is absent, and persisted CYD detection map/review candidates.
+- Current source includes the route camera summary hook, exposed FlockFree settings screen with live dynamic status refresh, camera-data spatial indexing with source/freshness diagnostics, OSM editor tag-prefill reporting with map-center draft action and profile-persisted report-draft status, experimental two-pass offline camera avoidance, profile-persisted applied/fallback/skipped route diagnostics, movement/navigation nearby-camera alerts with profile-persisted last-check status plus a map-center alert test action, cache-only route startup for existing camera data, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, phone GPS streaming to CYD over `FYGPS`, local CYD simulation from phone/OsmAnd GPS or current map center when hardware is absent, and persisted CYD detection map/review candidates.
 
 ## Verified APK
 
@@ -34,6 +34,7 @@
 - No-cache smoke log showed `No FlockFree camera cache found`, `Parsed 104902 camera points from bundled seed`, then a successful network refresh of the same 104,902 features.
 - Camera map layer and camera context-menu/reporting code are present in source.
 - The `Add ALPR Camera` flow now opens OsmAnd's POI editor with the selected ALPR tag preset attached to the new node.
+- `Draft report at map center` opens the same ALPR report dialog from the current map center, making tag-prefill proof possible from a suggested anchor without relying on long-press context-menu discovery.
 - The `Last report draft` settings row profile-persists whether the latest ALPR report attempt opened the OSM editor or showed manual fallback tags.
 - Route camera summary hook:
   - `FlockFreePlugin.newRouteIsCalculated(boolean)` now watches newly calculated routes when camera avoidance is enabled.
@@ -83,7 +84,7 @@
 15. Relaunch or leave/return to the map with `CYD BLE` still enabled and confirm FlockFree starts scanning again without visiting the settings screen.
 16. After FlockFree has a valid GPS fix, confirm the `CYD status` row reports `Phone GPS sent ... seconds ago` when connected or `Phone GPS ready ... seconds ago` before hardware is connected.
 17. Request status and confirm the CYD reports `gps:true` once FlockFree has had roughly one second to send the fix over `FYGPS`.
-18. Long-press or tap a CYD marker, open `Add ALPR Camera`, and confirm OsmAnd's POI editor opens with ALPR/surveillance tags.
+18. Tap `Draft report at map center`, long-press a map location, or tap a CYD marker to open `Add ALPR Camera`, and confirm OsmAnd's POI editor opens with ALPR/surveillance tags.
 19. Reopen FlockFree settings and confirm `Last report draft` preserves the editor-opened or manual-tag-fallback result after an app restart.
 20. After a GPS-backed CYD detection or local phone/map-center simulated CYD marker, return to the map, confirm a CYD diamond marker appears near the detection location, tap it, and choose `Review as ALPR camera` to open the normal ALPR report flow.
 

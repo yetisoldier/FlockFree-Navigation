@@ -10,6 +10,7 @@ import androidx.preference.Preference;
 import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.cyd.CydBleService;
 import net.osmand.plus.plugins.flockfree.cyd.CydDetectionCandidate;
 import net.osmand.plus.plugins.flockfree.cyd.CydHardwareManager;
 import net.osmand.plus.settings.fragments.BaseSettingsFragment;
@@ -26,6 +27,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 	private static final String ALERT_LAST_CHECK_KEY = "flockfree_alert_last_check";
 	private static final String ALERT_CHECK_MAP_CENTER_KEY = "flockfree_alert_check_map_center";
 	private static final String REPORT_LAST_DRAFT_KEY = "flockfree_report_last_draft";
+	private static final String REPORT_MAP_CENTER_KEY = "flockfree_report_map_center";
 	private static final String CYD_STATUS_KEY = "flockfree_cyd_status";
 	private static final String CYD_CONNECT_KEY = "flockfree_cyd_connect";
 	private static final String CYD_REQUEST_STATUS_KEY = "flockfree_cyd_request_status";
@@ -178,6 +180,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 			if (Boolean.TRUE.equals(newValue)) {
 				startCydScan();
 			} else {
+				CydBleService.stop(app);
 				plugin.getCydHardwareManager().disconnect();
 				setupCydStatusPreference();
 			}
@@ -199,6 +202,10 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 			plugin.checkCameraAlertAtMapCenter(getMapActivity());
 			setupAlertLastCheckPreference();
 			startDynamicStatusRefresh();
+			return true;
+		} else if (REPORT_MAP_CENTER_KEY.equals(key)) {
+			plugin.getCameraReporter().showAddCameraDialogAtMapCenter(getMapActivity());
+			setupReportLastDraftPreference();
 			return true;
 		} else if (CYD_REQUEST_STATUS_KEY.equals(key)) {
 			plugin.getCydHardwareManager().requestStatus();
@@ -238,6 +245,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 			return;
 		}
 		plugin.CYD_BLE_ENABLED.set(true);
+		CydBleService.start(mapActivity);
 		plugin.getCydHardwareManager().startScanAndConnect(mapActivity);
 		setupCydStatusPreference();
 		startDynamicStatusRefresh();

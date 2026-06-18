@@ -57,3 +57,4 @@ OsmAnd-java/src/test/resources/approximation/*
 #Shared library resources
 OsmAnd-shared/src/androidMain/resources/
 OsmAnd-shared/src/jvmMain/resources/
+__pycache__/

@@ -63,7 +63,7 @@ That APK was built from clean source commit `f5751c5cda9bcaff62fc0d47838ce4f87e8
 - Camera points render on the map at zoom 10+ with basic vendor colors and higher-zoom labels.
 - Tapping a rendered camera opens a simple details dialog with brand, operator, direction, mount, surveillance zone, OSM ID/type, and timestamp when present.
 - The map context menu has an `Add ALPR Camera` action that opens OsmAnd's POI editor with the selected ALPR tag preset already attached to a new node.
-- The settings screen keeps a profile-persisted `Last report draft` row so testers can confirm whether the latest ALPR report attempt opened the OSM editor or fell back to manual tags, even after restarting the app.
+- The settings screen includes `Draft report at map center` for bench-testing the same ALPR dialog from a suggested anchor. It keeps a profile-persisted `Last report draft` row so testers can confirm whether the latest ALPR report attempt opened the OSM editor or fell back to manual tags, even after restarting the app.
 - When camera avoidance is enabled, newly calculated routes get a FlockFree toast summary of cameras near the route corridor.
 - The FlockFree settings screen keeps the last route camera/avoidance summary in a profile-persisted row so route-test results can be checked after the toast disappears or the app restarts.
 - Current source can perform one experimental second-pass OsmAnd offline route calculation using temporary impassable road IDs for roads adjacent to known cameras. These IDs are route-scoped and do not pollute the user's Avoid Roads settings.

@@ -1152,6 +1152,13 @@
 			android:stopWithTask="false">
 		</service>
 
+		<service
+			android:name="net.osmand.plus.plugins.flockfree.cyd.CydBleService"
+			android:label="@string/flockfree_cyd_hardware"
+			android:exported="false"
+			android:foregroundServiceType="location"
+			android:stopWithTask="false" />
+
 		<service android:name="net.osmand.aidl.OsmandAidlService" android:exported="true" >
 			<intent-filter>
 				<action android:name="net.osmand.aidl.OsmandAidlService"/>

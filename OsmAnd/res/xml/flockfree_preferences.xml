@@ -105,6 +105,13 @@
 		android:title="@string/flockfree_report_last_draft" />
 
 	<Preference
+		android:key="flockfree_report_map_center"
+		android:layout="@layout/preference_with_descr"
+		android:persistent="false"
+		android:summary="@string/flockfree_report_map_center_description"
+		android:title="@string/flockfree_report_map_center" />
+
+	<Preference
 		android:layout="@layout/simple_divider_item"
 		android:selectable="false" />
 

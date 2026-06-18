@@ -10,6 +10,7 @@ import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.plugins.OsmandPlugin;
+import net.osmand.plus.plugins.flockfree.cyd.CydBleService;
 import net.osmand.plus.plugins.flockfree.cyd.CydDetectionCandidate;
 import net.osmand.plus.plugins.flockfree.cyd.CydHardwareManager;
 import net.osmand.plus.routing.RouteCalculationResult;
@@ -369,6 +370,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     @Override
     public void disable(@NonNull OsmandApplication app) {
         super.disable(app);
+        CydBleService.stop(app);
         if (cydHardwareManager != null) {
             cydHardwareManager.close();
             cydHardwareManager = null;
@@ -430,6 +432,7 @@ public class FlockFreePlugin extends OsmandPlugin {
         if (!CYD_BLE_ENABLED.get()) {
             return;
         }
+        CydBleService.start(activity);
         CydHardwareManager manager = getCydHardwareManager();
         if (manager.getState() == CydHardwareManager.State.IDLE) {
             manager.startScanAndConnect(activity);
