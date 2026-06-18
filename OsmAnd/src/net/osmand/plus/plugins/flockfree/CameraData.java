@@ -23,7 +23,10 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.zip.GZIPInputStream;
@@ -32,15 +35,17 @@ public class CameraData {
 
     private static final Log LOG = PlatformUtil.getLog(CameraData.class);
 
-    private static final String CAMERA_DATA_URL = "https://data.dontgetflocked.com/cameras.geojson.gz";
+    private static final String CAMERA_DATA_URL = FlockFreePreferences.CAMERA_DATA_URL;
     private static final String CACHE_FILENAME = "cameras.geojson";
-    private static final long WEEK_MS = 7L * 24 * 60 * 60 * 1000;
+    private static final long WEEK_MS = FlockFreePreferences.REFRESH_INTERVAL_MS;
     private static final long MAX_GEOJSON_BYTES = 128L * 1024 * 1024;
+    private static final double SPATIAL_CELL_DEGREES = 0.05d;
 
     private final OsmandApplication app;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     private volatile List<CameraPoint> cameras = new ArrayList<>();
+    private volatile Map<Long, List<CameraPoint>> cameraGrid = new HashMap<>();
     private volatile boolean dataLoaded = false;
     private volatile boolean loading = false;
 
@@ -210,9 +215,11 @@ public class CameraData {
             }
             synchronized (this) {
                 cameras = parsed;
+                cameraGrid = buildSpatialGrid(parsed);
             }
             LOG.info("Parsed " + parsed.size() + " camera points from " + source
-                    + "; skipped=" + skipped + ", features=" + features.length());
+                    + "; skipped=" + skipped + ", features=" + features.length()
+                    + ", buckets=" + cameraGrid.size());
             return true;
         } catch (Exception e) {
             LOG.error("Failed to parse GeoJSON", e);
@@ -248,28 +255,130 @@ public class CameraData {
 
     @NonNull
     public synchronized List<CameraPoint> getCamerasInBoundingBox(double top, double left, double bottom, double right) {
+        if (top < bottom) {
+            double temp = top;
+            top = bottom;
+            bottom = temp;
+        }
+        top = clamp(top, -90d, 90d);
+        bottom = clamp(bottom, -90d, 90d);
+
+        if (left > right) {
+            List<CameraPoint> result = getCamerasInBoundingBoxInternal(top, left, bottom, 180d);
+            result.addAll(getCamerasInBoundingBoxInternal(top, -180d, bottom, right));
+            return result;
+        }
+        return getCamerasInBoundingBoxInternal(top, left, bottom, right);
+    }
+
+    @NonNull
+    private List<CameraPoint> getCamerasInBoundingBoxInternal(double top, double left, double bottom, double right) {
         List<CameraPoint> result = new ArrayList<>();
-        for (CameraPoint cam : cameras) {
+        left = clamp(left, -180d, 180d);
+        right = clamp(right, -180d, 180d);
+
+        Map<Long, List<CameraPoint>> grid = cameraGrid;
+        if (grid.isEmpty()) {
+            for (CameraPoint cam : cameras) {
+                if (cam.lat >= bottom && cam.lat <= top && cam.lon >= left && cam.lon <= right) {
+                    result.add(cam);
+                }
+            }
+            return result;
+        }
+
+        int minLatBucket = getLatBucket(bottom);
+        int maxLatBucket = getLatBucket(top);
+        int minLonBucket = getLonBucket(left);
+        int maxLonBucket = getLonBucket(right);
+        for (int latBucket = minLatBucket; latBucket <= maxLatBucket; latBucket++) {
+            for (int lonBucket = minLonBucket; lonBucket <= maxLonBucket; lonBucket++) {
+                List<CameraPoint> bucket = grid.get(getGridKey(latBucket, lonBucket));
+                if (bucket == null) {
+                    continue;
+                }
+                addCamerasInBounds(bucket, top, left, bottom, right, result);
+            }
+        }
+        return result;
+    }
+
+    private void addCamerasInBounds(@NonNull List<CameraPoint> candidates, double top, double left, double bottom,
+                                    double right, @NonNull List<CameraPoint> result) {
+        for (CameraPoint cam : candidates) {
             if (cam.lat >= bottom && cam.lat <= top && cam.lon >= left && cam.lon <= right) {
                 result.add(cam);
             }
         }
-        return result;
     }
 
     public synchronized int getCameraCount() {
         return cameras.size();
     }
 
+    public synchronized int getSpatialBucketCount() {
+        return cameraGrid.size();
+    }
+
     public synchronized List<CameraPoint> getCamerasNear(double lat, double lon, double radiusMeters) {
+        double latitudeDelta = radiusMeters / 111_000d;
+        double longitudeScale = Math.max(0.01d, Math.cos(Math.toRadians(lat)));
+        double longitudeDelta = radiusMeters / (111_000d * longitudeScale);
+        double top = clamp(lat + latitudeDelta, -90d, 90d);
+        double bottom = clamp(lat - latitudeDelta, -90d, 90d);
+        double left = lon - longitudeDelta;
+        double right = lon + longitudeDelta;
+        if (left < -180d) {
+            left += 360d;
+        }
+        if (right > 180d) {
+            right -= 360d;
+        }
+
         List<CameraPoint> result = new ArrayList<>();
-        for (CameraPoint cam : cameras) {
+        List<CameraPoint> candidates = getCamerasInBoundingBox(top, left, bottom, right);
+        for (CameraPoint cam : candidates) {
             double dist = net.osmand.util.MapUtils.getDistance(cam.lat, cam.lon, lat, lon);
             if (dist <= radiusMeters) {
                 result.add(cam);
             }
         }
         return result;
+    }
+
+    @NonNull
+    private static Map<Long, List<CameraPoint>> buildSpatialGrid(@NonNull List<CameraPoint> points) {
+        Map<Long, List<CameraPoint>> mutableGrid = new HashMap<>();
+        for (CameraPoint point : points) {
+            long key = getGridKey(getLatBucket(point.lat), getLonBucket(point.lon));
+            List<CameraPoint> bucket = mutableGrid.get(key);
+            if (bucket == null) {
+                bucket = new ArrayList<>();
+                mutableGrid.put(key, bucket);
+            }
+            bucket.add(point);
+        }
+        Map<Long, List<CameraPoint>> grid = new HashMap<>(mutableGrid.size());
+        for (Map.Entry<Long, List<CameraPoint>> entry : mutableGrid.entrySet()) {
+            grid.put(entry.getKey(), Collections.unmodifiableList(entry.getValue()));
+        }
+        return Collections.unmodifiableMap(grid);
+    }
+
+    private static int getLatBucket(double lat) {
+        return (int) Math.floor((clamp(lat, -90d, 90d) + 90d) / SPATIAL_CELL_DEGREES);
+    }
+
+    private static int getLonBucket(double lon) {
+        return (int) Math.floor((clamp(lon, -180d, 180d) + 180d) / SPATIAL_CELL_DEGREES);
+    }
+
+    private static long getGridKey(int latBucket, int lonBucket) {
+        return ((long) latBucket << 32) ^ (lonBucket & 0xffffffffL);
+    }
+
+    private static double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
     }
 
     private String readGeoJsonFile(@NonNull File file) throws IOException {

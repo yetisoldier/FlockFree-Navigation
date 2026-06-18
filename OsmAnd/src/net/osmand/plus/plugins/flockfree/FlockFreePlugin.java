@@ -46,12 +46,24 @@ public class FlockFreePlugin extends OsmandPlugin {
     public FlockFreePlugin(OsmandApplication app) {
         super(app);
 
-        CAMERA_SHOW_LAYER = registerBooleanPreference("camera_show_layer", true).makeProfile().cache();
-        CAMERA_AVOIDANCE_ENABLED = registerBooleanPreference("camera_avoidance_enabled", false).makeProfile().cache();
-        CAMERA_AVOIDANCE_RADIUS = registerIntPreference("camera_avoidance_radius", 100).makeProfile().cache();
-        CAMERA_ALERT_DISTANCE = registerIntPreference("camera_alert_distance", 300).makeProfile().cache();
-        CAMERA_DATA_LAST_UPDATE = registerLongPreference("camera_data_last_update", 0L).makeProfile().cache();
-        CYD_BLE_ENABLED = registerBooleanPreference("cyd_ble_enabled", false).makeProfile().cache();
+        CAMERA_SHOW_LAYER = registerBooleanPreference(
+                FlockFreePreferences.CAMERA_SHOW_LAYER,
+                FlockFreePreferences.DEFAULT_CAMERA_SHOW_LAYER).makeProfile().cache();
+        CAMERA_AVOIDANCE_ENABLED = registerBooleanPreference(
+                FlockFreePreferences.CAMERA_AVOIDANCE_ENABLED,
+                FlockFreePreferences.DEFAULT_CAMERA_AVOIDANCE_ENABLED).makeProfile().cache();
+        CAMERA_AVOIDANCE_RADIUS = registerIntPreference(
+                FlockFreePreferences.CAMERA_AVOIDANCE_RADIUS,
+                FlockFreePreferences.DEFAULT_CAMERA_AVOIDANCE_RADIUS).makeProfile().cache();
+        CAMERA_ALERT_DISTANCE = registerIntPreference(
+                FlockFreePreferences.CAMERA_ALERT_DISTANCE,
+                FlockFreePreferences.DEFAULT_CAMERA_ALERT_DISTANCE).makeProfile().cache();
+        CAMERA_DATA_LAST_UPDATE = registerLongPreference(
+                FlockFreePreferences.CAMERA_DATA_LAST_UPDATE,
+                FlockFreePreferences.DEFAULT_CAMERA_DATA_LAST_UPDATE).makeProfile().cache();
+        CYD_BLE_ENABLED = registerBooleanPreference(
+                FlockFreePreferences.CYD_BLE_ENABLED,
+                FlockFreePreferences.DEFAULT_CYD_BLE_ENABLED).makeProfile().cache();
     }
 
     @Override
@@ -61,12 +73,12 @@ public class FlockFreePlugin extends OsmandPlugin {
 
     @Override
     public String getName() {
-        return "FlockFree - Camera Awareness";
+        return app.getString(R.string.flockfree_plugin_name);
     }
 
     @Override
     public CharSequence getDescription(boolean linksEnabled) {
-        return "Displays ALPR camera locations from dontgetflocked.com on the map, provides camera-aware routing that avoids known surveillance zones, and allows community reporting of new cameras to OpenStreetMap.";
+        return app.getString(R.string.flockfree_plugin_description);
     }
 
     @Override
@@ -82,7 +94,7 @@ public class FlockFreePlugin extends OsmandPlugin {
 
     @Override
     public String getPrefsDescription() {
-        return "Configure ALPR camera display, route camera summaries, and CYD hardware options.";
+        return app.getString(R.string.flockfree_plugin_prefs_description);
     }
 
     @NonNull

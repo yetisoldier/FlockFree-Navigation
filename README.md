@@ -24,6 +24,7 @@ OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-de
 Verified debug package/application ID: `com.yetiwurks.flockfree`.
 Verified APK SHA-256: `aecab4bdb9f873649e90fc3b4d1f6ff8f8c673e599c0b902fecf4772ff168c73`.
 That APK was installed and launched on a Moto G Stylus over Wi-Fi ADB. It includes the route-summary hook and exposed FlockFree plugin settings screen.
+The source tree has newer camera-indexing, experimental two-pass avoidance routing, and CYD BLE scaffold work after that APK. Rebuild before testing those features on-device.
 
 ## What Works Now
 
@@ -31,17 +32,20 @@ That APK was installed and launched on a Moto G Stylus over Wi-Fi ADB. It includ
 - The FlockFree plugin is registered in OsmAnd and enabled by default.
 - Camera data downloads from `https://data.dontgetflocked.com/cameras.geojson.gz`, is cached as GeoJSON, and refreshes weekly.
 - The data loader handles both gzip and plain GeoJSON because the live `.gz` endpoint currently returns plain GeoJSON.
+- Parsed cameras are indexed into a coarse in-memory spatial grid so map and route-corridor lookups do not scan the full camera list every time.
 - Camera points render on the map at zoom 10+ with basic vendor colors and higher-zoom labels.
 - Tapping a rendered camera opens a simple details dialog with brand, operator, direction, mount, surveillance zone, OSM ID/type, and timestamp when present.
 - The map context menu has an `Add ALPR Camera` action that opens the current camera-reporting flow.
 - When camera avoidance is enabled, newly calculated routes get a FlockFree toast summary of cameras near the route corridor.
+- Current source can perform one experimental second-pass OsmAnd offline route calculation using temporary impassable road IDs for roads adjacent to known cameras. These IDs are route-scoped and do not pollute the user's Avoid Roads settings.
 - The plugin settings screen is exposed through the OsmAnd plugin settings flow for map layer visibility, route summaries, corridor radius, alert distance, and CYD BLE enablement.
+- A CYD BLE UART scaffold exists for `FYHELLO`, `FYSTATUS`, `FYSIM`, `FYGPS`, `pair_status`, and `detection` messages, but it is not yet connected to a visible pairing/review UI.
 
 ## Still Stubbed Or Thin
 
-- Camera avoidance is advisory only. It reports cameras near the route corridor but does not yet block, penalize, or recalculate around roads.
-- CYD BLE integration is preference-only in this repo state; no BLE manager/service/parser is wired in.
-- Camera storage is an in-memory parsed GeoJSON list after cache/download, not a spatial SQLite database.
+- Camera avoidance is experimental and applies only to OsmAnd offline vector routing. It blocks whole route road objects, which can be coarse on long roads, and falls back to the original route if the avoided route fails.
+- CYD BLE integration has a low-level UART client/parser scaffold, but no scanner, foreground service, or pending-camera review workflow yet.
+- Camera storage is an in-memory parsed GeoJSON list with a spatial grid, not a persisted SQLite/geohash database.
 - No bundled first-run camera snapshot is present, so the first useful camera layer depends on network access to download data.
 - Widgets, quick actions, final settings polish, and rich camera detail UI are placeholders or not implemented.
 - Reporting depends on the current helper path and still needs end-to-end validation against OsmAnd's OSM editing flow.

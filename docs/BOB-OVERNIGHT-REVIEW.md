@@ -1,5 +1,7 @@
 # Bob Overnight Review
 
+Note: this was an overnight architecture review snapshot. Current source has since added experimental route-scoped two-pass camera avoidance, camera-data spatial indexing, and a low-level CYD BLE UART scaffold. See `docs/OVERNIGHT-HANDOFF.md` for the current handoff state.
+
 ## Recommendation
 
 Stay on the in-tree plugin path. FlockFree needs direct OsmAnd internals for route hooks, layers, plugin settings, and future road-blocking behavior. A standalone external plugin can compile for isolated experiments, but it should not be the main implementation path.

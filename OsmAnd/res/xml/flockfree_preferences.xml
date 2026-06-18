@@ -6,14 +6,19 @@
 	<PreferenceCategory
 		android:key="flockfree_map_display"
 		android:layout="@layout/preference_category_with_descr"
-		android:title="Map Display" />
+		android:title="@string/flockfree_map_display" />
 
 	<net.osmand.plus.settings.preferences.SwitchPreferenceEx
 		android:key="camera_show_layer"
 		android:layout="@layout/preference_with_descr_dialog_and_switch"
 		android:summaryOff="@string/shared_string_disabled"
 		android:summaryOn="@string/shared_string_enabled"
-		android:title="Show cameras on map" />
+		android:title="@string/flockfree_show_cameras_on_map" />
+
+	<Preference
+		android:key="flockfree_camera_data_status"
+		android:layout="@layout/preference_with_descr"
+		android:title="@string/flockfree_camera_data_status" />
 
 	<Preference
 		android:layout="@layout/simple_divider_item"
@@ -22,20 +27,20 @@
 	<PreferenceCategory
 		android:key="flockfree_camera_avoidance"
 		android:layout="@layout/preference_category_with_descr"
-		android:title="Camera Avoidance Routing" />
+		android:title="@string/flockfree_camera_avoidance_routing" />
 
 	<net.osmand.plus.settings.preferences.SwitchPreferenceEx
 		android:key="camera_avoidance_enabled"
 		android:layout="@layout/preference_with_descr_dialog_and_switch"
 		android:summaryOff="@string/shared_string_disabled"
 		android:summaryOn="@string/shared_string_enabled"
-		android:title="Enable camera avoidance routing" />
+		android:title="@string/flockfree_camera_avoidance_enabled" />
 
 	<net.osmand.plus.settings.preferences.ListPreferenceEx
 		android:key="camera_avoidance_radius"
 		android:layout="@layout/preference_with_descr"
-		android:title="Avoidance radius"
-		tools:summary="100 meters" />
+		android:title="@string/flockfree_avoidance_radius"
+		tools:summary="@string/flockfree_avoidance_radius_default_summary" />
 
 	<Preference
 		android:layout="@layout/simple_divider_item"
@@ -44,13 +49,13 @@
 	<PreferenceCategory
 		android:key="flockfree_alerts"
 		android:layout="@layout/preference_category_with_descr"
-		android:title="Alerts" />
+		android:title="@string/flockfree_alerts" />
 
 	<net.osmand.plus.settings.preferences.ListPreferenceEx
 		android:key="camera_alert_distance"
 		android:layout="@layout/preference_with_descr"
-		android:title="Alert distance"
-		tools:summary="300 meters" />
+		android:title="@string/flockfree_alert_distance"
+		tools:summary="@string/flockfree_alert_distance_default_summary" />
 
 	<Preference
 		android:layout="@layout/simple_divider_item"
@@ -59,13 +64,13 @@
 	<PreferenceCategory
 		android:key="flockfree_cyd_hardware"
 		android:layout="@layout/preference_category_with_descr"
-		android:title="CYD Hardware" />
+		android:title="@string/flockfree_cyd_hardware" />
 
 	<net.osmand.plus.settings.preferences.SwitchPreferenceEx
 		android:key="cyd_ble_enabled"
 		android:layout="@layout/preference_with_descr_dialog_and_switch"
 		android:summaryOff="@string/shared_string_disabled"
 		android:summaryOn="@string/shared_string_enabled"
-		android:title="Connect CYD hardware (BLE)" />
+		android:title="@string/flockfree_cyd_ble" />
 
 </PreferenceScreen>

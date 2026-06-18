@@ -4,14 +4,20 @@ import androidx.annotation.NonNull;
 
 import net.osmand.Location;
 import net.osmand.PlatformUtil;
+import net.osmand.binary.RouteDataObject;
 import net.osmand.data.LatLon;
 import net.osmand.plus.OsmandApplication;
+import net.osmand.plus.routing.RouteCalculationResult;
+import net.osmand.plus.routing.RouteSegmentSearchResult;
+import net.osmand.router.RouteSegmentResult;
 import net.osmand.util.MapUtils;
 
 import org.apache.commons.logging.Log;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Helps avoid known ALPR camera locations during route calculation.
@@ -73,6 +79,42 @@ public class CameraAvoidanceHelper {
             routePoints.add(new LatLon(location.getLatitude(), location.getLongitude()));
         }
         return findCamerasNearRoute(routePoints, radiusMeters);
+    }
+
+    @NonNull
+    public Set<Long> collectAvoidRoadIdsForRoute(@NonNull RouteCalculationResult route, int radiusMeters) {
+        Set<Long> result = new LinkedHashSet<>();
+        CameraData cameraData = plugin.getCameraData();
+        if (!isAvoidanceEnabled() || !cameraData.isDataLoaded()) {
+            return result;
+        }
+
+        List<RouteSegmentResult> roads = route.getOriginalRoute();
+        List<Location> locations = route.getImmutableAllLocations();
+        if (roads == null || roads.size() < 3 || locations == null || locations.isEmpty()) {
+            return result;
+        }
+
+        List<CameraData.CameraPoint> cameras = findCamerasNearRouteLocations(locations, radiusMeters);
+        for (CameraData.CameraPoint camera : cameras) {
+            RouteSegmentSearchResult searchResult = RouteSegmentSearchResult.searchRouteSegment(
+                    camera.lat, camera.lon, radiusMeters, roads);
+            if (searchResult == null) {
+                continue;
+            }
+            int roadIndex = searchResult.getRoadIndex();
+            if (roadIndex <= 0 || roadIndex >= roads.size() - 1) {
+                continue;
+            }
+            RouteDataObject object = roads.get(roadIndex).getObject();
+            if (object != null) {
+                result.add(object.getId());
+            }
+        }
+        if (!result.isEmpty()) {
+            LOG.info("FlockFree collected " + result.size() + " temporary avoid road ids");
+        }
+        return result;
     }
 
     /**

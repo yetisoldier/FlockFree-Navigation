@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.util.Base64;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import net.osmand.Location;
 import net.osmand.LocationsHolder;
@@ -29,6 +30,8 @@ import net.osmand.plus.measurementtool.GpxApproximationParams;
 import net.osmand.plus.onlinerouting.OnlineRoutingHelper;
 import net.osmand.plus.onlinerouting.engine.OnlineRoutingEngine;
 import net.osmand.plus.onlinerouting.engine.OnlineRoutingEngine.OnlineRoutingResponse;
+import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.render.NativeOsmandLibrary;
 import net.osmand.plus.routing.GPXRouteParams.GPXRouteParamsBuilder;
 import net.osmand.plus.settings.backend.ApplicationMode;
@@ -137,6 +140,10 @@ public class RouteProvider {
 					res = gpxRouteHelper.calculateGpxRoute(params);
 				} else if (params.mode.getRouteService() == RouteService.OSMAND) {
 					res = findVectorMapsRoute(params, calcGPXRoute);
+					RouteCalculationResult avoided = maybeRecalculateWithFlockFreeAvoidance(params, res, calcGPXRoute);
+					if (avoided != null) {
+						res = avoided;
+					}
 					if (params.calculationProgress.missingMapsCalculationResult != null) {
 						res.setMissingMapsCalculationResult(params.calculationProgress.missingMapsCalculationResult);
 					}
@@ -190,6 +197,61 @@ public class RouteProvider {
 					|| (params.gpxRoute.reverse && !params.gpxRoute.routePoints.isEmpty()));
 		}
 		return false;
+	}
+
+	@Nullable
+	private RouteCalculationResult maybeRecalculateWithFlockFreeAvoidance(@NonNull RouteCalculationParams params,
+	                                                                      @NonNull RouteCalculationResult initial,
+	                                                                      boolean calcGPXRoute) throws IOException {
+		if (params.cameraAvoidanceApplied || !initial.isCalculated()) {
+			return null;
+		}
+		FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
+		if (plugin == null || !plugin.CAMERA_AVOIDANCE_ENABLED.get() || !plugin.getCameraData().isDataLoaded()) {
+			return null;
+		}
+		Set<Long> avoidIds = plugin.getAvoidanceHelper().collectAvoidRoadIdsForRoute(initial,
+				plugin.CAMERA_AVOIDANCE_RADIUS.get());
+		if (Algorithms.isEmpty(avoidIds)) {
+			return null;
+		}
+
+		RouteCalculationParams avoidedParams = copyParamsForFlockFreeAvoidance(params, avoidIds);
+		RouteCalculationResult avoided = findVectorMapsRoute(avoidedParams, calcGPXRoute);
+		if (avoided.isCalculated()) {
+			log.info("FlockFree recalculated route with " + avoidIds.size() + " temporary avoid road ids");
+			return avoided;
+		}
+		log.warn("FlockFree temporary camera avoidance failed; returning original route");
+		return null;
+	}
+
+	@NonNull
+	private RouteCalculationParams copyParamsForFlockFreeAvoidance(@NonNull RouteCalculationParams params,
+	                                                               @NonNull Set<Long> avoidIds) {
+		RouteCalculationParams copy = new RouteCalculationParams();
+		copy.start = params.start;
+		copy.end = params.end;
+		copy.intermediates = params.intermediates;
+		copy.currentLocation = params.currentLocation;
+		copy.ctx = params.ctx;
+		copy.mode = params.mode;
+		copy.gpxRoute = params.gpxRoute;
+		copy.onlyStartPointChanged = false;
+		copy.fast = params.fast;
+		copy.leftSide = params.leftSide;
+		copy.startTransportStop = params.startTransportStop;
+		copy.targetTransportStop = params.targetTransportStop;
+		copy.inPublicTransportMode = params.inPublicTransportMode;
+		copy.extraIntermediates = params.extraIntermediates;
+		copy.initialCalculation = params.initialCalculation;
+		copy.gpxFile = params.gpxFile;
+		copy.calculationProgress = params.calculationProgress;
+		copy.calculationProgressListener = params.calculationProgressListener;
+		copy.alternateResultListener = params.alternateResultListener;
+		copy.temporaryImpassableRoadIds = new LinkedHashSet<>(avoidIds);
+		copy.cameraAvoidanceApplied = true;
+		return copy;
 	}
 
 	public RouteCalculationResult recalculatePartOfflineRoute(RouteCalculationResult res, RouteCalculationParams params) {
@@ -451,6 +513,11 @@ public class RouteProvider {
 		Double direction = params.start.hasBearing() ? params.start.getBearing() / 180d * Math.PI : null;
 
 		RoutingConfiguration configuration = builder.build(routingProfile, direction, memoryLimits, paramsR);
+		if (!Algorithms.isEmpty(params.temporaryImpassableRoadIds)) {
+			Set<Long> impassableRoads = new HashSet<>(builder.getImpassableRoadLocations());
+			impassableRoads.addAll(params.temporaryImpassableRoadIds);
+			configuration.router.setImpassableRoads(impassableRoads);
+		}
 		if (settings.ENABLE_TIME_CONDITIONAL_ROUTING.getModeValue(params.mode)) {
 			configuration.routeCalculationTime = System.currentTimeMillis();
 		}
