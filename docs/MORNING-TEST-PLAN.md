@@ -50,6 +50,12 @@ To reopen the newest field-session report path, summary, and marker-command file
 scripts/flockfree-latest-field-session.sh
 ```
 
+To print only the ready-made marker commands for the newest field session:
+
+```bash
+scripts/flockfree-latest-field-session.sh --commands-only
+```
+
 Offline camera-dense route-test anchors:
 
 ```bash

@@ -4,6 +4,7 @@ set -u
 OUT_ROOT="${OUT_ROOT:-logs/flockfree-field-session}"
 SESSION_DIR=""
 PATH_ONLY=0
+COMMANDS_ONLY=0
 
 usage() {
   cat <<'USAGE'
@@ -15,6 +16,7 @@ Usage:
 Options:
       --session-dir DIR     Show a specific session directory instead of latest.
       --path-only           Print only the selected session directory.
+      --commands-only       Print only manual-result marker commands for the session.
       --self-check          Run a local self-check without using real logs.
   -h, --help                Show this help.
 USAGE
@@ -31,7 +33,8 @@ Readiness: READY
 Crash evidence: none found
 EOF
   echo "report" > "$session/field-session-report.txt"
-  echo "commands" > "$session/manual-result-commands.txt"
+  echo "scripts/flockfree-mark-result.py \"\$SESSION_DIR\" route_avoidance PASS --notes checked --summarize" \
+    > "$session/manual-result-commands.txt"
   path_output="$(OUT_ROOT="$tmp/logs/flockfree-field-session" "$0" --path-only)" || return 1
   case "$path_output" in
     *20260101-010101*) ;;
@@ -48,6 +51,14 @@ EOF
       return 1
       ;;
   esac
+  commands_output="$(OUT_ROOT="$tmp/logs/flockfree-field-session" "$0" --commands-only)" || return 1
+  case "$commands_output" in
+    *"flockfree-mark-result.py"*"route_avoidance"*) ;;
+    *)
+      echo "self-check failed: --commands-only output missing marker command" >&2
+      return 1
+      ;;
+  esac
   echo "FlockFree latest field-session self-check passed."
 }
 
@@ -60,6 +71,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --path-only)
       PATH_ONLY=1
+      shift
+      ;;
+    --commands-only)
+      COMMANDS_ONLY=1
       shift
       ;;
     --self-check)
@@ -107,6 +122,15 @@ if [ "$PATH_ONLY" -eq 1 ]; then
   exit 0
 fi
 
+if [ "$COMMANDS_ONLY" -eq 1 ]; then
+  if [ -f "$COMMANDS" ]; then
+    cat "$COMMANDS"
+    exit 0
+  fi
+  echo "No manual-result command file found: $COMMANDS" >&2
+  exit 1
+fi
+
 echo "FlockFree latest field session"
 echo "=============================="
 echo "Session: $SESSION_DIR"
@@ -128,4 +152,7 @@ if [ -f "$COMMANDS" ]; then
   echo
   echo "To mark a visual result, open or run commands from:"
   echo "  $COMMANDS"
+  echo
+  echo "To print those commands directly:"
+  echo "  scripts/flockfree-latest-field-session.sh --commands-only"
 fi

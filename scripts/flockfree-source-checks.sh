@@ -250,6 +250,7 @@ required = [
     "session-summary.txt",
     "field-session-report.txt",
     "--path-only",
+    "--commands-only",
     "--session-dir",
     "--self-check",
 ]

@@ -118,6 +118,12 @@ To reopen the newest field-session summary and find its marker commands:
 scripts/flockfree-latest-field-session.sh
 ```
 
+To print only the ready-made marker commands for the newest field session:
+
+```bash
+scripts/flockfree-latest-field-session.sh --commands-only
+```
+
 To mark a visual/manual result and refresh the summary afterward:
 
 ```bash

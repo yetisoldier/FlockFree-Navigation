@@ -125,6 +125,12 @@ To reopen the latest field-session bundle without hunting for the timestamp:
 scripts/flockfree-latest-field-session.sh
 ```
 
+To print only the ready-made marker commands for the latest field-session bundle:
+
+```bash
+scripts/flockfree-latest-field-session.sh --commands-only
+```
+
 To mark a visual/manual result and refresh the summary without opening the TSV by hand:
 
 ```bash
