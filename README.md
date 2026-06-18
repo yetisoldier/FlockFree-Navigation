@@ -47,7 +47,7 @@ That APK was installed and launched on a Moto G Stylus over Wi-Fi ADB. It includ
 - The FlockFree plugin is registered in OsmAnd and enabled by default.
 - Camera data downloads from `https://data.dontgetflocked.com/cameras.geojson.gz`, is cached as GeoJSON, and refreshes weekly.
 - The data loader handles both gzip and plain GeoJSON because the live `.gz` endpoint currently returns plain GeoJSON.
-- A compressed bundled camera seed is included at `OsmAnd/assets/flockfree/cameras.geojson.gz`, so a fresh install can show the current 104,902-camera snapshot even if the first network refresh is unavailable.
+- A compressed bundled camera seed is included from `OsmAnd/assets/flockfree/cameras.geojson.gz`, so a fresh install can show the current 104,902-camera snapshot even if the first network refresh is unavailable.
 - Parsed cameras are indexed into a coarse in-memory spatial grid so map and route-corridor lookups do not scan the full camera list every time.
 - The FlockFree settings screen can manually refresh the camera data cache for morning validation or later data updates.
 - Camera points render on the map at zoom 10+ with basic vendor colors and higher-zoom labels.

@@ -107,6 +107,8 @@ for key in ["CAMERA_ALERTS_ENABLED", "CAMERA_ALERT_DISTANCE", "CYD_BLE_ENABLED"]
         raise SystemExit(f"missing preference constant {key}")
 if "refreshData()" not in camera_data:
     raise SystemExit("missing CameraData.refreshData()")
+if '"flockfree/cameras.geojson"' not in camera_data:
+    raise SystemExit("missing packaged bundled camera seed asset path")
 print("preference wiring ok")
 PY
 

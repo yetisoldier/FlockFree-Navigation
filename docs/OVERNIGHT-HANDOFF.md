@@ -28,7 +28,7 @@
 - The in-tree FlockFree plugin is registered and enabled by default.
 - FlockFree has a visible plugin settings screen wired into the OsmAnd plugin settings flow.
 - Camera data loader accepts the live `data.dontgetflocked.com` response, which currently uses a `.gz` URL but returns plain GeoJSON.
-- A bundled camera seed at `OsmAnd/assets/flockfree/cameras.geojson.gz` gives fresh installs a 104,902-camera fallback before the first successful network refresh.
+- A bundled camera seed from `OsmAnd/assets/flockfree/cameras.geojson.gz` gives fresh installs a 104,902-camera fallback before the first successful network refresh.
 - Smoke log showed `CameraData Reading camera data payload; gzip=false`.
 - Camera map layer and camera context-menu/reporting code are present in source.
 - The `Add ALPR Camera` flow now opens OsmAnd's POI editor with the selected ALPR tag preset attached to the new node.

@@ -37,7 +37,7 @@ public class CameraData {
 
     private static final String CAMERA_DATA_URL = FlockFreePreferences.CAMERA_DATA_URL;
     private static final String CACHE_FILENAME = "cameras.geojson";
-    private static final String BUNDLED_SEED_ASSET = "flockfree/cameras.geojson.gz";
+    private static final String BUNDLED_SEED_ASSET = "flockfree/cameras.geojson";
     private static final long WEEK_MS = FlockFreePreferences.REFRESH_INTERVAL_MS;
     private static final long MAX_GEOJSON_BYTES = 128L * 1024 * 1024;
     private static final double SPATIAL_CELL_DEGREES = 0.05d;
