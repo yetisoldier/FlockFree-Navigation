@@ -5,7 +5,7 @@
 - Repository: `https://github.com/yetisoldier/FlockFree-Navigation`
 - Local path: `/home/yetisoldier/projects/FlockFree-Navigation`
 - Branch: `master`
-- Latest functional source: current `master` after the profile-persisted proof-row status pass.
+- Latest functional source: current `master` after the map-center CYD simulation fallback pass.
 - Current source includes the route camera summary hook, exposed FlockFree settings screen with live dynamic status refresh, camera-data spatial indexing with source/freshness diagnostics, OSM editor tag-prefill reporting with profile-persisted report-draft status, experimental two-pass offline camera avoidance, profile-persisted applied/fallback/skipped route diagnostics, movement/navigation nearby-camera alerts with profile-persisted last-check status, cache-only route startup for existing camera data, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, phone GPS streaming to CYD over `FYGPS`, local CYD simulation from phone/OsmAnd GPS or current map center when hardware is absent, and persisted CYD detection map/review candidates.
 
 ## Verified APK
