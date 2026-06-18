@@ -46,6 +46,7 @@ Thumbs.db
 
 # Output files
 build
+/logs/
 
 #Rendering test files
 OsmAnd-java/src/test/resources/rendering/*
