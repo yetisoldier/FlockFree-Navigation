@@ -66,7 +66,7 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 - [ ] App launches and appears as FlockFree.
 - [ ] First-run permissions/wizard do not block reaching the map.
 - [ ] Download or open a local map area if OsmAnd asks for one.
-- [ ] Wait up to 2 minutes on Wi-Fi for camera data cache/download.
+- [ ] Wait up to 2 minutes for camera data to load from cache, bundled seed, or network.
 - [ ] Zoom to 10+ in an area expected to have ALPR cameras.
 - [ ] Camera dots appear on the map.
 - [ ] At zoom 15+, short vendor labels appear where camera data has a known brand.
@@ -96,7 +96,7 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 - Do not expect camera avoidance to work for BRouter or online routing. The experimental reroute path only applies to OsmAnd offline vector routing.
 - Do not expect camera avoidance to be subtle. It blocks whole route road objects and falls back to the original route if the avoided route fails.
 - Do not expect a polished CYD foreground service or sync. Current source can scan/connect/request status/simulate from settings, can scan again from the map when CYD BLE is enabled and idle, and can review recent GPS-backed detections from the map; those candidates are persisted only in app-private local storage.
-- Do not expect offline first-run camera data before the GeoJSON download succeeds.
+- Offline first-run camera data should now be available from the bundled seed snapshot, but `Refresh camera data` is still needed to prove live network update behavior.
 - Do not expect polished widgets, quick actions, or a final settings UI beyond the exposed MVP preferences.
 
 ## Useful Diagnostics

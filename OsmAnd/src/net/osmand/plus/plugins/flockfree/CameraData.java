@@ -37,6 +37,7 @@ public class CameraData {
 
     private static final String CAMERA_DATA_URL = FlockFreePreferences.CAMERA_DATA_URL;
     private static final String CACHE_FILENAME = "cameras.geojson";
+    private static final String BUNDLED_SEED_ASSET = "flockfree/cameras.geojson.gz";
     private static final long WEEK_MS = FlockFreePreferences.REFRESH_INTERVAL_MS;
     private static final long MAX_GEOJSON_BYTES = 128L * 1024 * 1024;
     private static final double SPATIAL_CELL_DEGREES = 0.05d;
@@ -69,6 +70,9 @@ public class CameraData {
         executor.execute(() -> {
             try {
                 boolean loadedFromCache = loadFromCache();
+                if (!loadedFromCache) {
+                    loadFromBundledSeed();
+                }
                 long lastUpdate = getLastUpdateTimestamp();
                 if (!loadedFromCache || isRefreshDue(lastUpdate)) {
                     downloadCameraData();
@@ -90,7 +94,7 @@ public class CameraData {
             try {
                 boolean refreshed = downloadCameraData();
                 if (!refreshed && !dataLoaded) {
-                    loadFromCache();
+                    loadFromCacheOrSeed();
                 }
             } catch (Exception e) {
                 LOG.error("Failed to refresh camera data", e);
@@ -110,7 +114,7 @@ public class CameraData {
         }
         loading = true;
         try {
-            return loadFromCache();
+            return loadFromCacheOrSeed();
         } catch (Exception e) {
             LOG.error("Failed to load camera cache for routing", e);
             return false;
@@ -140,6 +144,27 @@ public class CameraData {
             }
         } else {
             LOG.info("No FlockFree camera cache found");
+        }
+        return false;
+    }
+
+    private boolean loadFromCacheOrSeed() {
+        return loadFromCache() || loadFromBundledSeed();
+    }
+
+    private boolean loadFromBundledSeed() {
+        try {
+            String json = readGeoJsonAsset(BUNDLED_SEED_ASSET);
+            if (!parseGeoJSON(json, "bundled seed")) {
+                return false;
+            }
+            dataLoaded = true;
+            LOG.info("Loaded " + cameras.size() + " cameras from bundled seed");
+            return true;
+        } catch (IOException e) {
+            LOG.warn("No bundled FlockFree camera seed available", e);
+        } catch (Exception e) {
+            LOG.error("Failed to load bundled FlockFree camera seed", e);
         }
         return false;
     }
@@ -426,6 +451,13 @@ public class CameraData {
             throw new IOException("Camera cache is too large: " + file.length() + " bytes");
         }
         try (BufferedInputStream buffered = new BufferedInputStream(new java.io.FileInputStream(file))) {
+            return readMaybeGzipStream(buffered);
+        }
+    }
+
+    private String readGeoJsonAsset(@NonNull String assetPath) throws IOException {
+        try (InputStream inputStream = app.getAssets().open(assetPath);
+             BufferedInputStream buffered = new BufferedInputStream(inputStream)) {
             return readMaybeGzipStream(buffered);
         }
     }

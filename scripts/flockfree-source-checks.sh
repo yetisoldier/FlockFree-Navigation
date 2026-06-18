@@ -110,8 +110,25 @@ if "refreshData()" not in camera_data:
 print("preference wiring ok")
 PY
 
+log "Bundled camera seed check"
+python3 - <<'PY'
+from pathlib import Path
+import gzip
+import json
+
+asset = Path("OsmAnd/assets/flockfree/cameras.geojson.gz")
+if not asset.exists():
+    raise SystemExit(f"missing bundled camera seed: {asset}")
+with gzip.open(asset, "rt", encoding="utf-8") as f:
+    data = json.load(f)
+features = data.get("features")
+if data.get("type") != "FeatureCollection" or not isinstance(features, list) or not features:
+    raise SystemExit("bundled camera seed is not a non-empty FeatureCollection")
+print(f"bundled camera seed ok: {len(features)} features, {asset.stat().st_size} compressed bytes")
+PY
+
 log "Script syntax checks"
-bash -n scripts/flockfree-moto-diagnostics.sh scripts/flockfree-user-build-install.sh
+bash -n scripts/flockfree-moto-diagnostics.sh scripts/flockfree-user-build-install.sh scripts/flockfree-source-checks.sh
 
 log "CYD parser/store self-check"
 ANNOTATION_JAR="${ANNOTATION_JAR:-$(find_first_jar '*androidx.annotation/annotation-jvm*')}"

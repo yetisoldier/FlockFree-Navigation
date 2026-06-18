@@ -47,6 +47,7 @@ That APK was installed and launched on a Moto G Stylus over Wi-Fi ADB. It includ
 - The FlockFree plugin is registered in OsmAnd and enabled by default.
 - Camera data downloads from `https://data.dontgetflocked.com/cameras.geojson.gz`, is cached as GeoJSON, and refreshes weekly.
 - The data loader handles both gzip and plain GeoJSON because the live `.gz` endpoint currently returns plain GeoJSON.
+- A compressed bundled camera seed is included at `OsmAnd/assets/flockfree/cameras.geojson.gz`, so a fresh install can show the current 104,902-camera snapshot even if the first network refresh is unavailable.
 - Parsed cameras are indexed into a coarse in-memory spatial grid so map and route-corridor lookups do not scan the full camera list every time.
 - The FlockFree settings screen can manually refresh the camera data cache for morning validation or later data updates.
 - Camera points render on the map at zoom 10+ with basic vendor colors and higher-zoom labels.
@@ -67,7 +68,7 @@ That APK was installed and launched on a Moto G Stylus over Wi-Fi ADB. It includ
 - Camera avoidance is experimental and applies only to OsmAnd offline vector routing. It blocks whole route road objects, which can be coarse on long roads, and falls back to the original route if the avoided route fails.
 - CYD BLE integration is still map-activity/settings-driven. It has no foreground service yet, and recent detection candidates are persisted locally but not synced anywhere.
 - Camera storage is an in-memory parsed GeoJSON list with a spatial grid, not a persisted SQLite/geohash database.
-- No bundled first-run camera snapshot is present, so the first useful camera layer depends on network access to download data.
+- The bundled camera seed is a snapshot. `Refresh camera data` or the normal weekly refresh is still needed for the latest live camera data.
 - Widgets, quick actions, final settings polish, and rich camera detail UI are placeholders or not implemented.
 - Reporting now pre-fills OsmAnd's OSM POI editor with ALPR tags, but still needs end-to-end on-device validation against the save/upload flow.
 

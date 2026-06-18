@@ -28,6 +28,7 @@
 - The in-tree FlockFree plugin is registered and enabled by default.
 - FlockFree has a visible plugin settings screen wired into the OsmAnd plugin settings flow.
 - Camera data loader accepts the live `data.dontgetflocked.com` response, which currently uses a `.gz` URL but returns plain GeoJSON.
+- A bundled camera seed at `OsmAnd/assets/flockfree/cameras.geojson.gz` gives fresh installs a 104,902-camera fallback before the first successful network refresh.
 - Smoke log showed `CameraData Reading camera data payload; gzip=false`.
 - Camera map layer and camera context-menu/reporting code are present in source.
 - The `Add ALPR Camera` flow now opens OsmAnd's POI editor with the selected ALPR tag preset attached to the new node.
@@ -55,7 +56,7 @@
 - Route avoidance is still experimental and only works for OsmAnd offline vector routing. It blocks whole road objects and can be coarse.
 - CYD BLE has a map-activity/settings-driven scanner/status/simulation/review MVP with idle scan-on-resume and local candidate persistence, but no foreground service or sync.
 - Camera data is still held in memory and indexed in Java; persisted SQLite/geohash indexing is a later optimization.
-- First useful camera display needs network access for the live GeoJSON download unless a cache is already present.
+- The bundled camera seed is a snapshot. Live freshness still depends on the weekly or manual `Refresh camera data` network path.
 - The current OSM reporting helper pre-fills tags, but still needs end-to-end on-device validation before treating it as upload-ready.
 
 ## Morning First Steps
