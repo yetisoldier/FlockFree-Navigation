@@ -132,6 +132,7 @@ REPORT="${OUT_DIR}/field-session-report.txt"
 SESSION_LOGCAT="${OUT_DIR}/session-logcat-filtered.txt"
 SESSION_SUMMARY="${OUT_DIR}/session-summary.txt"
 PROMPTS="${OUT_DIR}/manual-test-prompts.txt"
+TEST_AREAS="${OUT_DIR}/test-area-suggestions.txt"
 READINESS_DIR="${OUT_DIR}/readiness"
 POST_DIAG_DIR="${OUT_DIR}/post-diagnostics"
 
@@ -160,6 +161,19 @@ run_step() {
   fi
 }
 
+write_test_areas() {
+  if [ -x "$ROOT_DIR/scripts/flockfree-suggest-test-areas.py" ]; then
+    "$ROOT_DIR/scripts/flockfree-suggest-test-areas.py" --limit 5 --radius-km 80 > "$TEST_AREAS" 2>&1 || {
+      {
+        echo "FlockFree test-area suggestions unavailable."
+        echo "Check scripts/flockfree-suggest-test-areas.py manually."
+      } > "$TEST_AREAS"
+    }
+  else
+    echo "FlockFree test-area suggestion helper not executable." > "$TEST_AREAS"
+  fi
+}
+
 write_prompts() {
   cat > "$PROMPTS" <<'PROMPTS'
 FlockFree manual test prompts
@@ -167,6 +181,7 @@ FlockFree manual test prompts
 
 Use these while the timed logcat capture is running:
 
+0. Open test-area-suggestions.txt and use one of the Map anchor coordinates for camera markers, nearby alerts, and route tests.
 1. Open FlockFree settings and confirm the readiness-relevant rows:
    Camera data, Last route check, Nearby camera alerts, CYD status.
 2. Tap Refresh camera data on Wi-Fi and wait for the row to settle.
@@ -197,8 +212,10 @@ append_report "Package: ${PACKAGE}"
 append_report "Timed capture duration: ${DURATION_SECONDS} seconds"
 append_report ""
 
+write_test_areas
 write_prompts
 append_report "Manual prompts: ${PROMPTS}"
+append_report "Test-area suggestions: ${TEST_AREAS}"
 append_report ""
 
 if [ "$RUN_READINESS" -eq 1 ]; then

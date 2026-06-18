@@ -110,7 +110,7 @@ scripts/flockfree-field-test-session.sh
 ```
 
 It runs the readiness gate, writes manual prompts, captures filtered logcat during the test window, then captures post-session diagnostics.
-It also writes `session-summary.txt`, which lists observed evidence buckets and suggests missing manual checks.
+It also writes `test-area-suggestions.txt` with bundled-seed map anchors and `session-summary.txt`, which lists observed evidence buckets and suggests missing manual checks.
 
 For offline route-test anchors from the bundled camera seed:
 

@@ -117,7 +117,7 @@ For a timed evidence bundle while Eric performs the manual route, OSM reporting,
 scripts/flockfree-field-test-session.sh
 ```
 
-Start with the generated `logs/flockfree-field-session/.../field-session-report.txt`; it includes the readiness gate, manual prompts, filtered logcat from the test window, post-session diagnostics, and a `session-summary.txt` evidence summary.
+Start with the generated `logs/flockfree-field-session/.../field-session-report.txt`; it includes the readiness gate, manual prompts, `test-area-suggestions.txt` map anchors from the bundled seed, filtered logcat from the test window, post-session diagnostics, and a `session-summary.txt` evidence summary.
 
 For data-backed camera-dense route-test anchors from the bundled seed, run:
 
