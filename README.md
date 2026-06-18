@@ -21,6 +21,8 @@ For a one-command manual build/install/launch/diagnostics flow, Eric can run:
 scripts/flockfree-user-build-install.sh
 ```
 
+The helper writes the copied APK and `FlockFree-build-info.txt` under `build-artifacts/` so the morning install can be traced back to a source commit and APK SHA-256.
+
 That helper intentionally runs Gradle and is for manual use. Agents should not execute it because `AGENTS.md` forbids agent-run Gradle build tasks.
 
 Last verified local APK output:

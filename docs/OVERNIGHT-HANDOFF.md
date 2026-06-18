@@ -58,7 +58,7 @@
 
 ## Morning First Steps
 
-1. Rebuild/install the latest source manually with `scripts/flockfree-user-build-install.sh` so the phone has the newest source changes. The helper runs Gradle, installs on the default Moto Wi-Fi ADB endpoint, launches the app, and captures diagnostics.
+1. Rebuild/install the latest source manually with `scripts/flockfree-user-build-install.sh` so the phone has the newest source changes. The helper runs Gradle, writes `build-artifacts/FlockFree-build-info.txt`, installs on the default Moto Wi-Fi ADB endpoint, launches the app, and captures diagnostics.
 2. Open the app on the Moto G Stylus. It should already be installed as `com.yetiwurks.flockfree`.
 3. Work through or skip the first-run map download flow.
 4. Confirm camera data finishes loading on Wi-Fi.

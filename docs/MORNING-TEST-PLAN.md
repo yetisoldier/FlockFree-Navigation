@@ -20,7 +20,7 @@ cd /home/yetisoldier/projects/FlockFree-Navigation
 scripts/flockfree-user-build-install.sh
 ```
 
-That script builds the current APK, copies it to `build-artifacts/`, installs it on the default Moto Wi-Fi ADB endpoint, launches it, and captures diagnostics. It runs Gradle, so it is for Eric/manual use rather than agent execution.
+That script builds the current APK, copies it to `build-artifacts/`, writes `build-artifacts/FlockFree-build-info.txt` with source commit, clean/dirty state, SHA-256, and signature status, installs it on the default Moto Wi-Fi ADB endpoint, launches it, and captures diagnostics. It runs Gradle, so it is for Eric/manual use rather than agent execution.
 
 Manual equivalent:
 
