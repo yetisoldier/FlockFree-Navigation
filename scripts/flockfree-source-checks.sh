@@ -276,6 +276,8 @@ required = [
     "--summarize",
     "--self-check",
     "flockfree-summarize-session.py",
+    "REPORT_BLOCK_BEGIN",
+    "update_field_report(",
 ]
 missing = [item for item in required if item not in marker]
 if missing:

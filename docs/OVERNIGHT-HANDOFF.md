@@ -125,6 +125,8 @@ To mark a visual/manual result and refresh the summary without opening the TSV b
 scripts/flockfree-mark-result.py logs/flockfree-field-session/RUN_ID route_avoidance PASS --notes "Avoidance applied toast observed" --summarize
 ```
 
+With `--summarize`, the helper refreshes `session-summary.txt` and updates a generated manual-result block in `field-session-report.txt`, so the report remains the primary file to read.
+
 For data-backed camera-dense route-test anchors from the bundled seed, run:
 
 ```bash

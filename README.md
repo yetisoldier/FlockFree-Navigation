@@ -118,6 +118,8 @@ To mark a visual/manual result and refresh the summary afterward:
 scripts/flockfree-mark-result.py logs/flockfree-field-session/RUN_ID route_avoidance PASS --notes "Avoidance applied toast observed" --summarize
 ```
 
+With `--summarize`, the helper refreshes both `session-summary.txt` and the generated manual-result block in `field-session-report.txt`.
+
 For offline route-test anchors from the bundled camera seed:
 
 ```bash

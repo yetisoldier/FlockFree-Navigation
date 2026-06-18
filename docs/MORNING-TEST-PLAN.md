@@ -157,6 +157,8 @@ You can also update one row and refresh the summary without opening an editor:
 scripts/flockfree-mark-result.py logs/flockfree-field-session/RUN_ID route_avoidance PASS --notes "Avoidance applied toast observed" --summarize
 ```
 
+With `--summarize`, the helper refreshes `session-summary.txt` and updates a generated manual-result block in `field-session-report.txt`, so the report remains the primary file to read.
+
 To pick data-backed route-test areas from the bundled seed:
 
 ```bash
