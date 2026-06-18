@@ -32,7 +32,7 @@ OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-de
 Verified debug package/application ID: `com.yetiwurks.flockfree`.
 Verified APK SHA-256: `aecab4bdb9f873649e90fc3b4d1f6ff8f8c673e599c0b902fecf4772ff168c73`.
 That APK was installed and launched on a Moto G Stylus over Wi-Fi ADB. It includes the route-summary hook and exposed FlockFree plugin settings screen.
-The source tree has newer camera-indexing, experimental two-pass avoidance routing, location-based camera alerts, OSM editor tag-prefill reporting, CYD BLE settings controls, phone GPS streaming to CYD, and CYD detection map/review work after that APK. Rebuild before testing those features on-device.
+The source tree has newer camera-indexing, experimental two-pass avoidance routing, location-based camera alerts, OSM editor tag-prefill reporting, CYD BLE settings controls, CYD auto-reconnect on map resume, phone GPS streaming to CYD, and CYD detection map/review work after that APK. Rebuild before testing those features on-device.
 
 ## What Works Now
 
@@ -49,13 +49,14 @@ The source tree has newer camera-indexing, experimental two-pass avoidance routi
 - With nearby alerts enabled, FlockFree can warn while navigating or moving when the current GPS fix is within the configured alert distance of the nearest known camera.
 - The plugin settings screen is exposed through the OsmAnd plugin settings flow for map layer visibility, route summaries, corridor radius, alert distance, and CYD BLE enablement.
 - A CYD BLE UART path exists for `FYHELLO`, `FYSTATUS`, `FYSIM`, `FYGPS`, `pair_status`, and `detection` messages.
+- If CYD BLE is enabled, returning to the map starts a scan when the CYD manager is idle.
 - Once the CYD is connected, FlockFree forwards valid phone GPS fixes over `FYGPS` about once per second so the CYD can time/location-stamp detections without DeFlock running separately.
 - GPS-backed CYD detections are kept as recent candidates, persisted to a small local JSON store, drawn on the map as distinct CYD markers, and can be reviewed through the existing ALPR camera reporting flow.
 
 ## Still Stubbed Or Thin
 
 - Camera avoidance is experimental and applies only to OsmAnd offline vector routing. It blocks whole route road objects, which can be coarse on long roads, and falls back to the original route if the avoided route fails.
-- CYD BLE integration is settings-driven. It has no foreground service or background auto-reconnect yet, and recent detection candidates are persisted locally but not synced anywhere.
+- CYD BLE integration is still map-activity/settings-driven. It has no foreground service yet, and recent detection candidates are persisted locally but not synced anywhere.
 - Camera storage is an in-memory parsed GeoJSON list with a spatial grid, not a persisted SQLite/geohash database.
 - No bundled first-run camera snapshot is present, so the first useful camera layer depends on network access to download data.
 - Widgets, quick actions, final settings polish, and rich camera detail UI are placeholders or not implemented.

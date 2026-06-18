@@ -312,6 +312,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     @Override
     public void mapActivityResume(@NonNull MapActivity activity) {
         getCameraData().ensureDataLoaded();
+        ensureCydScanIfEnabled(activity);
     }
 
     @Override
@@ -358,6 +359,16 @@ public class FlockFreePlugin extends OsmandPlugin {
     private void updateCydPhoneLocation(@NonNull Location location) {
         if (CYD_BLE_ENABLED.get() && cydHardwareManager != null) {
             cydHardwareManager.updatePhoneLocation(location);
+        }
+    }
+
+    private void ensureCydScanIfEnabled(@NonNull MapActivity activity) {
+        if (!CYD_BLE_ENABLED.get()) {
+            return;
+        }
+        CydHardwareManager manager = getCydHardwareManager();
+        if (manager.getState() == CydHardwareManager.State.IDLE) {
+            manager.startScanAndConnect(activity);
         }
     }
 
