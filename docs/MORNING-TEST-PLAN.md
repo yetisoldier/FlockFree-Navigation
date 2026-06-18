@@ -1,8 +1,8 @@
 # FlockFree Morning Test Plan
 
-Goal: once an installable APK is produced, prove it installs over Wi-Fi ADB, launches as FlockFree, and exposes the current camera-awareness MVP without chasing unfinished features.
+Goal: prove the debug APK installs over Wi-Fi ADB, launches as FlockFree, and exposes the current camera-awareness MVP without chasing unfinished features.
 
-Current status: source compile/assemble has passed locally, but the installable APK packaging path is still blocked by Android Gradle desugar/universal-package intermediates. Run this checklist only after `OsmAnd/build/outputs/apk` contains a FlockFree APK.
+Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The first verified APK installed successfully on the Moto G Stylus and launched into the FlockFree first-run screen.
 
 ## Setup
 
@@ -17,18 +17,21 @@ Current status: source compile/assemble has passed locally, but the installable 
 cd /home/yetisoldier/projects/FlockFree-Navigation
 
 ANDROID_HOME=$HOME/Android/Sdk ANDROID_SDK=$HOME/Android/Sdk \
-  ./gradlew --no-watch-fs --max-workers=1 \
-  :OsmAnd:assembleNightlyFreeLegacyFatDebug \
-  -x :OsmAnd-java:test
+  ./gradlew :OsmAnd:assembleGplayFreeLegacyFatDebug \
+  -x test --no-daemon --max-workers=1
 ```
 
 Find the APK:
 
 ```bash
-find OsmAnd/build/outputs/apk -type f -name '*nightly*legacy*fat*debug*.apk' -print
+find OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug -type f -name '*.apk' -print
 ```
 
-Stop here if that command returns nothing. The source compile path has been verified, but there is nothing to install yet.
+Expected current APK:
+
+```text
+OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-debug.apk
+```
 
 ## Install
 
@@ -36,7 +39,7 @@ Stop here if that command returns nothing. The source compile path has been veri
 adb devices
 adb connect PHONE_IP:5555
 adb install -r PATH_FROM_FIND_COMMAND.apk
-adb shell monkey -p com.yetiwurks.flockfree.dev 1
+adb shell monkey -p com.yetiwurks.flockfree 1
 ```
 
 ## Checklist
@@ -66,9 +69,9 @@ adb shell monkey -p com.yetiwurks.flockfree.dev 1
 
 ```bash
 adb logcat -c
-adb shell monkey -p com.yetiwurks.flockfree.dev 1
+adb shell monkey -p com.yetiwurks.flockfree 1
 adb logcat -d | rg -i 'flockfree|CameraData|FlockFreePlugin|AndroidRuntime|FATAL EXCEPTION'
-adb shell pidof com.yetiwurks.flockfree.dev
+adb shell pidof com.yetiwurks.flockfree
 ```
 
 Pass condition: the app launches, reaches the map, does not crash, and at least one FlockFree camera-layer/reporting path can be observed. Treat routing avoidance and CYD BLE as documented stubs unless separate code lands before the test.

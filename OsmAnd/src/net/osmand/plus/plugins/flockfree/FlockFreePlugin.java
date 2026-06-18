@@ -5,10 +5,12 @@ import android.content.Context;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import net.osmand.Location;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.plugins.OsmandPlugin;
+import net.osmand.plus.routing.RouteCalculationResult;
 import net.osmand.plus.quickaction.QuickActionType;
 import net.osmand.plus.settings.backend.preferences.CommonPreference;
 import net.osmand.plus.settings.backend.preferences.OsmandPreference;
@@ -201,5 +203,26 @@ public class FlockFreePlugin extends OsmandPlugin {
     @Override
     public void mapActivityResume(@NonNull MapActivity activity) {
         getCameraData().ensureDataLoaded();
+    }
+
+    @Override
+    public void newRouteIsCalculated(boolean newRoute) {
+        if (!newRoute || !CAMERA_AVOIDANCE_ENABLED.get()) {
+            return;
+        }
+        getCameraData().ensureDataLoaded();
+        if (!getCameraData().isDataLoaded()) {
+            app.showShortToastMessage("FlockFree: camera data is still loading");
+            return;
+        }
+        RouteCalculationResult route = app.getRoutingHelper().getRoute();
+        if (route == null || !route.isCalculated()) {
+            return;
+        }
+        List<Location> routeLocations = route.getImmutableAllLocations();
+        if (routeLocations == null || routeLocations.isEmpty()) {
+            return;
+        }
+        app.showToastMessage("FlockFree: " + getAvoidanceHelper().getRouteCameraSummaryFromLocations(routeLocations));
     }
 }
