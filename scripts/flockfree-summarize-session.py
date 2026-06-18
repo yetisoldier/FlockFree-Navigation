@@ -14,8 +14,12 @@ EVIDENCE_PATTERNS = {
     "route avoidance": re.compile(r"Avoidance|Last route check|route camera|camera-adjacent|reroute", re.I),
     "nearby alerts": re.compile(r"nearby camera|Nearby camera alerts|Alert distance", re.I),
     "OSM reporting": re.compile(r"Add ALPR Camera|ALPR|surveillance|EditPoi", re.I),
-    "CYD": re.compile(r"\bCYD\b|FYSTATUS|FYGPS|FYSIM|pair_status|detection", re.I),
 }
+CYD_EVIDENCE_PATTERN = re.compile(
+    r"\b(FYSTATUS|FYGPS|FYSIM|pair_status|CYD detection received|Phone GPS sent|"
+    r"Connected to CYD|CYD status|Simulate CYD detection)\b",
+    re.I,
+)
 FATAL_CRASH_PATTERN = re.compile(r"FATAL EXCEPTION|AndroidRuntime.*FATAL EXCEPTION", re.I)
 
 
@@ -69,6 +73,12 @@ def has_fatal_crash_evidence(timed_fatal_lines: str, *texts: str) -> bool:
     return present(FATAL_CRASH_PATTERN, *texts)
 
 
+def has_cyd_evidence(post_summary: str, ui_summary: str, session_log: str) -> bool:
+    if re.search(r"^CYD detection store: present", post_summary, re.I | re.MULTILINE):
+        return True
+    return present(CYD_EVIDENCE_PATTERN, ui_summary, session_log)
+
+
 def summarize(session_dir: Path) -> str:
     field_report = read_text(session_dir / "field-session-report.txt")
     readiness = read_text(session_dir / "readiness" / "readiness-report.txt")
@@ -93,7 +103,7 @@ def summarize(session_dir: Path) -> str:
     timed_log_lines = first_match(r"^Timed filtered logcat lines: (.+)$", field_report)
     timed_fatal_lines = first_match(r"^Timed fatal crash evidence lines: (.+)$", field_report)
 
-    evidence_texts = (field_report, readiness, post_summary, ui_summary, app_data, session_log)
+    evidence_texts = (post_summary, ui_summary, app_data, session_log)
     fatal_crash_found = has_fatal_crash_evidence(timed_fatal_lines, field_report, readiness, post_summary, session_log)
     observed = []
     not_observed = []
@@ -102,6 +112,10 @@ def summarize(session_dir: Path) -> str:
             observed.append(name)
         else:
             not_observed.append(name)
+    if has_cyd_evidence(post_summary, ui_summary, session_log):
+        observed.append("CYD")
+    else:
+        not_observed.append("CYD")
 
     output = [
         "FlockFree field-session summary",
@@ -193,6 +207,7 @@ def self_check() -> int:
             "route avoidance",
             "Timed fatal crash evidence lines: 0",
             "Crash evidence: none found",
+            "connect/simulate CYD",
         ]
         missing = [item for item in required if item not in result]
         if missing:

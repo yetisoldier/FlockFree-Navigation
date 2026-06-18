@@ -247,6 +247,7 @@ required = [
     "Not observed in captured artifacts:",
     "Suggested next manual checks:",
     "Crash evidence:",
+    "has_cyd_evidence(",
     "--self-check",
     "Timed fatal crash evidence lines:",
 ]
