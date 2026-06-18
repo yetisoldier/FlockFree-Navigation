@@ -36,6 +36,14 @@ scripts/flockfree-morning-readiness.sh
 
 Start with the generated `logs/flockfree-readiness/.../readiness-report.txt`. The report compares `build-artifacts/FlockFree-build-info.txt` against the current repo, states whether the installed APK is app-code current or whether app/runtime paths changed after the last APK build, and ends with a `Readiness verdict`.
 
+Timed no-Gradle evidence capture while performing the manual checklist:
+
+```bash
+scripts/flockfree-field-test-session.sh
+```
+
+Start with the generated `logs/flockfree-field-session/.../field-session-report.txt`. It includes a readiness gate, manual test prompts, filtered logcat from the test window, and post-session diagnostics.
+
 Manual equivalent:
 
 ```bash
@@ -124,6 +132,12 @@ To grant only FlockFree's declared runtime permissions before CYD/GPS testing an
 
 ```bash
 scripts/flockfree-moto-permission-primer.sh
+```
+
+To capture evidence while performing route, OSM reporting, and CYD checks:
+
+```bash
+scripts/flockfree-field-test-session.sh --duration 900
 ```
 
 If the phone IP changes:

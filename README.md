@@ -103,6 +103,14 @@ scripts/flockfree-moto-permission-primer.sh
 
 It grants only FlockFree's declared location, Bluetooth, and notification runtime permissions, then runs the standard diagnostics collector so `summary.txt` confirms whether CYD/GPS testing is permission-ready.
 
+For a timed no-Gradle evidence bundle while manually walking through the route, OSM reporting, and CYD checks:
+
+```bash
+scripts/flockfree-field-test-session.sh
+```
+
+It runs the readiness gate, writes manual prompts, captures filtered logcat during the test window, then captures post-session diagnostics.
+
 ## Credits
 
 - Built on [OsmAnd](https://github.com/osmandapp/osmand) under Apache 2.0.

@@ -110,3 +110,11 @@ scripts/flockfree-morning-readiness.sh
 ```
 
 Start with the generated `logs/flockfree-readiness/.../readiness-report.txt`; it includes source-check status, permission-primer status, copied APK build provenance, an installed-APK app-code freshness check, the latest Moto diagnostic summary, and a final `Readiness verdict`.
+
+For a timed evidence bundle while Eric performs the manual route, OSM reporting, and CYD checks, run:
+
+```bash
+scripts/flockfree-field-test-session.sh
+```
+
+Start with the generated `logs/flockfree-field-session/.../field-session-report.txt`; it includes the readiness gate, manual prompts, filtered logcat from the test window, and post-session diagnostics.

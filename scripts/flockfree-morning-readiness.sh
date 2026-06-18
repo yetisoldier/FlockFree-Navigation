@@ -271,7 +271,8 @@ if [ "$RUN_DIAGNOSTICS" -eq 1 ]; then
     verdict="ATTENTION"
   fi
   if [ -f "${DIAG_DIR}/logcat-flockfree-camera-fatal.txt" ] \
-    && grep -Eiq 'FATAL EXCEPTION| E AndroidRuntime|AndroidRuntime.*FATAL' "${DIAG_DIR}/logcat-flockfree-camera-fatal.txt"; then
+    && grep -Ev '^(\$|\[|$)' "${DIAG_DIR}/logcat-flockfree-camera-fatal.txt" \
+      | grep -Eiq 'FATAL EXCEPTION|AndroidRuntime.*FATAL EXCEPTION'; then
     append_report "  ATTENTION: fatal crash evidence found in filtered logcat"
     verdict="ATTENTION"
   fi
