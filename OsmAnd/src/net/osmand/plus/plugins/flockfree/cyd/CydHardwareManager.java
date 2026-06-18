@@ -131,6 +131,18 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 			app.showShortToastMessage(R.string.flockfree_cyd_status_permission_requested);
 			return false;
 		}
+		return startScanAndConnectWithGrantedPermissions(activity);
+	}
+
+	public boolean startScanAndConnectFromService(@NonNull Context context) {
+		if (!AndroidUtils.hasBLEPermission(context)) {
+			setState(State.PERMISSION_NEEDED, app.getString(R.string.flockfree_cyd_status_permission_requested));
+			return false;
+		}
+		return startScanAndConnectWithGrantedPermissions(context);
+	}
+
+	private boolean startScanAndConnectWithGrantedPermissions(@NonNull Context context) {
 		BluetoothManager manager = (BluetoothManager) app.getSystemService(Context.BLUETOOTH_SERVICE);
 		BluetoothAdapter adapter = manager != null ? manager.getAdapter() : null;
 		if (adapter == null) {
@@ -165,7 +177,7 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 				.setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
 				.setReportDelay(0L)
 				.build();
-		ScanCallback callback = createScanCallback(activity);
+		ScanCallback callback = createScanCallback(context);
 		synchronized (lock) {
 			scanCallback = callback;
 		}
@@ -355,17 +367,17 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 		}
 	}
 
-	private ScanCallback createScanCallback(@NonNull MapActivity activity) {
+	private ScanCallback createScanCallback(@NonNull Context context) {
 		return new ScanCallback() {
 			@Override
 			public void onScanResult(int callbackType, ScanResult result) {
-				handleScanResult(activity, result);
+				handleScanResult(context, result);
 			}
 
 			@Override
 			public void onBatchScanResults(List<ScanResult> results) {
 				for (ScanResult result : results) {
-					handleScanResult(activity, result);
+					handleScanResult(context, result);
 				}
 			}
 
@@ -379,8 +391,8 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 	}
 
 	@SuppressLint("MissingPermission")
-	private void handleScanResult(@NonNull MapActivity activity, @Nullable ScanResult result) {
-		if (result == null || getState() != State.SCANNING || !AndroidUtils.hasBLEPermission(activity)) {
+	private void handleScanResult(@NonNull Context context, @Nullable ScanResult result) {
+		if (result == null || getState() != State.SCANNING || !AndroidUtils.hasBLEPermission(context)) {
 			return;
 		}
 		BluetoothDevice device = result.getDevice();
@@ -398,7 +410,7 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 		stopScan();
 		setState(State.CONNECTING, app.getString(R.string.flockfree_cyd_status_connecting,
 				name != null ? name : CydBleUartClient.DEFAULT_DEVICE_NAME_PREFIX));
-		client.connect(activity, device);
+		client.connect(context, device);
 	}
 
 	private boolean isLikelyCydResult(@Nullable String name, @Nullable ScanRecord record) {

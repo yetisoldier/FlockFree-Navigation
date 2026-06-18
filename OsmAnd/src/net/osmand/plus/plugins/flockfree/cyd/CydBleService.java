@@ -94,6 +94,7 @@ public class CydBleService extends Service {
 			stopSelf();
 			return START_NOT_STICKY;
 		}
+		maybeStartBackgroundScan();
 		return START_STICKY;
 	}
 
@@ -135,6 +136,18 @@ public class CydBleService extends Service {
 
 	public boolean isStarted() {
 		return started;
+	}
+
+	private void maybeStartBackgroundScan() {
+		FlockFreePlugin plugin = PluginsHelper.getPlugin(FlockFreePlugin.class);
+		if (plugin == null || !plugin.CYD_BLE_ENABLED.get()) {
+			return;
+		}
+		CydHardwareManager manager = getHardwareManager();
+		CydHardwareManager.State state = manager.getState();
+		if (state == CydHardwareManager.State.IDLE) {
+			manager.startScanAndConnectFromService(this);
+		}
 	}
 
 	private Notification buildNotification() {

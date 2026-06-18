@@ -165,6 +165,8 @@ missing_reporter = [item for item in required_reporter_tokens if item not in rep
 if missing_reporter:
     raise SystemExit("missing persisted report draft wiring:\n" + "\n".join(missing_reporter))
 required_cyd_tokens = [
+    "startScanAndConnectFromService(",
+    "startScanAndConnectWithGrantedPermissions(",
     "simulateLocalDetection(",
     "getLocalSimulationFix(",
     "map-center-local-test",
@@ -292,6 +294,8 @@ required_service = [
     "FOREGROUND_SERVICE_TYPE_LOCATION",
     "CydHardwareManager",
     "getHardwareManager()",
+    "maybeStartBackgroundScan()",
+    "startScanAndConnectFromService(this)",
     "startForegroundService(intent)",
     "NotificationCompat.Builder",
     "R.drawable.ic_action_bluetooth",
