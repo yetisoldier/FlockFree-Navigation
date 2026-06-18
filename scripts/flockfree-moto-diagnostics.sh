@@ -252,9 +252,26 @@ write_summary() {
   pid="${3:-}"
   activity="${4:-}"
   log_file="${OUT_DIR}/logcat-flockfree-camera-fatal.txt"
+  app_data_file="${OUT_DIR}/app-data-state.txt"
   log_lines="0"
+  camera_cache_state="not checked"
+  cyd_store_state="not checked"
   if [ -f "$log_file" ]; then
     log_lines="$(grep -Evc '^(\$|\[|$)' "$log_file" 2>/dev/null || true)"
+  fi
+  if [ -f "$app_data_file" ]; then
+    camera_cache_bytes="$(awk '/cache\/cameras\.geojson$/ {print $1}' "$app_data_file" | tail -n 1)"
+    if [ -n "$camera_cache_bytes" ]; then
+      camera_cache_state="present (${camera_cache_bytes} bytes)"
+    elif grep -q 'cache/cameras.geojson missing' "$app_data_file"; then
+      camera_cache_state="missing"
+    fi
+    cyd_store_bytes="$(awk '/files\/flockfree-cyd-detections\.json$/ {print $1}' "$app_data_file" | tail -n 1)"
+    if [ -n "$cyd_store_bytes" ]; then
+      cyd_store_state="present (${cyd_store_bytes} bytes)"
+    elif grep -q 'files/flockfree-cyd-detections.json missing' "$app_data_file"; then
+      cyd_store_state="missing"
+    fi
   fi
 
   {
@@ -267,6 +284,8 @@ write_summary() {
     printf 'Package installed: %s\n' "$package_installed"
     printf 'Current activity: %s\n' "${activity:-not detected}"
     printf 'PID: %s\n' "${pid:-not running}"
+    printf 'Camera cache: %s\n' "$camera_cache_state"
+    printf 'CYD detection store: %s\n' "$cyd_store_state"
     printf 'Filtered logcat lines: %s\n\n' "$log_lines"
     printf 'Key files:\n'
     printf '%s\n' '- adb-devices-after.txt'

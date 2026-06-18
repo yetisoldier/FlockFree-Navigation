@@ -130,6 +130,10 @@ required = [
     "app-data-state.txt",
     "cache/cameras.geojson",
     "flockfree-cyd-detections.json",
+    "Camera cache:",
+    "CYD detection store:",
+    "camera_cache_state",
+    "cyd_store_state",
 ]
 missing = [item for item in required if item not in diagnostics]
 if missing:
