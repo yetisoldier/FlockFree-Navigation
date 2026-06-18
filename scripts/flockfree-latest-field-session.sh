@@ -63,6 +63,7 @@ EOF
   cat > "$latest/manual-test-results.tsv" <<'EOF'
 check_id	status	notes
 route_avoidance	TODO	Needs route check.
+nearby_alerts	TODO	Move or navigate near a known camera.
 cyd	FAIL	Use local phone-GPS simulation fallback.
 EOF
   path_output="$(OUT_ROOT="$tmp/logs/flockfree-field-session" "$0" --path-only)" || return 1
@@ -99,7 +100,7 @@ EOF
   esac
   todo_output="$(OUT_ROOT="$tmp/logs/flockfree-field-session" "$0" --todo-only)" || return 1
   case "$todo_output" in
-    *"Session source differs from current HEAD"*"route_avoidance: TODO"*"cyd: FAIL"*"flockfree-mark-latest-result.sh"*"Current CYD source note"*) ;;
+    *"Session source differs from current HEAD"*"route_avoidance: TODO"*"nearby_alerts: TODO"*"cyd: FAIL"*"flockfree-mark-latest-result.sh"*"Current CYD source note"*"Current alert source note"*) ;;
     *)
       echo "self-check failed: --todo-only output missing remaining proof rows" >&2
       return 1
@@ -309,6 +310,16 @@ if [ "$TODO_ONLY" -eq 1 ]; then
   ' "$RESULTS"; then
     echo
     echo "Current CYD source note: after rebuilding current HEAD, local simulation can use phone/OsmAnd GPS or the current map center."
+  fi
+  if awk '
+    BEGIN { FS = "\t"; found = 0 }
+    $1 == "nearby_alerts" && ($2 == "TODO" || $2 == "FAIL") && $3 !~ /Check map center alert/ {
+      found = 1
+    }
+    END { exit found ? 0 : 1 }
+  ' "$RESULTS"; then
+    echo
+    echo "Current alert source note: after rebuilding current HEAD, use Check map center alert from a suggested camera-dense anchor, or verify the live GPS path during movement."
   fi
   exit 0
 fi

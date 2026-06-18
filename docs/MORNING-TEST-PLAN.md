@@ -78,7 +78,7 @@ To print only the remaining TODO/FAIL proof rows for the newest field session:
 scripts/flockfree-latest-field-session.sh --todo-only
 ```
 
-If that session predates the current source, the helper prints the session commit, current `HEAD`, and a rebuild/install warning. For older CYD result sheets, it also notes that current source can use phone/OsmAnd GPS or the map center for local simulation after the latest APK is installed.
+If that session predates the current source, the helper prints the session commit, current `HEAD`, and a rebuild/install warning. For older nearby-alert and CYD result sheets, it also notes that current source can use `Check map center alert` and phone/OsmAnd GPS or map-center local simulation after the latest APK is installed.
 
 To mark the newest field session directly after a visual/manual check:
 

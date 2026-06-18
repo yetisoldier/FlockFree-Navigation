@@ -149,7 +149,7 @@ To print only the remaining TODO/FAIL proof rows for the latest field-session bu
 scripts/flockfree-latest-field-session.sh --todo-only
 ```
 
-This view now prints the session source commit, current `HEAD`, and a warning when the latest bundle is older than the current source. That matters while the APK is stale: rerun the build/install helper and a fresh field session before treating TODO rows as final evidence.
+This view now prints the session source commit, current `HEAD`, and a warning when the latest bundle is older than the current source. It also annotates older nearby-alert and CYD rows with the current map-center proof paths. That matters while the APK is stale: rerun the build/install helper and a fresh field session before treating TODO rows as final evidence.
 
 To mark the latest field session directly after a visual/manual check:
 
