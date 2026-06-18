@@ -72,7 +72,8 @@ That APK was built from clean source commit `f5751c5cda9bcaff62fc0d47838ce4f87e8
 - A CYD BLE UART path exists for `FYHELLO`, `FYSTATUS`, `FYSIM`, `FYGPS`, `pair_status`, and `detection` messages.
 - If CYD BLE is enabled, returning to the map starts a scan when the CYD manager is idle.
 - Once the CYD is connected, FlockFree forwards valid phone GPS fixes over `FYGPS` about once per second so the CYD can time/location-stamp detections without DeFlock running separately.
-- The CYD settings status row reports recent phone GPS sends, making the `FYGPS` stream visible during bench testing.
+- The CYD settings status row reports recent phone GPS sends, or a cached phone GPS fix before hardware is connected, making the `FYGPS` stream and local bench-test readiness visible.
+- If CYD hardware is not connected, `Simulate CYD detection` can create a local GPS-backed CYD test marker from the latest phone/OsmAnd location so the map and reporting review flow can still be tested.
 - GPS-backed CYD detections are kept as recent candidates, persisted to a small local JSON store, drawn on the map as distinct CYD markers, and can be reviewed through the existing ALPR camera reporting flow.
 
 ## Still Stubbed Or Thin

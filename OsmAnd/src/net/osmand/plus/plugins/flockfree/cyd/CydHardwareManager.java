@@ -26,6 +26,8 @@ import net.osmand.plus.utils.AndroidUtils;
 import net.osmand.util.Algorithms;
 
 import org.apache.commons.logging.Log;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -60,6 +62,13 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 	@Nullable
 	private String lastMessage;
 	private long lastGpsSentAtMs;
+	@Nullable
+	private Double lastPhoneLatitude;
+	@Nullable
+	private Double lastPhoneLongitude;
+	@Nullable
+	private Float lastPhoneAccuracy;
+	private long lastPhoneLocationAtMs;
 
 	public CydHardwareManager(@NonNull OsmandApplication app) {
 		this.app = app;
@@ -185,12 +194,15 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 		if (client.isReady()) {
 			return client.sendSimulationRequest();
 		}
-		app.showShortToastMessage(R.string.flockfree_cyd_status_not_connected);
-		return false;
+		return simulateLocalDetection();
 	}
 
 	public boolean updatePhoneLocation(@NonNull Location location) {
-		if (!client.isReady() || !isValidGpsFix(location)) {
+		if (!isValidGpsFix(location)) {
+			return false;
+		}
+		rememberPhoneLocation(location);
+		if (!client.isReady()) {
 			return false;
 		}
 		long nowMs = System.currentTimeMillis();
@@ -217,6 +229,69 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 			}
 		}
 		return sent;
+	}
+
+	private void rememberPhoneLocation(@NonNull Location location) {
+		long nowMs = System.currentTimeMillis();
+		synchronized (lock) {
+			lastPhoneLatitude = location.getLatitude();
+			lastPhoneLongitude = location.getLongitude();
+			lastPhoneAccuracy = location.hasAccuracy() ? location.getAccuracy() : null;
+			lastPhoneLocationAtMs = location.getTime() > 0 ? location.getTime() : nowMs;
+		}
+	}
+
+	private boolean simulateLocalDetection() {
+		rememberLastKnownLocationIfAvailable();
+		Double latitude;
+		Double longitude;
+		Float accuracy;
+		long locationAtMs;
+		synchronized (lock) {
+			latitude = lastPhoneLatitude;
+			longitude = lastPhoneLongitude;
+			accuracy = lastPhoneAccuracy;
+			locationAtMs = lastPhoneLocationAtMs;
+		}
+		if (latitude == null || longitude == null) {
+			setState(State.ERROR, app.getString(R.string.flockfree_cyd_phone_gps_unavailable));
+			app.showShortToastMessage(R.string.flockfree_cyd_phone_gps_unavailable);
+			return false;
+		}
+		try {
+			long nowMs = System.currentTimeMillis();
+			JSONObject gps = new JSONObject()
+					.put("latitude", latitude)
+					.put("longitude", longitude)
+					.put("accuracy", accuracy != null ? accuracy : JSONObject.NULL)
+					.put("age_ms", Math.max(0L, nowMs - locationAtMs))
+					.put("source", "phone-local-test");
+			JSONObject json = new JSONObject()
+					.put("event", "detection")
+					.put("detection_method", "Simulated CYD")
+					.put("protocol", "local-test")
+					.put("device_name", "FlockFree local test")
+					.put("rssi", -42)
+					.put("channel", 0)
+					.put("gps", gps);
+			storeDetection(CydDetectionCandidate.fromJson(json), R.string.flockfree_cyd_local_simulated_detection);
+			return true;
+		} catch (JSONException e) {
+			LOG.warn("Unable to create local CYD simulation", e);
+			setState(State.ERROR, app.getString(R.string.flockfree_cyd_status_not_connected));
+			app.showShortToastMessage(R.string.flockfree_cyd_status_not_connected);
+			return false;
+		}
+	}
+
+	private void rememberLastKnownLocationIfAvailable() {
+		Location location = app.getLocationProvider().getLastKnownLocation();
+		if (location == null) {
+			location = app.getLocationProvider().getLastStaleKnownLocation();
+		}
+		if (location != null && isValidGpsFix(location)) {
+			rememberPhoneLocation(location);
+		}
 	}
 
 	public void clearDetections() {
@@ -344,6 +419,10 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 			long ageSeconds = Math.max(0L, (nowMs - lastGpsSentAtMs) / 1000L);
 			return app.getString(R.string.flockfree_cyd_phone_gps_sent, ageSeconds);
 		}
+		if (lastPhoneLocationAtMs > 0L) {
+			long ageSeconds = Math.max(0L, (nowMs - lastPhoneLocationAtMs) / 1000L);
+			return app.getString(R.string.flockfree_cyd_phone_gps_ready, ageSeconds);
+		}
 		return state == State.READY ? app.getString(R.string.flockfree_cyd_phone_gps_waiting) : null;
 	}
 
@@ -394,6 +473,10 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 
 	@Override
 	public void onCydDetection(@NonNull CydDetectionCandidate candidate) {
+		storeDetection(candidate, R.string.flockfree_cyd_detection_received);
+	}
+
+	private void storeDetection(@NonNull CydDetectionCandidate candidate, int toastStringId) {
 		synchronized (lock) {
 			lastDetection = candidate;
 			if (candidate.hasGpsFix()) {
@@ -406,7 +489,7 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 			}
 			lastMessage = candidate.getStatusSummary();
 		}
-		app.showShortToastMessage(R.string.flockfree_cyd_detection_received);
+		app.showShortToastMessage(toastStringId);
 		persistRecentDetections();
 		refreshMap();
 	}

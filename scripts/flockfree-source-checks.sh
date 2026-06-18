@@ -67,6 +67,7 @@ fragment = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/FlockFreeSettingsF
 prefs = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/FlockFreePreferences.java").read_text()
 plugin = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/FlockFreePlugin.java").read_text()
 reporter = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/CameraReporter.java").read_text()
+cyd_manager = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/cyd/CydHardwareManager.java").read_text()
 camera_data = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/CameraData.java").read_text()
 
 root = ET.parse(prefs_xml).getroot()
@@ -146,6 +147,17 @@ required_reporter_tokens = [
 missing_reporter = [item for item in required_reporter_tokens if item not in reporter]
 if missing_reporter:
     raise SystemExit("missing persisted report draft wiring:\n" + "\n".join(missing_reporter))
+required_cyd_tokens = [
+    "simulateLocalDetection()",
+    "rememberLastKnownLocationIfAvailable()",
+    "getLastStaleKnownLocation()",
+    "flockfree_cyd_local_simulated_detection",
+    "flockfree_cyd_phone_gps_ready",
+    "flockfree_cyd_phone_gps_unavailable",
+]
+missing_cyd = [item for item in required_cyd_tokens if item not in cyd_manager]
+if missing_cyd:
+    raise SystemExit("missing local CYD simulation wiring:\n" + "\n".join(missing_cyd))
 if "refreshData()" not in camera_data:
     raise SystemExit("missing CameraData.refreshData()")
 if '"flockfree/cameras.geojson"' not in camera_data:
@@ -263,6 +275,7 @@ required = [
     "Last report draft",
     "Nearby camera alert behavior and Last alert check status observed",
     "ALPR/surveillance tag prefill and Last report draft status observed",
+    "local phone-GPS simulation fallback",
     "Map anchor coordinates",
     "Suggested map anchors:",
     "--duration",
