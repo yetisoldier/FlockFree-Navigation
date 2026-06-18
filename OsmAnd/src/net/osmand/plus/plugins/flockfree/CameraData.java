@@ -590,11 +590,18 @@ public class CameraData {
 
     private void writeStringToFile(String content, File file) throws IOException {
         File parent = file.getParentFile();
-        if (parent != null && !parent.exists()) {
-            parent.mkdirs();
+        if (parent != null && !parent.exists() && !parent.mkdirs()) {
+            throw new IOException("Unable to create camera cache directory: " + parent);
         }
-        try (OutputStream out = new FileOutputStream(file)) {
+        File temp = new File(parent != null ? parent : app.getCacheDir(), file.getName() + ".tmp");
+        try (OutputStream out = new FileOutputStream(temp)) {
             out.write(content.getBytes(StandardCharsets.UTF_8));
+        }
+        if (!temp.renameTo(file)) {
+            if (file.exists() && file.delete() && temp.renameTo(file)) {
+                return;
+            }
+            throw new IOException("Unable to replace camera cache file: " + file);
         }
     }
 

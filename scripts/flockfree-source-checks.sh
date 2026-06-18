@@ -241,6 +241,8 @@ required_data = [
     "databaseReady = false",
     "databaseHelper.getCamerasInBoundingBox(top, left, bottom, right)",
     "databaseHelper.getCamerasNear(lat, lon, radiusMeters)",
+    "file.getName() + \".tmp\"",
+    "Unable to replace camera cache file",
 ]
 missing_data = [item for item in required_data if item not in camera_data]
 if missing_data:
