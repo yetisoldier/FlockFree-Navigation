@@ -16,9 +16,13 @@ import net.osmand.util.MapUtils;
 import org.apache.commons.logging.Log;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Collections;
 
 /**
  * Helps avoid known ALPR camera locations during route calculation.
@@ -32,16 +36,35 @@ public class CameraAvoidanceHelper {
     public enum AvoidanceStatus {
         NONE,
         APPLIED,
+        PARTIAL_APPLIED,
         FALLBACK,
         SKIPPED_PARTIAL,
         SKIPPED_NO_DATA,
         SKIPPED_NO_ROAD_IDS
     }
 
+    /**
+     * Pairs a road ID with the count of cameras found on/near that road.
+     * Used by RouteProvider for iterative relaxation: unblock roads with
+     * the fewest cameras first when full avoidance fails.
+     */
+    public static class RoadWithCameraCount {
+        public final long roadId;
+        public final int cameraCount;
+
+        public RoadWithCameraCount(long roadId, int cameraCount) {
+            this.roadId = roadId;
+            this.cameraCount = cameraCount;
+        }
+    }
+
     private final OsmandApplication app;
     private final FlockFreePlugin plugin;
     private AvoidanceStatus lastAvoidanceStatus = AvoidanceStatus.NONE;
     private int lastAvoidanceRoadCount;
+    private int lastPartialBlockedRoadCount;
+    private int lastPartialTotalCameraRoadCount;
+    private int lastPartialRemainingCameraCount;
 
     public CameraAvoidanceHelper(@NonNull OsmandApplication app, @NonNull FlockFreePlugin plugin) {
         this.app = app;
@@ -71,12 +94,31 @@ public class CameraAvoidanceHelper {
         lastAvoidanceRoadCount = 0;
     }
 
+    /**
+     * Records that partial (iterative relaxation) avoidance was applied.
+     *
+     * @param blockedRoadCount     Number of camera-adjacent roads that remain blocked
+     * @param totalCameraRoadCount Total number of distinct camera-adjacent roads originally identified
+     * @param remainingCameraCount  Number of cameras still on/near the route after partial avoidance
+     */
+    public synchronized void recordAvoidancePartial(int blockedRoadCount, int totalCameraRoadCount, int remainingCameraCount) {
+        lastAvoidanceStatus = AvoidanceStatus.PARTIAL_APPLIED;
+        lastAvoidanceRoadCount = blockedRoadCount;
+        lastPartialBlockedRoadCount = blockedRoadCount;
+        lastPartialTotalCameraRoadCount = totalCameraRoadCount;
+        lastPartialRemainingCameraCount = remainingCameraCount;
+    }
+
     @NonNull
     public synchronized String consumeLastAvoidanceStatusSummary() {
         String summary;
         switch (lastAvoidanceStatus) {
             case APPLIED:
                 summary = app.getString(R.string.flockfree_route_status_applied, lastAvoidanceRoadCount);
+                break;
+            case PARTIAL_APPLIED:
+                summary = app.getString(R.string.flockfree_route_status_partial_applied,
+                        lastPartialBlockedRoadCount, lastPartialTotalCameraRoadCount, lastPartialRemainingCameraCount);
                 break;
             case FALLBACK:
                 summary = app.getString(R.string.flockfree_route_status_fallback, lastAvoidanceRoadCount);
@@ -97,6 +139,9 @@ public class CameraAvoidanceHelper {
         }
         lastAvoidanceStatus = AvoidanceStatus.NONE;
         lastAvoidanceRoadCount = 0;
+        lastPartialBlockedRoadCount = 0;
+        lastPartialTotalCameraRoadCount = 0;
+        lastPartialRemainingCameraCount = 0;
         return summary;
     }
 
@@ -169,6 +214,63 @@ public class CameraAvoidanceHelper {
         }
         if (!result.isEmpty()) {
             LOG.info("FlockFree collected " + result.size() + " temporary avoid road ids");
+        }
+        return result;
+    }
+
+    /**
+     * Collects camera-adjacent road IDs paired with the number of cameras that mapped to each road.
+     * The list is sorted by cameraCount DESCENDING (most cameras first), so the RouteProvider
+     * can iteratively unblock the least-impactful roads first when full avoidance fails.
+     *
+     * @param route        The calculated route
+     * @param radiusMeters  Radius in meters to search around the route
+     * @return List of RoadWithCameraCount sorted by cameraCount descending
+     */
+    @NonNull
+    public List<RoadWithCameraCount> collectAvoidRoadIdsWithCameraCountForRoute(
+            @NonNull RouteCalculationResult route, int radiusMeters) {
+        List<RoadWithCameraCount> result = new ArrayList<>();
+        CameraData cameraData = plugin.getCameraData();
+        if (!isAvoidanceEnabled() || !cameraData.isDataLoaded()) {
+            return result;
+        }
+
+        List<RouteSegmentResult> roads = route.getOriginalRoute();
+        List<Location> locations = route.getImmutableAllLocations();
+        if (roads == null || roads.size() < 3 || locations == null || locations.isEmpty()) {
+            return result;
+        }
+
+        List<CameraData.CameraPoint> cameras = findCamerasNearRouteLocations(locations, radiusMeters);
+
+        // Map each road ID to the count of cameras that matched it
+        Map<Long, Integer> roadIdToCameraCount = new HashMap<>();
+        for (CameraData.CameraPoint camera : cameras) {
+            RouteSegmentSearchResult searchResult = RouteSegmentSearchResult.searchRouteSegment(
+                    camera.lat, camera.lon, radiusMeters, roads);
+            if (searchResult == null) {
+                continue;
+            }
+            int roadIndex = searchResult.getRoadIndex();
+            if (roadIndex <= 0 || roadIndex >= roads.size() - 1) {
+                continue;
+            }
+            RouteDataObject object = roads.get(roadIndex).getObject();
+            if (object != null) {
+                Long roadId = object.getId();
+                roadIdToCameraCount.merge(roadId, 1, Integer::sum);
+            }
+        }
+
+        // Build sorted list: most cameras first (most important to block)
+        for (Map.Entry<Long, Integer> entry : roadIdToCameraCount.entrySet()) {
+            result.add(new RoadWithCameraCount(entry.getKey(), entry.getValue()));
+        }
+        result.sort(Collections.reverseOrder(Comparator.comparingInt(r -> r.cameraCount)));
+
+        if (!result.isEmpty()) {
+            LOG.info("FlockFree collected " + result.size() + " camera-adjacent road ids with camera counts");
         }
         return result;
     }
