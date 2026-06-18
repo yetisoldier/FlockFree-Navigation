@@ -215,6 +215,9 @@ if missing_primer:
     raise SystemExit("permission primer missing grant commands:\n" + "\n".join(missing_primer))
 required_primer_tokens = [
     "cmd appops set",
+    "reconnect_serial()",
+    "retrying Wi-Fi ADB reconnect",
+    "disconnect \"$SERIAL\"",
     "flockfree-moto-diagnostics.sh",
     "--no-diagnostics",
     "--no-launch",

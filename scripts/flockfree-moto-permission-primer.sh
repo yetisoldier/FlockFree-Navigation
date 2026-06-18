@@ -76,6 +76,15 @@ run_adb() {
   "$ADB" -s "$SERIAL" "$@"
 }
 
+reconnect_serial() {
+  if [ "$CONNECT" -eq 1 ] && [[ "$SERIAL" == *:* ]]; then
+    "$ADB" disconnect "$SERIAL" >/dev/null 2>&1 || true
+    sleep 1
+    "$ADB" connect "$SERIAL" || true
+    sleep 1
+  fi
+}
+
 try_shell() {
   description="$1"
   shift
@@ -97,6 +106,11 @@ if [ "$CONNECT" -eq 1 ] && [[ "$SERIAL" == *:* ]]; then
 fi
 
 ADB_STATE="$("$ADB" -s "$SERIAL" get-state 2>/dev/null | tr -d '\r' || true)"
+if [ "$ADB_STATE" != "device" ]; then
+  echo "ADB state is '${ADB_STATE:-unknown}', retrying Wi-Fi ADB reconnect." >&2
+  reconnect_serial
+  ADB_STATE="$("$ADB" -s "$SERIAL" get-state 2>/dev/null | tr -d '\r' || true)"
+fi
 if [ "$ADB_STATE" != "device" ]; then
   echo "ADB state is '${ADB_STATE:-unknown}', not 'device'." >&2
   exit 2
