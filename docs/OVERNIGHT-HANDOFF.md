@@ -13,14 +13,14 @@
 - APK: `OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-debug.apk`
 - Synced artifact: `build-artifacts/FlockFree-gplayFree-legacy-fat-debug.apk`
 - Package: `com.yetiwurks.flockfree`
-- SHA-256: `5ae4a370b44170c79b0b61f532f87e2d6656803a78c454c168610e8efdaa895e`
-- Source commit: `9d89afe2249f5e038a39c711f2efac2c7c11a637`
+- SHA-256: `038dd9caa9d8525e2abf95dd5563fa2294f30b1db79fbcff56de3c4829b6c764`
+- Source commit: `47ec9c733f74cf6741a170e79ba753a09e11f393`
 - Signature: verifies with APK Signature Scheme v2 using the Android debug certificate
 - Phone install: succeeded over Wi-Fi ADB on `192.168.1.139:5555`
-- Launch: succeeded into `net.osmand.plus.activities.MapActivity`
+- Launch: succeeded into `net.osmand.plus.activities.MapActivity`; diagnostics showed it top-resumed with PID `14073`
 - Build info: `build-artifacts/FlockFree-build-info.txt`
-- Smoke log directory: `logs/flockfree-diagnostics/20260618-030106`
-- Screenshot: `flockfree-latest-launch.png`
+- Smoke log directory: `logs/flockfree-diagnostics/20260618-031105`
+- Crash check: no fatal FlockFree crash entries in filtered logcat
 
 ## What Is Ready To Test
 

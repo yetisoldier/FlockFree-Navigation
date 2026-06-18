@@ -38,8 +38,8 @@ OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-de
 ```
 
 Verified debug package/application ID: `com.yetiwurks.flockfree`.
-Verified APK SHA-256: `5ae4a370b44170c79b0b61f532f87e2d6656803a78c454c168610e8efdaa895e`.
-That APK was built from clean source commit `9d89afe2249f5e038a39c711f2efac2c7c11a637`, installed and launched on a Moto G Stylus over Wi-Fi ADB, and verified with cache removed so the bundled camera seed loaded before the network refresh.
+Verified APK SHA-256: `038dd9caa9d8525e2abf95dd5563fa2294f30b1db79fbcff56de3c4829b6c764`.
+That APK was built from clean source commit `47ec9c733f74cf6741a170e79ba753a09e11f393`, installed and launched on a Moto G Stylus over Wi-Fi ADB, and diagnostics showed `MapActivity` top-resumed with no fatal FlockFree crash entries.
 
 ## What Works Now
 
