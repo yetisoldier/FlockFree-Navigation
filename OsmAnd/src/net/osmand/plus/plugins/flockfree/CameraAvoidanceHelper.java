@@ -2,12 +2,15 @@ package net.osmand.plus.plugins.flockfree;
 
 import androidx.annotation.NonNull;
 
+import net.osmand.Location;
 import net.osmand.PlatformUtil;
 import net.osmand.data.LatLon;
 import net.osmand.plus.OsmandApplication;
+import net.osmand.util.MapUtils;
 
 import org.apache.commons.logging.Log;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -45,22 +48,31 @@ public class CameraAvoidanceHelper {
      */
     @NonNull
     public List<CameraData.CameraPoint> findCamerasNearRoute(@NonNull List<LatLon> routePoints, int radiusMeters) {
-        List<CameraData.CameraPoint> result = new java.util.ArrayList<>();
+        List<CameraData.CameraPoint> result = new ArrayList<>();
         CameraData cameraData = plugin.getCameraData();
-        if (!cameraData.isDataLoaded()) {
+        if (!cameraData.isDataLoaded() || routePoints.isEmpty()) {
             return result;
         }
 
-        for (LatLon point : routePoints) {
-            List<CameraData.CameraPoint> nearby = cameraData.getCamerasNear(
-                    point.getLatitude(), point.getLongitude(), radiusMeters);
-            for (CameraData.CameraPoint cam : nearby) {
-                if (!result.contains(cam)) {
-                    result.add(cam);
-                }
+        double[] bounds = getRouteCorridorBounds(routePoints, radiusMeters);
+        List<CameraData.CameraPoint> candidates = cameraData.getCamerasInBoundingBox(
+                bounds[0], bounds[1], bounds[2], bounds[3]);
+        for (CameraData.CameraPoint cam : candidates) {
+            if (isCameraNearRoute(cam, routePoints, radiusMeters)) {
+                result.add(cam);
             }
         }
         return result;
+    }
+
+    @NonNull
+    public List<CameraData.CameraPoint> findCamerasNearRouteLocations(@NonNull List<Location> routeLocations,
+                                                                      int radiusMeters) {
+        List<LatLon> routePoints = new ArrayList<>(routeLocations.size());
+        for (Location location : routeLocations) {
+            routePoints.add(new LatLon(location.getLatitude(), location.getLongitude()));
+        }
+        return findCamerasNearRoute(routePoints, radiusMeters);
     }
 
     /**
@@ -71,8 +83,8 @@ public class CameraAvoidanceHelper {
         if (routePoints.isEmpty()) {
             return new double[]{0, 0, 0, 0};
         }
-        double minLat = Double.MAX_VALUE, maxLat = Double.MIN_VALUE;
-        double minLon = Double.MAX_VALUE, maxLon = Double.MIN_VALUE;
+        double minLat = Double.MAX_VALUE, maxLat = -Double.MAX_VALUE;
+        double minLon = Double.MAX_VALUE, maxLon = -Double.MAX_VALUE;
         for (LatLon p : routePoints) {
             minLat = Math.min(minLat, p.getLatitude());
             maxLat = Math.max(maxLat, p.getLatitude());
@@ -90,6 +102,26 @@ public class CameraAvoidanceHelper {
         };
     }
 
+    private boolean isCameraNearRoute(@NonNull CameraData.CameraPoint cam, @NonNull List<LatLon> routePoints,
+                                      int radiusMeters) {
+        if (routePoints.size() == 1) {
+            LatLon point = routePoints.get(0);
+            return MapUtils.getDistance(point.getLatitude(), point.getLongitude(), cam.lat, cam.lon) <= radiusMeters;
+        }
+        for (int i = 1; i < routePoints.size(); i++) {
+            LatLon from = routePoints.get(i - 1);
+            LatLon to = routePoints.get(i);
+            double distance = MapUtils.getOrthogonalDistance(
+                    cam.lat, cam.lon,
+                    from.getLatitude(), from.getLongitude(),
+                    to.getLatitude(), to.getLongitude());
+            if (distance <= radiusMeters) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Returns a human-readable summary of cameras near the route.
      */
@@ -100,6 +132,21 @@ public class CameraAvoidanceHelper {
         }
         int radius = getAvoidanceRadius();
         List<CameraData.CameraPoint> cameras = findCamerasNearRoute(routePoints, radius);
+        return formatRouteCameraSummary(cameras, radius);
+    }
+
+    @NonNull
+    public String getRouteCameraSummaryFromLocations(@NonNull List<Location> routeLocations) {
+        if (!isAvoidanceEnabled()) {
+            return "Camera avoidance disabled";
+        }
+        int radius = getAvoidanceRadius();
+        List<CameraData.CameraPoint> cameras = findCamerasNearRouteLocations(routeLocations, radius);
+        return formatRouteCameraSummary(cameras, radius);
+    }
+
+    @NonNull
+    private String formatRouteCameraSummary(@NonNull List<CameraData.CameraPoint> cameras, int radius) {
         if (cameras.isEmpty()) {
             return "No cameras detected within " + radius + "m of route";
         }

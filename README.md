@@ -11,14 +11,18 @@ cd /home/yetisoldier/projects/FlockFree-Navigation
 git clone --depth 1 https://github.com/osmandapp/OsmAnd-resources.git ../resources  # skip if ../resources already exists
 
 ANDROID_HOME=$HOME/Android/Sdk ANDROID_SDK=$HOME/Android/Sdk \
-  ./gradlew --no-watch-fs --max-workers=1 \
-  :OsmAnd:assembleNightlyFreeLegacyFatDebug \
-  -x :OsmAnd-java:test
+  ./gradlew :OsmAnd:assembleGplayFreeLegacyFatDebug \
+  -x test --no-daemon --max-workers=1
 ```
 
-That assemble path has compiled the FlockFree plugin successfully in local testing. The installable APK packaging path still needs cleanup: this checkout hit Android Gradle desugar/universal-package intermediates and did not leave a FlockFree APK under `OsmAnd/build/outputs/apk`.
+Verified local APK output:
 
-Debug package/application ID target: `com.yetiwurks.flockfree.dev`.
+```text
+OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-debug.apk
+```
+
+Verified debug package/application ID: `com.yetiwurks.flockfree`.
+Verified APK SHA-256: `f578dc2f5b14e063ceb53e0171a222a5ef4a1377d276b00e3352a56663ed1791`.
 
 ## What Works Now
 
@@ -41,7 +45,7 @@ Debug package/application ID target: `com.yetiwurks.flockfree.dev`.
 
 ## Phone Test Plan
 
-Use [docs/MORNING-TEST-PLAN.md](docs/MORNING-TEST-PLAN.md) after the APK packaging path is fixed.
+Use [docs/MORNING-TEST-PLAN.md](docs/MORNING-TEST-PLAN.md). The first verified APK has been installed and launched on the Moto G Stylus over Wi-Fi ADB.
 
 ## Credits
 
