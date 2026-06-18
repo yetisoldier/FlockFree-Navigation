@@ -54,6 +54,8 @@ public class FlockFreePlugin extends OsmandPlugin {
     private CydHardwareManager cydHardwareManager;
     private long lastCameraAlertTimeMs;
     private String lastCameraAlertKey;
+    @Nullable
+    private String lastRouteCheckSummary;
 
     public FlockFreePlugin(OsmandApplication app) {
         super(app);
@@ -142,6 +144,17 @@ public class FlockFreePlugin extends OsmandPlugin {
             cydHardwareManager = new CydHardwareManager(app);
         }
         return cydHardwareManager;
+    }
+
+    @NonNull
+    public synchronized String getLastRouteCheckSummary() {
+        return lastRouteCheckSummary != null
+                ? lastRouteCheckSummary
+                : app.getString(R.string.flockfree_route_last_check_none);
+    }
+
+    private synchronized void setLastRouteCheckSummary(@NonNull String summary) {
+        lastRouteCheckSummary = summary;
     }
 
     @Override
@@ -418,15 +431,19 @@ public class FlockFreePlugin extends OsmandPlugin {
         }
         getCameraData().ensureDataLoaded();
         if (!getCameraData().isDataLoaded()) {
-            app.showShortToastMessage(R.string.flockfree_route_camera_data_loading);
+            String loadingSummary = app.getString(R.string.flockfree_route_camera_data_loading);
+            setLastRouteCheckSummary(loadingSummary);
+            app.showShortToastMessage(loadingSummary);
             return;
         }
         RouteCalculationResult route = app.getRoutingHelper().getRoute();
         if (route == null || !route.isCalculated()) {
+            setLastRouteCheckSummary(app.getString(R.string.flockfree_route_last_check_no_route));
             return;
         }
         List<Location> routeLocations = route.getImmutableAllLocations();
         if (routeLocations == null || routeLocations.isEmpty()) {
+            setLastRouteCheckSummary(app.getString(R.string.flockfree_route_last_check_no_route));
             return;
         }
         CameraAvoidanceHelper helper = getAvoidanceHelper();
@@ -435,6 +452,7 @@ public class FlockFreePlugin extends OsmandPlugin {
         if (!avoidanceSummary.isEmpty()) {
             routeSummary = routeSummary + "\n" + avoidanceSummary;
         }
+        setLastRouteCheckSummary(routeSummary);
         app.showToastMessage(routeSummary);
     }
 }

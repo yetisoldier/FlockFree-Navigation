@@ -79,6 +79,7 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 - [ ] Toggle the camera layer preference if reachable, then return to the map and confirm the layer hides/shows after refresh.
 - [ ] Confirm `Nearby camera alerts` and `Alert distance` are present, then while navigating or moving near a known camera confirm FlockFree shows a nearby-camera toast no more than once per cooldown window.
 - [ ] Enable camera avoidance, calculate a route, and confirm FlockFree shows a route camera summary toast with `Avoidance applied`, `Avoidance fallback`, or an explicit skipped reason.
+- [ ] Reopen FlockFree settings and confirm `Last route check` preserves the same route summary/status after the toast disappears.
 - [ ] On an offline OsmAnd route through a known camera corridor, compare the route with camera avoidance off versus on and look for a one-pass reroute around camera-adjacent road objects.
 - [ ] Open the FlockFree CYD hardware settings, enable `CYD BLE`, and tap `Scan and connect CYD` with the CYD powered and advertising `CYD-Flock-You`.
 - [ ] If the CYD connects, tap `Request CYD status` and confirm the `CYD status` row updates with device, GPS, SD, detection, and radio scan details.
@@ -133,4 +134,4 @@ adb logcat -d | rg -i 'flockfree|CameraData|FlockFreePlugin|AndroidRuntime|FATAL
 adb shell pidof com.yetiwurks.flockfree
 ```
 
-Pass condition: the app launches, reaches the map, does not crash, camera data indexes and can be manually refreshed, camera proximity alerts fire while navigating or moving near a known camera, the add-camera flow pre-fills the OSM editor with ALPR tags, the CYD settings path can connect or fail cleanly with a clear status, the status row shows recent phone GPS sends, phone GPS reaches the CYD after connection, GPS-backed CYD detections become reviewable map candidates, and the experimental offline reroute visibly reports that it applied, fell back, or skipped for a specific reason.
+Pass condition: the app launches, reaches the map, does not crash, camera data indexes and can be manually refreshed, camera proximity alerts fire while navigating or moving near a known camera, the add-camera flow pre-fills the OSM editor with ALPR tags, the CYD settings path can connect or fail cleanly with a clear status, the status row shows recent phone GPS sends, phone GPS reaches the CYD after connection, GPS-backed CYD detections become reviewable map candidates, and the experimental offline reroute visibly reports and preserves whether it applied, fell back, or skipped for a specific reason.

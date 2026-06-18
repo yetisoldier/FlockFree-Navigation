@@ -82,6 +82,7 @@ required_xml_keys = {
     "camera_alert_distance",
     "cyd_ble_enabled",
     "flockfree_camera_data_refresh",
+    "flockfree_route_last_check",
     "flockfree_cyd_status",
     "flockfree_cyd_connect",
     "flockfree_cyd_request_status",
@@ -97,6 +98,8 @@ required_fragments = [
     "refreshCameraData()",
     "flockfree_camera_data_loaded_source_summary",
     "getLastLoadedSourceLabel()",
+    "ROUTE_LAST_CHECK_KEY",
+    "setupRouteLastCheckPreference()",
     "CYD_CLEAR_DETECTIONS_KEY",
     "setupCydStatusPreference()",
 ]

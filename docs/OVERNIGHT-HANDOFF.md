@@ -6,7 +6,7 @@
 - Local path: `/home/yetisoldier/projects/FlockFree-Navigation`
 - Branch: `master`
 - Latest functional source: current `master` after the bundled camera seed fallback verification pass.
-- Current source includes the route camera summary hook, exposed FlockFree settings screen, camera-data spatial indexing, OSM editor tag-prefill reporting, experimental two-pass offline camera avoidance, visible applied/fallback/skipped route diagnostics, movement/navigation nearby-camera alerts, cache-only route startup for existing camera data, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, phone GPS streaming to CYD over `FYGPS`, and persisted CYD detection map/review candidates.
+- Current source includes the route camera summary hook, exposed FlockFree settings screen, camera-data spatial indexing, OSM editor tag-prefill reporting, experimental two-pass offline camera avoidance, retained applied/fallback/skipped route diagnostics, movement/navigation nearby-camera alerts, cache-only route startup for existing camera data, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, phone GPS streaming to CYD over `FYGPS`, and persisted CYD detection map/review candidates.
 
 ## Verified APK
 
@@ -37,7 +37,7 @@
   - `FlockFreePlugin.newRouteIsCalculated(boolean)` now watches newly calculated routes when camera avoidance is enabled.
   - `CameraAvoidanceHelper` now checks cameras against route segments instead of only route vertices.
 - The hook still shows an advisory FlockFree toast after route calculation so testers can see the camera count near the final route.
-- The toast now also reports whether route avoidance applied, fell back to the original route, skipped because camera data was unavailable, skipped because no camera-adjacent road objects were found, or skipped during a lightweight follow-me recalculation.
+- The toast and `Last route check` settings row report whether route avoidance applied, fell back to the original route, skipped because camera data was unavailable, skipped because no camera-adjacent road objects were found, or skipped during a lightweight follow-me recalculation.
 - Current source adds an experimental second-pass OsmAnd offline route calculation:
   - It maps cameras near the initial route to `RouteDataObject` IDs.
   - It passes those IDs as temporary per-calculation impassable roads.
@@ -71,12 +71,13 @@
 6. Confirm the `Nearby camera alerts` / `Alert distance` rows are present.
 7. While navigating or moving near a known camera, verify FlockFree shows a nearby-camera toast and does not repeat it continuously.
 8. Enable camera avoidance, calculate a route, and verify the route-summary toast includes an applied/fallback/skipped status line.
-9. Compare one camera-dense offline route with avoidance off and on. A successful newer build should either route around camera-adjacent road objects, fall back cleanly to the original route, or say why avoidance was skipped.
-10. In the CYD hardware section, enable CYD BLE, scan/connect to a powered `CYD-Flock-You`, request status, and try the simulated detection command.
-11. Relaunch or leave/return to the map with `CYD BLE` still enabled and confirm FlockFree starts scanning again without visiting the settings screen.
-12. After connecting, confirm the FlockFree `CYD status` row reports `Phone GPS sent ... seconds ago` once FlockFree has a valid GPS fix.
-13. Request status and confirm the CYD reports `gps:true` once FlockFree has had roughly one second to send the fix over `FYGPS`.
-14. After a GPS-backed CYD detection, return to the map, confirm a CYD diamond marker appears near the detection location, tap it, and choose `Review as ALPR camera` to open the normal ALPR report flow.
+9. Reopen FlockFree settings and confirm `Last route check` preserves the same route summary/status after the toast disappears.
+10. Compare one camera-dense offline route with avoidance off and on. A successful newer build should either route around camera-adjacent road objects, fall back cleanly to the original route, or say why avoidance was skipped.
+11. In the CYD hardware section, enable CYD BLE, scan/connect to a powered `CYD-Flock-You`, request status, and try the simulated detection command.
+12. Relaunch or leave/return to the map with `CYD BLE` still enabled and confirm FlockFree starts scanning again without visiting the settings screen.
+13. After connecting, confirm the FlockFree `CYD status` row reports `Phone GPS sent ... seconds ago` once FlockFree has a valid GPS fix.
+14. Request status and confirm the CYD reports `gps:true` once FlockFree has had roughly one second to send the fix over `FYGPS`.
+15. After a GPS-backed CYD detection, return to the map, confirm a CYD diamond marker appears near the detection location, tap it, and choose `Review as ALPR camera` to open the normal ALPR report flow.
 
 For a no-Gradle device snapshot before or after those checks, run:
 

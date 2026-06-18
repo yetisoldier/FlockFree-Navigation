@@ -49,6 +49,12 @@
 		tools:summary="@string/flockfree_avoidance_radius_default_summary" />
 
 	<Preference
+		android:key="flockfree_route_last_check"
+		android:layout="@layout/preference_with_descr"
+		android:persistent="false"
+		android:title="@string/flockfree_route_last_check" />
+
+	<Preference
 		android:layout="@layout/simple_divider_item"
 		android:selectable="false" />
 

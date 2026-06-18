@@ -54,6 +54,7 @@ That APK was built from clean source commit `7a8803e6fb5b7ff73e56bcc1d117d1b10e8
 - Tapping a rendered camera opens a simple details dialog with brand, operator, direction, mount, surveillance zone, OSM ID/type, and timestamp when present.
 - The map context menu has an `Add ALPR Camera` action that opens OsmAnd's POI editor with the selected ALPR tag preset already attached to a new node.
 - When camera avoidance is enabled, newly calculated routes get a FlockFree toast summary of cameras near the route corridor.
+- The FlockFree settings screen keeps the last route camera/avoidance summary visible so route-test results can be checked after the toast disappears.
 - Current source can perform one experimental second-pass OsmAnd offline route calculation using temporary impassable road IDs for roads adjacent to known cameras. These IDs are route-scoped and do not pollute the user's Avoid Roads settings.
 - With nearby alerts enabled, FlockFree can warn while navigating or moving when the current GPS fix is within the configured alert distance of the nearest known camera.
 - The plugin settings screen is exposed through the OsmAnd plugin settings flow for map layer visibility, route summaries, corridor radius, alert distance, and CYD BLE enablement.

@@ -17,6 +17,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 
 	private static final String CAMERA_DATA_STATUS_KEY = "flockfree_camera_data_status";
 	private static final String CAMERA_DATA_REFRESH_KEY = "flockfree_camera_data_refresh";
+	private static final String ROUTE_LAST_CHECK_KEY = "flockfree_route_last_check";
 	private static final String CYD_STATUS_KEY = "flockfree_cyd_status";
 	private static final String CYD_CONNECT_KEY = "flockfree_cyd_connect";
 	private static final String CYD_REQUEST_STATUS_KEY = "flockfree_cyd_request_status";
@@ -36,6 +37,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 				R.string.flockfree_camera_avoidance_enabled_description);
 		setupDistancePreference(plugin.CAMERA_AVOIDANCE_RADIUS.getId(), AVOIDANCE_RADIUS_VALUES,
 				R.string.flockfree_avoidance_radius_description);
+		setupRouteLastCheckPreference();
 		setupSwitchPreference(plugin.CAMERA_ALERTS_ENABLED.getId(),
 				R.string.flockfree_nearby_alerts_enabled_description);
 		setupDistancePreference(plugin.CAMERA_ALERT_DISTANCE.getId(), ALERT_DISTANCE_VALUES,
@@ -65,6 +67,13 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 			} else {
 				preference.setSummary(R.string.flockfree_camera_data_not_loaded_summary);
 			}
+		}
+	}
+
+	private void setupRouteLastCheckPreference() {
+		Preference preference = findPreference(ROUTE_LAST_CHECK_KEY);
+		if (preference != null) {
+			preference.setSummary(plugin.getLastRouteCheckSummary());
 		}
 	}
 
