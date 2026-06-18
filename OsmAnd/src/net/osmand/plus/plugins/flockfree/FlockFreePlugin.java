@@ -56,6 +56,8 @@ public class FlockFreePlugin extends OsmandPlugin {
     private String lastCameraAlertKey;
     @Nullable
     private String lastRouteCheckSummary;
+    @Nullable
+    private String lastCameraAlertCheckSummary;
 
     public FlockFreePlugin(OsmandApplication app) {
         super(app);
@@ -155,6 +157,17 @@ public class FlockFreePlugin extends OsmandPlugin {
 
     private synchronized void setLastRouteCheckSummary(@NonNull String summary) {
         lastRouteCheckSummary = summary;
+    }
+
+    @NonNull
+    public synchronized String getLastCameraAlertCheckSummary() {
+        return lastCameraAlertCheckSummary != null
+                ? lastCameraAlertCheckSummary
+                : app.getString(R.string.flockfree_alert_last_check_none);
+    }
+
+    private synchronized void setLastCameraAlertCheckSummary(@NonNull String summary) {
+        lastCameraAlertCheckSummary = summary;
     }
 
     @Override
@@ -343,11 +356,14 @@ public class FlockFreePlugin extends OsmandPlugin {
             return;
         }
         updateCydPhoneLocation(location);
-        if (!shouldCheckCameraAlert(location)) {
+        String skipReason = getCameraAlertSkipReason(location);
+        if (skipReason != null) {
+            setLastCameraAlertCheckSummary(skipReason);
             return;
         }
         CameraData data = getCameraData();
         if (!data.isDataLoaded()) {
+            setLastCameraAlertCheckSummary(app.getString(R.string.flockfree_alert_last_check_loading));
             data.ensureDataLoaded();
             return;
         }
@@ -366,6 +382,9 @@ public class FlockFreePlugin extends OsmandPlugin {
         }
         if (closest != null) {
             showCameraAlertIfNeeded(closest, closestDistance);
+        } else {
+            setLastCameraAlertCheckSummary(app.getString(R.string.flockfree_alert_last_check_no_cameras,
+                    alertDistance));
         }
     }
 
@@ -385,35 +404,43 @@ public class FlockFreePlugin extends OsmandPlugin {
         }
     }
 
-    private boolean shouldCheckCameraAlert(@NonNull Location location) {
+    @Nullable
+    private String getCameraAlertSkipReason(@NonNull Location location) {
         if (!CAMERA_ALERTS_ENABLED.get()) {
-            return false;
+            return app.getString(R.string.flockfree_alert_last_check_disabled);
         }
         int alertDistance = CAMERA_ALERT_DISTANCE.get();
         if (alertDistance <= 0) {
-            return false;
+            return app.getString(R.string.flockfree_alert_last_check_disabled);
         }
         if (location.hasAccuracy() && location.getAccuracy() > alertDistance) {
-            return false;
+            return app.getString(R.string.flockfree_alert_last_check_accuracy,
+                    Math.round(location.getAccuracy()), alertDistance);
         }
-        return app.getRoutingHelper().isFollowingMode()
+        boolean shouldCheck = app.getRoutingHelper().isFollowingMode()
                 || (location.hasSpeed() && location.getSpeed() >= MOVING_ALERT_SPEED_MPS);
+        return shouldCheck ? null : app.getString(R.string.flockfree_alert_last_check_waiting);
     }
 
     private void showCameraAlertIfNeeded(@NonNull CameraData.CameraPoint camera, double distanceMeters) {
         long now = System.currentTimeMillis();
         String cameraKey = getCameraAlertKey(camera);
+        String brand = camera.brand != null ? camera.brand : app.getString(R.string.res_unknown);
+        int roundedDistance = Math.max(1, Math.round((float) distanceMeters));
         long cooldown = cameraKey.equals(lastCameraAlertKey)
                 ? SAME_CAMERA_ALERT_COOLDOWN_MS
                 : CAMERA_ALERT_COOLDOWN_MS;
         if (now - lastCameraAlertTimeMs < cooldown) {
+            setLastCameraAlertCheckSummary(app.getString(R.string.flockfree_alert_last_check_cooldown,
+                    brand, roundedDistance));
             return;
         }
         lastCameraAlertTimeMs = now;
         lastCameraAlertKey = cameraKey;
-        String brand = camera.brand != null ? camera.brand : app.getString(R.string.res_unknown);
+        setLastCameraAlertCheckSummary(app.getString(R.string.flockfree_alert_last_check_triggered,
+                brand, roundedDistance));
         app.showShortToastMessage(R.string.flockfree_nearby_camera_alert,
-                brand, Math.max(1, Math.round((float) distanceMeters)));
+                brand, roundedDistance);
     }
 
     @NonNull

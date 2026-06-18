@@ -77,6 +77,12 @@
 		tools:summary="@string/flockfree_alert_distance_default_summary" />
 
 	<Preference
+		android:key="flockfree_alert_last_check"
+		android:layout="@layout/preference_with_descr"
+		android:persistent="false"
+		android:title="@string/flockfree_alert_last_check" />
+
+	<Preference
 		android:layout="@layout/simple_divider_item"
 		android:selectable="false" />
 

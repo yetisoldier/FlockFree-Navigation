@@ -2,7 +2,7 @@
 
 Goal: prove the debug APK installs over Wi-Fi ADB, launches as FlockFree, and exposes the current camera-awareness MVP without chasing unfinished features.
 
-Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The current verified APK installed successfully on the Moto G Stylus, launched to the map, and includes camera indexing, bundled first-use camera seed fallback, camera-data source/freshness diagnostics, experimental two-pass camera avoidance, visible applied/fallback/skipped route diagnostics, movement/navigation camera alerts, OSM editor tag-prefill reporting, cache-backed route startup, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, phone GPS streaming to CYD, and persisted CYD detection map/review candidates.
+Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The last verified APK installed successfully on the Moto G Stylus and launched to the map. Current source includes camera indexing, bundled first-use camera seed fallback, camera-data source/freshness diagnostics, experimental two-pass camera avoidance, visible applied/fallback/skipped route diagnostics, movement/navigation camera alerts with retained last-check status, OSM editor tag-prefill reporting, cache-backed route startup, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, phone GPS streaming to CYD, and persisted CYD detection map/review candidates. Run `scripts/flockfree-user-build-install.sh` before morning feature testing so the installed APK matches the latest source.
 
 ## Setup
 
@@ -125,7 +125,8 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 - [ ] Confirm the FlockFree settings screen shows a `Camera data` status row after camera data loads, including source `cache`, `bundled seed`, or `network`, plus last-refresh freshness or `Refresh due`.
 - [ ] Tap `Refresh camera data` once on Wi-Fi and confirm the status switches to loading, then refreshes in place or returns to the indexed camera count.
 - [ ] Toggle the camera layer preference if reachable, then return to the map and confirm the layer hides/shows after refresh.
-- [ ] Confirm `Nearby camera alerts` and `Alert distance` are present, then while navigating or moving near a known camera confirm FlockFree shows a nearby-camera toast no more than once per cooldown window.
+- [ ] Confirm `Nearby camera alerts`, `Alert distance`, and `Last alert check` are present, then while navigating or moving near a known camera confirm FlockFree shows a nearby-camera toast no more than once per cooldown window.
+- [ ] Reopen FlockFree settings and confirm `Last alert check` reports whether the latest location update triggered, found no camera, hit cooldown, or skipped for accuracy/movement/data reasons.
 - [ ] Enable camera avoidance, calculate a route, and confirm FlockFree shows a route camera summary toast with `Avoidance applied`, `Avoidance fallback`, or an explicit skipped reason.
 - [ ] Reopen FlockFree settings and confirm `Last route check` preserves the same route summary/status after the toast disappears.
 - [ ] On an offline OsmAnd route through a known camera corridor, compare the route with camera avoidance off versus on and look for a one-pass reroute around camera-adjacent road objects.
@@ -218,4 +219,4 @@ adb logcat -d | rg -i 'flockfree|CameraData|FlockFreePlugin|AndroidRuntime|FATAL
 adb shell pidof com.yetiwurks.flockfree
 ```
 
-Pass condition: the app launches, reaches the map, does not crash, camera data indexes and can be manually refreshed, camera proximity alerts fire while navigating or moving near a known camera, the add-camera flow pre-fills the OSM editor with ALPR tags, the CYD settings path can connect or fail cleanly with a clear status, the status row shows recent phone GPS sends, phone GPS reaches the CYD after connection, GPS-backed CYD detections become reviewable map candidates, and the experimental offline reroute visibly reports and preserves whether it applied, fell back, or skipped for a specific reason.
+Pass condition: the app launches, reaches the map, does not crash, camera data indexes and can be manually refreshed, camera proximity alerts fire while navigating or moving near a known camera and preserve a `Last alert check` result, the add-camera flow pre-fills the OSM editor with ALPR tags, the CYD settings path can connect or fail cleanly with a clear status, the status row shows recent phone GPS sends, phone GPS reaches the CYD after connection, GPS-backed CYD detections become reviewable map candidates, and the experimental offline reroute visibly reports and preserves whether it applied, fell back, or skipped for a specific reason.
