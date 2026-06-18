@@ -157,6 +157,8 @@ public class RearrangeItemHolder extends ViewHolder implements UnmovableItem {
 				return R.string.shared_string_settings;
 			case DRAWER_BUILDS_ID:
 				return R.string.developer_plugin;
+			case DRAWER_FLOCKFREE_ID:
+				return R.string.flockfree_plugin_name;
 			case GPX_FILES_ID:
 			case MAP_CONTEXT_MENU_EDIT_GPX_WP:
 			case MAP_CONTEXT_MENU_ADD_GPX_WAYPOINT:

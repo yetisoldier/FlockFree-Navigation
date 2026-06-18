@@ -41,7 +41,7 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 - **Camera proximity widget** — Shows the count of known ALPR cameras within 1 km and the distance to the nearest one, updating in real time as you move
 
 ### Branding
-- **FlockFree identity** — Custom blue/white FF road mark on navy splash, cyan headers, red toggles
+- **FlockFree identity** — Custom blue/white FF road mark on navy splash with dark blue/cyan controls
 - **All asset densities** — Launcher, adaptive, and splash icons in mdpi through xxxhdpi
 
 ![FlockFree Settings](docs/screenshots/ff-settings-branding.png)

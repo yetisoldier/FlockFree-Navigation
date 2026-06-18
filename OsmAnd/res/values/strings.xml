@@ -13,6 +13,8 @@
 	<string name="flockfree_plugin_name">FlockFree - Camera Awareness</string>
 	<string name="flockfree_plugin_description">Displays ALPR camera locations from dontgetflocked.com on the map, tries experimental offline camera-aware rerouting, and allows community reporting of new cameras to OpenStreetMap.</string>
 	<string name="flockfree_plugin_prefs_description">Configure ALPR camera display, experimental camera-aware rerouting, alert distance, and CYD hardware options.</string>
+	<string name="flockfree_drawer_title">FlockFree</string>
+	<string name="flockfree_quick_controls">Quick Controls</string>
 	<string name="flockfree_map_display">Map Display</string>
 	<string name="flockfree_show_cameras_on_map">Show cameras on map</string>
 	<string name="flockfree_show_cameras_on_map_description">Display ALPR camera markers from dontgetflocked.com.</string>

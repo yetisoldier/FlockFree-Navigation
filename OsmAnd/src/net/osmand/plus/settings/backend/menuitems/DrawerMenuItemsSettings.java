@@ -24,6 +24,7 @@ public class DrawerMenuItemsSettings extends ContextMenuItemsSettings {
 		originalOrderIds.add(DRAWER_SEARCH_ID);
 		originalOrderIds.add(DRAWER_TRIP_RECORDING_ID);
 		originalOrderIds.add(DRAWER_DIRECTIONS_ID);
+		originalOrderIds.add(DRAWER_FLOCKFREE_ID);
 		originalOrderIds.add(DRAWER_CONFIGURE_MAP_ID);
 		originalOrderIds.add(DRAWER_DOWNLOAD_MAPS_ID);
 		originalOrderIds.add(DRAWER_LIVE_UPDATES_ID);

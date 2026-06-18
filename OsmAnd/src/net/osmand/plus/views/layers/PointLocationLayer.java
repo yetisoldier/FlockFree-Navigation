@@ -70,6 +70,7 @@ public class PointLocationLayer extends OsmandMapLayer
 
 	private static final int MODEL_3D_MAX_SIZE_DP = 6;
 	protected static final float BEARING_SPEED_THRESHOLD = 0.1f;
+	private static final long BEARING_GRACE_PERIOD_MS = 5_000L;
 	protected static final int MIN_ZOOM = 3;
 	protected static final int RADIUS = 7;
 
@@ -107,6 +108,7 @@ public class PointLocationLayer extends OsmandMapLayer
 	private boolean nighMode;
 	private boolean locationOutdated;
 	private Location prevLocation;
+	private long lastBearingValidTimeMs;
 
 	private static final int MARKER_ID_MY_LOCATION = 1;
 	private static final int MARKER_ID_NAVIGATION = 2;
@@ -566,7 +568,14 @@ public class PointLocationLayer extends OsmandMapLayer
 			boolean speedValid = !location.hasSpeed() || location.getSpeed() > BEARING_SPEED_THRESHOLD;
 
 			if (bearingValid && (speedValid || isLocationSnappedToRoad())) {
+				lastBearingValidTimeMs = System.currentTimeMillis();
 				return hasBearing ? location.getBearing() : lastBearingCached;
+			}
+			// Grace period: keep showing the last bearing for 5 seconds to prevent
+			// the marker flickering between STAY and MOVE states during brief GPS gaps
+			if (lastBearingCached != null
+					&& System.currentTimeMillis() - lastBearingValidTimeMs < BEARING_GRACE_PERIOD_MS) {
+				return lastBearingCached;
 			}
 		}
 		return null;

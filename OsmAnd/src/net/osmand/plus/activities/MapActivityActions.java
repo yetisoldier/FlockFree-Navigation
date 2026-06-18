@@ -503,6 +503,17 @@ public class MapActivityActions extends MapActions {
 					return true;
 				}));
 
+		adapter.addItem(new ContextMenuItem(DRAWER_FLOCKFREE_ID)
+				.setTitleId(R.string.flockfree_drawer_title, activity)
+				.setIcon(R.drawable.ic_action_privacy_and_security)
+				.setListener((uiAdapter, view, item, isChecked) -> {
+					app.logEvent("drawer_flockfree_open");
+					MapActivity.clearPrevActivityIntent();
+					activity.closeDrawer();
+					BaseSettingsFragment.showInstance(activity, SettingsScreenType.FLOCKFREE_SETTINGS);
+					return true;
+				}));
+
 		adapter.addItem(new ContextMenuItem(DRAWER_CONFIGURE_MAP_ID)
 				.setTitleId(R.string.configure_map, activity)
 				.setIcon(R.drawable.ic_action_layers)

@@ -791,10 +791,10 @@ Replace:
 
 Modify `OsmAnd/res/values/colors.xml`:
 ```xml
-<color name="flockfree_primary">#FF4CAF50</color>  <!-- green for "safe" -->
-<color name="flockfree_accent">#FFFF5722</color>   <!-- orange for "alert" -->
+<color name="flockfree_primary">#FF063A5A</color>  <!-- dark logo blue -->
+<color name="flockfree_accent">#FF00BCD4</color>   <!-- CYD/camera-cone cyan -->
 <color name="flockfree_camera_marker">#FFE53935</color> <!-- red camera markers -->
-<color name="flockfree_camera_marker_alert">#FFFFC107</color> <!-- yellow for detected -->
+<color name="flockfree_camera_marker_alert">#FFFFC107</color> <!-- amber for detected -->
 ```
 
 ### 7.5 String resources

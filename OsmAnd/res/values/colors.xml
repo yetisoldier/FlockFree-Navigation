@@ -31,11 +31,11 @@
 	<color name="icon_color_secondary_dark">#4d4d4d</color>
 	<color name="icon_color_primary_light">#4d4d4d</color>
 	<color name="icon_color_primary_dark">#b3b3b3</color>
-	<!-- FlockFree brand palette: surveillance red with CYD/camera-cone cyan accents. -->
-	<color name="icon_color_osmand_light">#C61E2D</color>
-	<color name="icon_color_osmand_dark">#FF6B6B</color>
-	<color name="icon_color_active_light">#C61E2D</color>
-	<color name="icon_color_active_dark">#FF6B6B</color>
+	<!-- FlockFree brand palette: dark logo blue with CYD/camera-cone cyan accents. -->
+	<color name="icon_color_osmand_light">#063A5A</color>
+	<color name="icon_color_osmand_dark">#4FC3F7</color>
+	<color name="icon_color_active_light">#063A5A</color>
+	<color name="icon_color_active_dark">#4FC3F7</color>
 	<color name="icon_color_warning">#EE5622</color>
 	<color name="map_button_icon_color_light">#727272</color>
 	<color name="map_button_icon_color_dark">#cccccc</color>
@@ -45,22 +45,22 @@
 	<color name="icon_color_inverse_dark">#F2F2F2</color>
 	
 	<!-- AppBar & Status bar -->
-	<color name="app_bar_main_light">#C61E2D</color>
+	<color name="app_bar_main_light">#063A5A</color>
 	<color name="app_bar_main_dark">#252727</color>
 	<color name="app_bar_secondary_light">#FFFFFF</color>
 	<color name="app_bar_secondary_dark">#252727</color>
-	<color name="app_bar_active_light">#C61E2D</color>
-	<color name="app_bar_active_dark">#520811</color>
+	<color name="app_bar_active_light">#063A5A</color>
+	<color name="app_bar_active_dark">#052B43</color>
 
 	<color name="navigation_bar_bg_light">#000000</color>
 	<color name="navigation_bar_bg_dark">#000000</color>
 
-	<color name="status_bar_main_light">#9F1724</color>
+	<color name="status_bar_main_light">#052B43</color>
 	<color name="status_bar_main_dark">#1E1F1F</color>
 	<color name="status_bar_secondary_light">#F0F0F0</color>
 	<color name="status_bar_secondary_dark">#1E1F1F</color>
-	<color name="status_bar_selection_color_light">#9F1724</color>
-	<color name="status_bar_selection_color_dark">#520811</color>
+	<color name="status_bar_selection_color_light">#052B43</color>
+	<color name="status_bar_selection_color_dark">#052B43</color>
 	<color name="status_bar_transparent_light">#66000000</color>
 	<color name="status_bar_transparent_dark">#99000000</color>
 
@@ -71,20 +71,20 @@
 
 	
 	<!-- Active -->
-	<color name="active_color_primary_light">#C61E2D</color>
-	<color name="active_color_primary_dark">#FF6B6B</color>
-	<color name="active_color_secondary_light">#FCE3E6</color>
-	<color name="active_color_secondary_dark">#3D1418</color>
+	<color name="active_color_primary_light">#063A5A</color>
+	<color name="active_color_primary_dark">#4FC3F7</color>
+	<color name="active_color_secondary_light">#D8EEF8</color>
+	<color name="active_color_secondary_dark">#062A3A</color>
 
 	<!-- Material -->
 	<color name="text_color_primary_light_v2">#212121</color>
 	<color name="text_color_primary_dark_v2">#E6E6E6</color>
 	<color name="icon_color_default_light_v2">#676D7E</color>
 	<color name="icon_color_default_dark_v2">#727272</color>
-	<color name="active_color_primary_light_v2">#C61E2D</color>
-	<color name="active_color_primary_dark_v2">#FF6B6B</color>
-	<color name="active_color_secondary_light_v2">#FCE3E6</color>
-	<color name="active_color_secondary_dark_v2">#3D1418</color>
+	<color name="active_color_primary_light_v2">#063A5A</color>
+	<color name="active_color_primary_dark_v2">#4FC3F7</color>
+	<color name="active_color_secondary_light_v2">#D8EEF8</color>
+	<color name="active_color_secondary_dark_v2">#062A3A</color>
 	<color name="buttons_secondary_light_v2">#E9E9EC</color>
 	<color name="buttons_secondary_dark_v2">#303436</color>
 	<color name="material_switch_outline_light">#00ACC1</color>
@@ -233,8 +233,8 @@
 	<color name="popup_text_color">#FFFFFF</color>
 
 
-	<color name="osmand_orange">#C61E2D</color>
-	<color name="osmand_orange_dark">#9F1724</color>
+	<color name="osmand_orange">#063A5A</color>
+	<color name="osmand_orange_dark">#052B43</color>
 	<color name="app_mode_icon_color">#33B4E4</color>
 	<color name="recording_color">#F44336</color>
 
@@ -246,10 +246,10 @@
 	<color name="list_item_light_pressed">#b2e6e6e6</color>
 	<color name="list_item_dark_pressed">#cc3b3b3b</color>
 
-	<color name="fab_color">#C61E2D</color>
-	<color name="fab_color_pressed">#9F1724</color>
+	<color name="fab_color">#063A5A</color>
+	<color name="fab_color_pressed">#052B43</color>
 
-	<color name="map_widget_icon_color">#C61E2D</color>
+	<color name="map_widget_icon_color">#063A5A</color>
 	<color name="map_widget_stroke">#4C000000</color>
 	<color name="map_widget_light">#fff</color>
 	<color name="map_widget_dark">#a0000000</color>
@@ -527,25 +527,25 @@
 
 	<color name="preference_category_title">#00BCD4</color>
 	<color name="preference_top_switch_off">#808080</color>
-	<color name="preference_action_button_text">#C61E2D</color>
+	<color name="preference_action_button_text">#063A5A</color>
 
 	<color name="inactive_pages_light">#cccccc</color>
 	<color name="inactive_pages_dark">#505050</color>
-	<color name="active_buttons_and_links_trans_light">#66C61E2D</color>
-	<color name="active_buttons_and_links_trans_dark">#66FF6B6B</color>
+	<color name="active_buttons_and_links_trans_light">#66063A5A</color>
+	<color name="active_buttons_and_links_trans_dark">#664FC3F7</color>
 	<!-- <color name="settings_divider">#dcdcdc</color> -->
 	<color name="profile_button_gray">#EFEFEF</color>
 	<color name="profile_button_gray_pressed">#ababab</color>
 
 	<!-- Profile colors -->
-	<color name="profile_icon_color_blue_light_default">#C61E2D</color>
+	<color name="profile_icon_color_blue_light_default">#063A5A</color>
 	<color name="profile_icon_color_purple_light">#00ACC1</color>
 	<color name="profile_icon_color_green_light">#0EBE92</color>
 	<color name="profile_icon_color_blue_light">#00ACC1</color>
 	<color name="profile_icon_color_red_light">#FF2200</color>
 	<color name="profile_icon_color_yellow_light">#F0B400</color>
 	<color name="profile_icon_color_magenta_light">#CC0063</color>
-	<color name="profile_icon_color_blue_dark_default">#FF6B6B</color>
+	<color name="profile_icon_color_blue_dark_default">#4FC3F7</color>
 	<color name="profile_icon_color_purple_dark">#00BCD4</color>
 	<color name="profile_icon_color_green_dark">#0EBE92</color>
 	<color name="profile_icon_color_blue_dark">#00BCD4</color>
@@ -554,10 +554,10 @@
 	<color name="profile_icon_color_magenta_dark">#CC0063</color>
 	<color name="profile_icon_color_outdated_light">#A6A6A6</color>
 
-	<color name="switch_button_active_light">#1AC61E2D</color>
-	<color name="switch_button_active_dark">#1AFF6B6B</color>
-	<color name="switch_button_active_stroke_light">#80C61E2D</color>
-	<color name="switch_button_active_stroke_dark">#80FF6B6B</color>
+	<color name="switch_button_active_light">#1A063A5A</color>
+	<color name="switch_button_active_dark">#1A4FC3F7</color>
+	<color name="switch_button_active_stroke_light">#80063A5A</color>
+	<color name="switch_button_active_stroke_dark">#804FC3F7</color>
 	<color name="empty_hint_bg">#80000000</color>
 	<color name="input_layout_bg_color">#4DCCCCCC</color>
 	<color name="text_input_background_light">#4DCCCCCC</color>

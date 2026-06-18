@@ -4,6 +4,50 @@
 	android:title="@string/flockfree_settings">
 
 	<PreferenceCategory
+		android:key="flockfree_quick_controls"
+		android:layout="@layout/preference_category_with_descr"
+		android:title="@string/flockfree_quick_controls" />
+
+	<net.osmand.plus.settings.preferences.SwitchPreferenceEx
+		android:key="camera_avoidance_enabled"
+		android:layout="@layout/preference_with_descr_dialog_and_switch"
+		android:summaryOff="@string/shared_string_disabled"
+		android:summaryOn="@string/shared_string_enabled"
+		android:title="@string/flockfree_camera_avoidance_enabled" />
+
+	<net.osmand.plus.settings.preferences.SwitchPreferenceEx
+		android:key="cyd_ble_enabled"
+		android:layout="@layout/preference_with_descr_dialog_and_switch"
+		android:summaryOff="@string/shared_string_disabled"
+		android:summaryOn="@string/shared_string_enabled"
+		android:title="@string/flockfree_cyd_ble" />
+
+	<Preference
+		android:layout="@layout/simple_divider_item"
+		android:selectable="false" />
+
+	<PreferenceCategory
+		android:key="flockfree_camera_avoidance"
+		android:layout="@layout/preference_category_with_descr"
+		android:title="@string/flockfree_camera_avoidance_routing" />
+
+	<net.osmand.plus.settings.preferences.ListPreferenceEx
+		android:key="camera_avoidance_radius"
+		android:layout="@layout/preference_with_descr"
+		android:title="@string/flockfree_avoidance_radius"
+		tools:summary="@string/flockfree_avoidance_radius_default_summary" />
+
+	<Preference
+		android:key="flockfree_route_last_check"
+		android:layout="@layout/preference_with_descr"
+		android:persistent="false"
+		android:title="@string/flockfree_route_last_check" />
+
+	<Preference
+		android:layout="@layout/simple_divider_item"
+		android:selectable="false" />
+
+	<PreferenceCategory
 		android:key="flockfree_map_display"
 		android:layout="@layout/preference_category_with_descr"
 		android:title="@string/flockfree_map_display" />
@@ -38,34 +82,6 @@
 		android:layout="@layout/preference_with_descr"
 		android:persistent="false"
 		android:title="@string/flockfree_camera_nearest_last_check" />
-
-	<Preference
-		android:layout="@layout/simple_divider_item"
-		android:selectable="false" />
-
-	<PreferenceCategory
-		android:key="flockfree_camera_avoidance"
-		android:layout="@layout/preference_category_with_descr"
-		android:title="@string/flockfree_camera_avoidance_routing" />
-
-	<net.osmand.plus.settings.preferences.SwitchPreferenceEx
-		android:key="camera_avoidance_enabled"
-		android:layout="@layout/preference_with_descr_dialog_and_switch"
-		android:summaryOff="@string/shared_string_disabled"
-		android:summaryOn="@string/shared_string_enabled"
-		android:title="@string/flockfree_camera_avoidance_enabled" />
-
-	<net.osmand.plus.settings.preferences.ListPreferenceEx
-		android:key="camera_avoidance_radius"
-		android:layout="@layout/preference_with_descr"
-		android:title="@string/flockfree_avoidance_radius"
-		tools:summary="@string/flockfree_avoidance_radius_default_summary" />
-
-	<Preference
-		android:key="flockfree_route_last_check"
-		android:layout="@layout/preference_with_descr"
-		android:persistent="false"
-		android:title="@string/flockfree_route_last_check" />
 
 	<Preference
 		android:layout="@layout/simple_divider_item"
@@ -132,13 +148,6 @@
 		android:key="flockfree_cyd_hardware"
 		android:layout="@layout/preference_category_with_descr"
 		android:title="@string/flockfree_cyd_hardware" />
-
-	<net.osmand.plus.settings.preferences.SwitchPreferenceEx
-		android:key="cyd_ble_enabled"
-		android:layout="@layout/preference_with_descr_dialog_and_switch"
-		android:summaryOff="@string/shared_string_disabled"
-		android:summaryOn="@string/shared_string_enabled"
-		android:title="@string/flockfree_cyd_ble" />
 
 	<Preference
 		android:key="flockfree_cyd_status"

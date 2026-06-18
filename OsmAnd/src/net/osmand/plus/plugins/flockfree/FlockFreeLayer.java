@@ -191,7 +191,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
 
     @Override
     public boolean drawInScreenPixels() {
-        return false;
+        return true;
     }
 
     private CameraData.CameraPoint findClosestCamera(@NonNull PointF point, @NonNull RotatedTileBox tileBox) {
@@ -300,13 +300,9 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
 
     private void drawCameraCone(@NonNull Canvas canvas, @NonNull RotatedTileBox tileBox,
                                 float x, float y, float compassBearing, int color) {
-        // Convert compass bearing (0=N, 90=E) to screen angle (0=E, 90=S in canvas terms)
-        // and account for map rotation so the cone points correctly on a rotated map.
-        float mapRotation = tileBox.getRotate(); // radians
-        float bearingRad = (float) Math.toRadians(compassBearing);
-        // Screen angle: compass bearing - 90 (to convert from north-up to east-right canvas)
-        // minus map rotation (to counter-rotate for the map's rotation)
-        float screenAngle = bearingRad - (float) (Math.PI / 2) - mapRotation;
+        // Convert compass bearing (0=N, 90=E) to canvas angle (0=E, 90=S),
+        // then apply the map rotation already used by RotatedTileBox projection.
+        float screenAngle = (float) Math.toRadians(compassBearing - 90f + tileBox.getRotate());
 
         float coneLength = dpToPx(CONE_LENGTH_DP);
         float halfAngle = (float) Math.toRadians(CONE_HALF_ANGLE_DEG);
@@ -372,7 +368,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         switch (brand.toLowerCase()) {
             case "flock safety":
             case "flock":
-                return Color.parseColor("#E53935"); // red
+                return Color.parseColor("#E53935"); // red camera marker
             case "motorola":
             case "motorola solutions":
                 return Color.parseColor("#FB8C00"); // orange

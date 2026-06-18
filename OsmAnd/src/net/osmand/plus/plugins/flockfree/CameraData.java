@@ -26,8 +26,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.zip.GZIPInputStream;
@@ -157,19 +159,45 @@ public class CameraData {
             if (loaded.isEmpty()) {
                 return false;
             }
+            // Deduplicate in case the database has stale duplicate rows from older versions
+            List<CameraPoint> deduped = deduplicateCameras(loaded);
+            int removed = loaded.size() - deduped.size();
             synchronized (this) {
-                cameras = loaded;
-                cameraGrid = buildSpatialGrid(loaded);
+                cameras = deduped;
+                cameraGrid = buildSpatialGrid(deduped);
                 lastLoadedSource = DataSource.DATABASE;
                 databaseReady = true;
             }
             dataLoaded = true;
-            LOG.info("Loaded " + loaded.size() + " cameras from SQLite database");
+            LOG.info("Loaded " + deduped.size() + " cameras from SQLite database (removed " + removed + " duplicates)");
             return true;
         } catch (Exception e) {
             LOG.error("Failed to load cameras from database", e);
             return false;
         }
+    }
+
+    @NonNull
+    private static List<CameraPoint> deduplicateCameras(@NonNull List<CameraPoint> input) {
+        Set<String> seen = new HashSet<>();
+        List<CameraPoint> result = new ArrayList<>(input.size());
+        int duplicates = 0;
+        for (CameraPoint cam : input) {
+            String key = (cam.osmId != null && cam.osmType != null)
+                    ? cam.osmType + ":" + cam.osmId
+                    : Math.round(cam.lat * 1_000_000d) + ":" + Math.round(cam.lon * 1_000_000d)
+                      + ":" + (cam.brand != null ? cam.brand : "")
+                      + ":" + (cam.direction != null ? cam.direction : "");
+            if (seen.add(key)) {
+                result.add(cam);
+            } else {
+                duplicates++;
+            }
+        }
+        if (duplicates > 0) {
+            LOG.info("Deduplicated " + duplicates + " camera entries (" + input.size() + " -> " + result.size() + ")");
+        }
+        return result;
     }
 
     private boolean loadFromCache() {
@@ -269,7 +297,9 @@ public class CameraData {
                 return false;
             }
             List<CameraPoint> parsed = new ArrayList<>(features.length());
+            Set<String> seenKeys = new HashSet<>();
             int skipped = 0;
+            int duplicates = 0;
             for (int i = 0; i < features.length(); i++) {
                 JSONObject feature = features.optJSONObject(i);
                 if (feature == null) {
@@ -314,11 +344,21 @@ public class CameraData {
                 point.surveillanceZone = optProperty(props, "surveillanceZone", "surveillance_zone");
                 point.osmTimestamp = optProperty(props, "osmTimestamp", "osm_timestamp");
 
+                // Deduplicate by osm_id+osm_type when available, otherwise by rounded coords+brand+direction
+                String dedupKey = (point.osmId != null && point.osmType != null)
+                        ? point.osmType + ":" + point.osmId
+                        : Math.round(lat * 1_000_000d) + ":" + Math.round(lon * 1_000_000d)
+                          + ":" + (point.brand != null ? point.brand : "")
+                          + ":" + (point.direction != null ? point.direction : "");
+                if (!seenKeys.add(dedupKey)) {
+                    duplicates++;
+                    continue;
+                }
                 parsed.add(point);
             }
             if (parsed.isEmpty()) {
                 LOG.error("Parsed zero camera points from " + source + "; skipped=" + skipped
-                        + ", features=" + features.length());
+                        + ", duplicates=" + duplicates + ", features=" + features.length());
                 return false;
             }
             synchronized (this) {
@@ -329,7 +369,8 @@ public class CameraData {
             }
             persistParsedCameras(parsed, source);
             LOG.info("Parsed " + parsed.size() + " camera points from " + source.logName
-                    + "; skipped=" + skipped + ", features=" + features.length()
+                    + "; skipped=" + skipped + ", duplicates=" + duplicates
+                    + ", features=" + features.length()
                     + ", buckets=" + cameraGrid.size());
             return true;
         } catch (Exception e) {
