@@ -5,7 +5,7 @@
 - Repository: `https://github.com/yetisoldier/FlockFree-Navigation`
 - Local path: `/home/yetisoldier/projects/FlockFree-Navigation`
 - Branch: `master`
-- Latest pushed source before the final settings handoff: `9a1b0ca9db Ignore local smoke-test logs`
+- Latest pushed source: `95e8384bf9 Add FlockFree CYD settings controls`
 - Current source includes the route camera summary hook, exposed FlockFree settings screen, camera-data spatial indexing, OSM editor tag-prefill reporting, experimental two-pass offline camera avoidance, cache-only route startup for existing camera data, and a settings-driven CYD BLE scan/status/simulation path.
 
 ## Verified APK
