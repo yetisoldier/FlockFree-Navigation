@@ -269,13 +269,18 @@ from pathlib import Path
 diagnostics = Path("scripts/flockfree-moto-diagnostics.sh").read_text()
 required = [
     "capture_ui_snapshot()",
+    "UI (hierarchy|hierchary) dumped to",
+    "window hierarchy was not dumped",
     "capture_app_data_state()",
     "app-data-state.txt",
     "cache/cameras.geojson",
+    "databases/flockfree_cameras.db",
     "flockfree-cyd-detections.json",
     "Camera cache:",
+    "Camera database:",
     "CYD detection store:",
     "camera_cache_state",
+    "camera_database_state",
     "cyd_store_state",
     "capture_permission_state()",
     "permission-state.txt",
@@ -290,6 +295,7 @@ required = [
     "Notifications permission:",
     "ACCESS_FINE_LOCATION",
     "BLUETOOTH_SCAN",
+    "192.168.1.139:39183",
 ]
 missing = [item for item in required if item not in diagnostics]
 if missing:

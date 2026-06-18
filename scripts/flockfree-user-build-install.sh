@@ -4,7 +4,7 @@ set -euo pipefail
 # User-run helper. Repository AGENTS.md forbids agents from running Gradle build tasks.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PHONE_SERIAL="${PHONE_SERIAL:-192.168.1.139:5555}"
+PHONE_SERIAL="${PHONE_SERIAL:-192.168.1.139:39183}"
 ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
 ANDROID_SDK="${ANDROID_SDK:-$ANDROID_HOME}"
 GRADLE_TASK="${GRADLE_TASK:-:OsmAnd:assembleGplayFreeLegacyFatDebug}"

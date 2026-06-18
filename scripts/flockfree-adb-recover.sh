@@ -2,7 +2,7 @@
 set -u
 
 ADB="${ADB:-adb}"
-SERIAL="${FLOCKFREE_ADB_SERIAL:-192.168.1.139:5555}"
+SERIAL="${FLOCKFREE_ADB_SERIAL:-192.168.1.139:39183}"
 OUT_ROOT="${OUT_ROOT:-logs/flockfree-adb-recover}"
 OUT_DIR="${OUT_DIR:-}"
 KILL_SERVER=1
@@ -13,7 +13,7 @@ usage() {
 Retry the FlockFree Moto Wi-Fi ADB endpoint and capture a local recovery log.
 
 Defaults:
-  serial: 192.168.1.139:5555, or $FLOCKFREE_ADB_SERIAL
+  serial: 192.168.1.139:39183, or $FLOCKFREE_ADB_SERIAL
   output: logs/flockfree-adb-recover/YYYYMMDD-HHMMSS
 
 Usage:

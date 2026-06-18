@@ -3,7 +3,7 @@ set -u
 
 PACKAGE="${PACKAGE:-com.yetiwurks.flockfree}"
 ADB="${ADB:-adb}"
-SERIAL="${FLOCKFREE_ADB_SERIAL:-192.168.1.139:5555}"
+SERIAL="${FLOCKFREE_ADB_SERIAL:-192.168.1.139:39183}"
 CONNECT=1
 RUN_DIAGNOSTICS=1
 LAUNCH=1
@@ -13,7 +13,7 @@ usage() {
 Grant FlockFree runtime permissions needed for morning CYD/GPS testing.
 
 Defaults:
-  serial: 192.168.1.139:5555, or $FLOCKFREE_ADB_SERIAL
+  serial: 192.168.1.139:39183, or $FLOCKFREE_ADB_SERIAL
   package: com.yetiwurks.flockfree, or $PACKAGE
 
 Usage:

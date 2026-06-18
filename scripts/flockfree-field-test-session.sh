@@ -3,7 +3,7 @@ set -u
 
 PACKAGE="${PACKAGE:-com.yetiwurks.flockfree}"
 ADB="${ADB:-adb}"
-SERIAL="${FLOCKFREE_ADB_SERIAL:-192.168.1.139:5555}"
+SERIAL="${FLOCKFREE_ADB_SERIAL:-192.168.1.139:39183}"
 OUT_ROOT="${OUT_ROOT:-logs/flockfree-field-session}"
 OUT_DIR="${OUT_DIR:-}"
 DURATION_SECONDS="${DURATION_SECONDS:-900}"
@@ -18,7 +18,7 @@ usage() {
 Capture a no-Gradle FlockFree manual field-test session over ADB.
 
 Defaults:
-  serial: 192.168.1.139:5555, or $FLOCKFREE_ADB_SERIAL
+  serial: 192.168.1.139:39183, or $FLOCKFREE_ADB_SERIAL
   package: com.yetiwurks.flockfree, or $PACKAGE
   duration: 900 seconds
   output: logs/flockfree-field-session/YYYYMMDD-HHMMSS

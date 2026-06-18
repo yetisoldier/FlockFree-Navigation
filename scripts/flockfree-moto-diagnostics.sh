@@ -4,7 +4,7 @@ set -u
 
 PACKAGE="${PACKAGE:-com.yetiwurks.flockfree}"
 ADB="${ADB:-adb}"
-SERIAL="${FLOCKFREE_ADB_SERIAL:-192.168.1.139:5555}"
+SERIAL="${FLOCKFREE_ADB_SERIAL:-192.168.1.139:39183}"
 OUT_ROOT="${OUT_ROOT:-logs/flockfree-diagnostics}"
 OUT_DIR="${OUT_DIR:-}"
 LOGCAT_LINES="${LOGCAT_LINES:-2000}"
@@ -17,7 +17,7 @@ usage() {
 Collect repeatable FlockFree phone diagnostics over ADB.
 
 Defaults:
-  serial: 192.168.1.139:5555, or $FLOCKFREE_ADB_SERIAL
+  serial: 192.168.1.139:39183, or $FLOCKFREE_ADB_SERIAL
   package: com.yetiwurks.flockfree, or $PACKAGE
   output: logs/flockfree-diagnostics/YYYYMMDD-HHMMSS
 
@@ -177,7 +177,7 @@ capture_ui_snapshot() {
   } > "$dump_file" 2>&1
   log "wrote ${dump_file}"
 
-  if grep -q '\[exit_status=0\]' "$dump_file"; then
+  if grep -Eiq 'UI (hierarchy|hierchary) dumped to' "$dump_file"; then
     {
       printf '$ %q -s %q pull %q %q\n\n' "$ADB" "$SERIAL" "$remote_xml" "${OUT_DIR}/window.xml"
       "$ADB" -s "$SERIAL" pull "$remote_xml" "${OUT_DIR}/window.xml"
@@ -185,6 +185,9 @@ capture_ui_snapshot() {
       printf '\n[exit_status=%s]\n' "$status"
       "$ADB" -s "$SERIAL" shell rm -f "$remote_xml" >/dev/null 2>&1 || true
     } > "$pull_file" 2>&1
+    log "wrote ${pull_file}"
+  else
+    printf 'window hierarchy was not dumped; see %s\n' "$dump_file" > "$pull_file"
     log "wrote ${pull_file}"
   fi
 
@@ -235,7 +238,7 @@ PY
 
 capture_app_data_state() {
   file="${OUT_DIR}/app-data-state.txt"
-  run_as_script='echo "run-as package:"; pwd; echo ""; echo "cache directory:"; ls -l cache 2>/dev/null || true; echo ""; echo "files directory:"; ls -l files 2>/dev/null || true; echo ""; echo "camera cache:"; if [ -f cache/cameras.geojson ]; then ls -l cache/cameras.geojson; wc -c cache/cameras.geojson; else echo "cache/cameras.geojson missing"; fi; echo ""; echo "CYD detection store:"; if [ -f files/flockfree-cyd-detections.json ]; then ls -l files/flockfree-cyd-detections.json; wc -c files/flockfree-cyd-detections.json; else echo "files/flockfree-cyd-detections.json missing"; fi'
+  run_as_script='echo "run-as package:"; pwd; echo ""; echo "cache directory:"; ls -l cache 2>/dev/null || true; echo ""; echo "files directory:"; ls -l files 2>/dev/null || true; echo ""; echo "databases directory:"; ls -l databases 2>/dev/null || true; echo ""; echo "camera cache:"; if [ -f cache/cameras.geojson ]; then ls -l cache/cameras.geojson; wc -c cache/cameras.geojson; else echo "cache/cameras.geojson missing"; fi; echo ""; echo "camera database:"; if [ -f databases/flockfree_cameras.db ]; then ls -l databases/flockfree_cameras.db; wc -c databases/flockfree_cameras.db; ls -l databases/flockfree_cameras.db-* 2>/dev/null || true; else echo "databases/flockfree_cameras.db missing"; fi; echo ""; echo "CYD detection store:"; if [ -f files/flockfree-cyd-detections.json ]; then ls -l files/flockfree-cyd-detections.json; wc -c files/flockfree-cyd-detections.json; else echo "files/flockfree-cyd-detections.json missing"; fi'
   shell_command="run-as $PACKAGE sh -c '$run_as_script'"
   {
     printf '$ %q -s %q shell %q\n\n' "$ADB" "$SERIAL" "$shell_command"
@@ -281,6 +284,7 @@ write_summary() {
   service_file="${OUT_DIR}/service-state.txt"
   log_lines="0"
   camera_cache_state="not checked"
+  camera_database_state="not checked"
   cyd_store_state="not checked"
   cyd_service_state="not checked"
   cyd_notification_state="not checked"
@@ -300,6 +304,12 @@ write_summary() {
       camera_cache_state="present (${camera_cache_bytes} bytes)"
     elif grep -q 'cache/cameras.geojson missing' "$app_data_file"; then
       camera_cache_state="missing"
+    fi
+    camera_database_bytes="$(awk '/databases\/flockfree_cameras\.db$/ {print $1}' "$app_data_file" | tail -n 1)"
+    if [ -n "$camera_database_bytes" ]; then
+      camera_database_state="present (${camera_database_bytes} bytes)"
+    elif grep -q 'databases/flockfree_cameras.db missing' "$app_data_file"; then
+      camera_database_state="missing"
     fi
     cyd_store_bytes="$(awk '/files\/flockfree-cyd-detections\.json$/ {print $1}' "$app_data_file" | tail -n 1)"
     if [ -n "$cyd_store_bytes" ]; then
@@ -373,6 +383,7 @@ write_summary() {
     printf 'Current activity: %s\n' "${activity:-not detected}"
     printf 'PID: %s\n' "${pid:-not running}"
     printf 'Camera cache: %s\n' "$camera_cache_state"
+    printf 'Camera database: %s\n' "$camera_database_state"
     printf 'CYD detection store: %s\n' "$cyd_store_state"
     printf 'Location permissions: fine %s, coarse %s; device location %s\n' \
       "$fine_location_state" "$coarse_location_state" "$location_toggle_state"

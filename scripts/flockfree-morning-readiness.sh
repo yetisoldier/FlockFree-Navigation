@@ -3,7 +3,7 @@ set -u
 
 PACKAGE="${PACKAGE:-com.yetiwurks.flockfree}"
 ADB="${ADB:-adb}"
-SERIAL="${FLOCKFREE_ADB_SERIAL:-192.168.1.139:5555}"
+SERIAL="${FLOCKFREE_ADB_SERIAL:-192.168.1.139:39183}"
 OUT_ROOT="${OUT_ROOT:-logs/flockfree-readiness}"
 OUT_DIR="${OUT_DIR:-}"
 LOGCAT_LINES="${LOGCAT_LINES:-2000}"
@@ -18,7 +18,7 @@ usage() {
 Run the no-Gradle FlockFree morning readiness pass.
 
 Defaults:
-  serial: 192.168.1.139:5555, or $FLOCKFREE_ADB_SERIAL
+  serial: 192.168.1.139:39183, or $FLOCKFREE_ADB_SERIAL
   package: com.yetiwurks.flockfree, or $PACKAGE
   output: logs/flockfree-readiness/YYYYMMDD-HHMMSS
 
