@@ -33,6 +33,11 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private final Paint markerPaint;
     private final Paint candidatePaint;
     private final Paint textPaint;
+    private final Paint coneFillPaint;
+    private final Paint coneStrokePaint;
+
+    private static final float CONE_HALF_ANGLE_DEG = 30f; // half-angle of the view cone on each side
+    private static final float CONE_LENGTH_DP = 22f;     // screen-space cone length in dp
 
     private List<CameraData.CameraPoint> visibleCameras = new java.util.ArrayList<>();
     private List<CydDetectionCandidate> visibleDetections = new java.util.ArrayList<>();
@@ -55,6 +60,15 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         textPaint.setTextSize(dpToPx(10));
         textPaint.setColor(Color.WHITE);
         textPaint.setTextAlign(Paint.Align.CENTER);
+
+        coneFillPaint = new Paint();
+        coneFillPaint.setStyle(Paint.Style.FILL);
+        coneFillPaint.setAntiAlias(true);
+
+        coneStrokePaint = new Paint();
+        coneStrokePaint.setStyle(Paint.Style.STROKE);
+        coneStrokePaint.setAntiAlias(true);
+        coneStrokePaint.setStrokeWidth(dpToPx(1.5f));
     }
 
     @Override
@@ -247,6 +261,15 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         int color = getBrandColor(camera.brand);
         markerPaint.setColor(color);
         float radius = dpToPx(6);
+
+        // Draw orientation cone when direction is available and zoom is high enough
+        if (tileBox.getZoom() >= 15) {
+            Float bearing = parseDirection(camera.direction);
+            if (bearing != null) {
+                drawCameraCone(canvas, tileBox, x, y, bearing, color);
+            }
+        }
+
         canvas.drawCircle(x, y, radius, markerPaint);
         markerPaint.setStyle(Paint.Style.STROKE);
         markerPaint.setColor(darkenColor(color));
@@ -257,6 +280,57 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
             String label = getShortBrandName(camera.brand);
             canvas.drawText(label, x, y - radius - dpToPx(2), textPaint);
         }
+    }
+
+    @androidx.annotation.Nullable
+    private Float parseDirection(@androidx.annotation.Nullable String direction) {
+        if (direction == null || direction.isEmpty()) {
+            return null;
+        }
+        try {
+            float bearing = Float.parseFloat(direction.trim());
+            if (bearing >= 0f && bearing <= 360f) {
+                return bearing;
+            }
+        } catch (NumberFormatException e) {
+            // ignore
+        }
+        return null;
+    }
+
+    private void drawCameraCone(@NonNull Canvas canvas, @NonNull RotatedTileBox tileBox,
+                                float x, float y, float compassBearing, int color) {
+        // Convert compass bearing (0=N, 90=E) to screen angle (0=E, 90=S in canvas terms)
+        // and account for map rotation so the cone points correctly on a rotated map.
+        float mapRotation = tileBox.getRotate(); // radians
+        float bearingRad = (float) Math.toRadians(compassBearing);
+        // Screen angle: compass bearing - 90 (to convert from north-up to east-right canvas)
+        // minus map rotation (to counter-rotate for the map's rotation)
+        float screenAngle = bearingRad - (float) (Math.PI / 2) - mapRotation;
+
+        float coneLength = dpToPx(CONE_LENGTH_DP);
+        float halfAngle = (float) Math.toRadians(CONE_HALF_ANGLE_DEG);
+
+        // Build the cone as a triangle: camera position -> two points at the wide end
+        Path conePath = new Path();
+        conePath.moveTo(x, y);
+        float endX1 = x + (float) (coneLength * Math.cos(screenAngle - halfAngle));
+        float endY1 = y + (float) (coneLength * Math.sin(screenAngle - halfAngle));
+        float endX2 = x + (float) (coneLength * Math.cos(screenAngle + halfAngle));
+        float endY2 = y + (float) (coneLength * Math.sin(screenAngle + halfAngle));
+        conePath.lineTo(endX1, endY1);
+        conePath.lineTo(endX2, endY2);
+        conePath.close();
+
+        // Fill with semi-transparent brand color
+        coneFillPaint.setColor(color);
+        coneFillPaint.setAlpha(60);
+        canvas.drawPath(conePath, coneFillPaint);
+
+        // Stroke with a more opaque brand color
+        coneStrokePaint.setColor(color);
+        coneStrokePaint.setAlpha(140);
+        canvas.drawPath(conePath, coneStrokePaint);
     }
 
     private void drawCydDetection(@NonNull Canvas canvas, @NonNull RotatedTileBox tileBox,
