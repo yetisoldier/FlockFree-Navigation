@@ -23,11 +23,19 @@ import net.osmand.plus.views.layers.MapSelectionRules;
 import net.osmand.plus.views.layers.base.OsmandMapLayer;
 import net.osmand.util.MapUtils;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.IContextMenuProvider {
 
     private static final int MIN_ZOOM_TO_SHOW = 10;
+    private static final int CLUSTER_MIN_ZOOM = 13; // cluster below this zoom, show individual at 13+
+    private static final float CLUSTER_CELL_SIZE_DP = 40f; // grid cell size in dp
+    private static final float CLUSTER_BASE_RADIUS_DP = 10f;
+    private static final float CLUSTER_RADIUS_INCREMENT_DP = 1f;
+    private static final float CLUSTER_MAX_RADIUS_DP = 20f;
 
     private final FlockFreePlugin plugin;
     private final Paint markerPaint;
@@ -39,8 +47,33 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private static final float CONE_HALF_ANGLE_DEG = 30f; // half-angle of the view cone on each side
     private static final float CONE_LENGTH_DP = 22f;     // screen-space cone length in dp
 
-    private List<CameraData.CameraPoint> visibleCameras = new java.util.ArrayList<>();
-    private List<CydDetectionCandidate> visibleDetections = new java.util.ArrayList<>();
+    private List<CameraData.CameraPoint> visibleCameras = new ArrayList<>();
+    private List<CydDetectionCandidate> visibleDetections = new ArrayList<>();
+    private List<CameraCluster> visibleClusters = new ArrayList<>();
+
+    /**
+     * A cluster of cameras that fall within the same grid cell.
+     */
+    private static class CameraCluster {
+        final float screenX;
+        final float screenY;
+        final double lat;
+        final double lon;
+        final int count;
+        final int dominantColor;
+        final List<CameraData.CameraPoint> cameras;
+
+        CameraCluster(float screenX, float screenY, double lat, double lon,
+                      int count, int dominantColor, List<CameraData.CameraPoint> cameras) {
+            this.screenX = screenX;
+            this.screenY = screenY;
+            this.lat = lat;
+            this.lon = lon;
+            this.count = count;
+            this.dominantColor = dominantColor;
+            this.cameras = cameras;
+        }
+    }
 
     public FlockFreeLayer(@NonNull Context context, @NonNull FlockFreePlugin plugin) {
         super(context);
@@ -78,20 +111,27 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         }
 
         QuadRect screenArea = tileBox.getLatLonBounds();
+        visibleClusters = new ArrayList<>();
         if (tileBox.getZoom() >= MIN_ZOOM_TO_SHOW) {
             CameraData cameraData = plugin.getCameraData();
             if (cameraData.isDataLoaded()) {
                 List<CameraData.CameraPoint> cameras = cameraData.getCamerasInBoundingBox(
                         screenArea.top, screenArea.left, screenArea.bottom, screenArea.right);
                 visibleCameras = cameras;
-                for (CameraData.CameraPoint camera : cameras) {
-                    drawCamera(canvas, tileBox, camera);
+                if (tileBox.getZoom() >= CLUSTER_MIN_ZOOM) {
+                    // Show individual markers
+                    for (CameraData.CameraPoint camera : cameras) {
+                        drawCamera(canvas, tileBox, camera);
+                    }
+                } else {
+                    // Cluster cameras using grid-based spatial clustering
+                    drawClusters(canvas, tileBox, cameras);
                 }
             } else {
-                visibleCameras = new java.util.ArrayList<>();
+                visibleCameras = new ArrayList<>();
             }
         } else {
-            visibleCameras = new java.util.ArrayList<>();
+            visibleCameras = new ArrayList<>();
         }
 
         visibleDetections = getVisibleDetections(screenArea);
@@ -100,8 +140,135 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         }
     }
 
+    /**
+     * Grid-based spatial clustering: divide the screen into a grid of cells,
+     * group cameras in the same cell, and draw cluster badges.
+     */
+    private void drawClusters(@NonNull Canvas canvas, @NonNull RotatedTileBox tileBox,
+                              @NonNull List<CameraData.CameraPoint> cameras) {
+        float cellSize = dpToPx(CLUSTER_CELL_SIZE_DP);
+
+        // Use a map keyed by grid cell coordinates
+        Map<Long, List<CameraData.CameraPoint>> grid = new HashMap<>();
+        Map<Long, float[]> cellScreenCenter = new HashMap<>(); // store [sumX, sumY] for averaging
+
+        for (CameraData.CameraPoint camera : cameras) {
+            float x = tileBox.getPixXFromLatLon(camera.lat, camera.lon);
+            float y = tileBox.getPixYFromLatLon(camera.lat, camera.lon);
+            int cellX = (int) (x / cellSize);
+            int cellY = (int) (y / cellSize);
+            long key = ((long) cellX << 32) | (cellY & 0xFFFFFFFFL);
+
+            grid.computeIfAbsent(key, k -> new ArrayList<>()).add(camera);
+            float[] sums = cellScreenCenter.computeIfAbsent(key, k -> new float[2]);
+            sums[0] += x;
+            sums[1] += y;
+        }
+
+        for (Map.Entry<Long, List<CameraData.CameraPoint>> entry : grid.entrySet()) {
+            List<CameraData.CameraPoint> cellCameras = entry.getValue();
+            int count = cellCameras.size();
+
+            float[] sums = cellScreenCenter.get(entry.getKey());
+            float centerX = sums[0] / count;
+            float centerY = sums[1] / count;
+
+            if (count == 1) {
+                // Single camera — draw normal marker
+                drawCamera(canvas, tileBox, cellCameras.get(0));
+                continue;
+            }
+
+            // Determine dominant brand color
+            int dominantColor = getDominantBrandColor(cellCameras);
+
+            // Convert screen center back to lat/lon for tap handling
+            LatLon centerLatLon = tileBox.getLatLonFromPixel(centerX, centerY);
+
+            CameraCluster cluster = new CameraCluster(
+                    centerX, centerY,
+                    centerLatLon.getLatitude(), centerLatLon.getLongitude(),
+                    count, dominantColor, cellCameras);
+            visibleClusters.add(cluster);
+            drawClusterBadge(canvas, cluster);
+        }
+    }
+
+    /**
+     * Draw a cluster badge: filled circle with count text.
+     */
+    private void drawClusterBadge(@NonNull Canvas canvas, @NonNull CameraCluster cluster) {
+        float radius = dpToPx(Math.min(CLUSTER_BASE_RADIUS_DP + CLUSTER_RADIUS_INCREMENT_DP * (cluster.count - 1),
+                CLUSTER_MAX_RADIUS_DP));
+
+        // Fill with dominant brand color
+        markerPaint.setStyle(Paint.Style.FILL);
+        markerPaint.setColor(cluster.dominantColor);
+        canvas.drawCircle(cluster.screenX, cluster.screenY, radius, markerPaint);
+
+        // Stroke with darkened color
+        markerPaint.setStyle(Paint.Style.STROKE);
+        markerPaint.setColor(darkenColor(cluster.dominantColor));
+        canvas.drawCircle(cluster.screenX, cluster.screenY, radius, markerPaint);
+        markerPaint.setStyle(Paint.Style.FILL);
+
+        // Draw count text
+        String countText = String.valueOf(cluster.count);
+        float textOffset = textPaint.getTextSize() / 3f;
+        canvas.drawText(countText, cluster.screenX, cluster.screenY + textOffset, textPaint);
+    }
+
+    /**
+     * Find the most common brand color among a group of cameras.
+     */
+    private int getDominantBrandColor(@NonNull List<CameraData.CameraPoint> cameras) {
+        Map<String, Integer> brandCounts = new HashMap<>();
+        for (CameraData.CameraPoint cam : cameras) {
+            String key = cam.brand != null ? cam.brand.toLowerCase() : "";
+            brandCounts.merge(key, 1, Integer::sum);
+        }
+        String dominantBrand = "";
+        int maxCount = 0;
+        for (Map.Entry<String, Integer> entry : brandCounts.entrySet()) {
+            if (entry.getValue() > maxCount) {
+                maxCount = entry.getValue();
+                dominantBrand = entry.getKey();
+            }
+        }
+        // Reconstruct a brand string for getBrandColor
+        for (CameraData.CameraPoint cam : cameras) {
+            if (cam.brand != null && cam.brand.toLowerCase().equals(dominantBrand)) {
+                return getBrandColor(cam.brand);
+            }
+        }
+        return getBrandColor(null);
+    }
+
     @Override
     public boolean onSingleTap(@NonNull PointF point, @NonNull RotatedTileBox tileBox) {
+        // Check if a cluster was tapped (only relevant when clustering is active)
+        if (!visibleClusters.isEmpty()) {
+            CameraCluster closestCluster = null;
+            float closestClusterDist = Float.MAX_VALUE;
+            float tapRadius = dpToPx(CLUSTER_MAX_RADIUS_DP);
+            for (CameraCluster cluster : visibleClusters) {
+                float dx = cluster.screenX - point.x;
+                float dy = cluster.screenY - point.y;
+                float dist = (float) Math.sqrt(dx * dx + dy * dy);
+                if (dist < tapRadius && dist < closestClusterDist) {
+                    closestClusterDist = dist;
+                    closestCluster = cluster;
+                }
+            }
+            if (closestCluster != null) {
+                // Animate to cluster center at zoom+2
+                int targetZoom = Math.min(tileBox.getZoom() + 2, 20);
+                getMapView().getAnimatedDraggingThread()
+                        .startMoving(closestCluster.lat, closestCluster.lon, targetZoom);
+                return true;
+            }
+        }
+
         // Check if a camera marker was tapped
         LatLon latLon = tileBox.getLatLonFromPixel(point.x, point.y);
         double tapLat = latLon.getLatitude();
