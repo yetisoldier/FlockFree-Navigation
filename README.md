@@ -1,6 +1,6 @@
 # FlockFree Navigation
 
-FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR camera awareness. The current branch is an early source baseline, not a finished consumer release.
+FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR camera awareness. The current branch is a validated MVP/debug build, not a finished consumer release.
 
 ## Current Build Status
 
@@ -48,12 +48,12 @@ OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-de
 ```
 
 Verified debug package/application ID: `com.yetiwurks.flockfree`.
-Verified APK SHA-256: `29cbf62a0695741202ce459d34cff99f0cc1a8be8f8a43f36b379b9e0b94e934`.
-That APK was built from clean source commit `f5751c5cda9bcaff62fc0d47838ce4f87e8183bd`, installed and launched on a Moto G Stylus over Wi-Fi ADB, and diagnostics showed `MapActivity` top-resumed with no fatal FlockFree crash entries.
+Verified APK SHA-256: `cd93d295d16a2ca71eb46a46e2e0583add3885236ca834cf397a393715005534`.
+That APK was built from clean source commit `155a5382e8b88eb1ddb95e3ee3791416de5d704e`, installed and launched on a Moto G Stylus over Wi-Fi ADB, and readiness reported `READY` with camera cache/database, permissions, CYD service, and filtered crash checks passing.
 
 ## What Works Now
 
-- App branding and Gradle flavor are pointed at FlockFree for the `gplayFree` debug build.
+- App branding, launcher/adaptive/splash icons, and visible app palette are pointed at FlockFree for the `gplayFree` debug build.
 - The FlockFree plugin is registered in OsmAnd and enabled by default.
 - Camera data downloads from `https://data.dontgetflocked.com/cameras.geojson.gz`, is cached as GeoJSON, and refreshes weekly.
 - The data loader handles both gzip and plain GeoJSON because the live `.gz` endpoint currently returns plain GeoJSON.
@@ -71,7 +71,7 @@ That APK was built from clean source commit `f5751c5cda9bcaff62fc0d47838ce4f87e8
 - The plugin settings screen is exposed through the OsmAnd plugin settings flow for map layer visibility, route summaries, corridor radius, alert distance, and CYD BLE enablement.
 - A CYD BLE UART path exists for `FYHELLO`, `FYSTATUS`, `FYSIM`, `FYGPS`, `pair_status`, and `detection` messages.
 - If CYD BLE is enabled, returning to the map starts a scan when the CYD manager is idle.
-- Current source includes a CYD foreground service source path with a low-priority notification so BLE monitoring can stay alive when the map is backgrounded. If CYD BLE is still enabled and Bluetooth permissions are already granted, the service can restart scanning without reopening the settings screen. The prior foreground-service APK proof was captured before the current `connectedDevice` service-type audit fix, so rebuild before treating the latest source as on-device proven.
+- Current source includes a CYD foreground service source path with a low-priority notification so BLE monitoring can stay alive when the map is backgrounded. If CYD BLE is still enabled and Bluetooth permissions are already granted, the service can restart scanning without reopening the settings screen. The latest verified APK proved the Android `connectedDevice` foreground-service type on-device.
 - Once the CYD is connected, FlockFree forwards valid phone GPS fixes over `FYGPS` about once per second so the CYD can time/location-stamp detections without DeFlock running separately.
 - The CYD settings status row reports recent phone GPS sends, or a cached phone GPS fix before hardware is connected, making the `FYGPS` stream and local bench-test readiness visible.
 - If CYD hardware is not connected, `Simulate CYD detection` can create a local test marker from the latest phone/OsmAnd location or the current map center so the map and reporting review flow can still be tested indoors.
@@ -80,11 +80,11 @@ That APK was built from clean source commit `f5751c5cda9bcaff62fc0d47838ce4f87e8
 ## Still Stubbed Or Thin
 
 - Camera avoidance is experimental and applies only to OsmAnd offline vector routing. It blocks whole route road objects, which can be coarse on long roads, and falls back to the original route if the avoided route fails.
-- CYD BLE integration now has a foreground service source path with permission-gated background scan restart. The foreground path was validated on-device at an earlier source commit, but the current `connectedDevice` service-type fix still needs a fresh APK proof. Recent detection candidates are persisted locally but not synced anywhere.
-- Camera storage now has app-private SQLite persistence plus an in-memory route/helper mirror. It is not a full geohash/tile store yet, and the SQLite source path needs a fresh APK proof before treating it as on-device validated.
+- CYD BLE integration now has a foreground service with permission-gated background scan restart, proven on-device with the Android `connectedDevice` service type. Recent detection candidates are persisted locally but not synced anywhere.
+- Camera storage now has app-private SQLite persistence plus an in-memory route/helper mirror. It is not a full geohash/tile store yet.
 - The bundled camera seed is a snapshot. `Refresh camera data` or the normal weekly refresh is still needed for the latest live camera data.
 - Widgets, quick actions, final settings polish, and rich camera detail UI are placeholders or not implemented.
-- Reporting now pre-fills OsmAnd's OSM POI editor with ALPR tags, but still needs end-to-end on-device validation against the save/upload flow.
+- Reporting now pre-fills OsmAnd's OSM POI editor with ALPR tags and has been validated through editor-open on-device. OSM save/upload remains intentionally untested for bench data.
 
 ## Phone Test Plan
 

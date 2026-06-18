@@ -413,6 +413,8 @@ for token in required_callers:
 stale_doc_phrases = [
     "no foreground service yet",
     "no foreground service or sync",
+    "fresh APK proof",
+    "current `connectedDevice` service-type change still needs",
 ]
 for phrase in stale_doc_phrases:
     for path, text in {
@@ -425,7 +427,8 @@ for phrase in stale_doc_phrases:
 required_doc_tokens = [
     "foreground service source path",
     "connectedDevice",
-    "fresh APK proof",
+    "latest verified APK proved",
+    "validated on-device",
 ]
 docs_text = "\n".join([readme, handoff, morning])
 missing_doc_tokens = [item for item in required_doc_tokens if item not in docs_text]

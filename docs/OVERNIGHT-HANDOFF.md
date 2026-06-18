@@ -5,30 +5,32 @@
 - Repository: `https://github.com/yetisoldier/FlockFree-Navigation`
 - Local path: `/home/yetisoldier/projects/FlockFree-Navigation`
 - Branch: `master`
-- Latest source: `9bffc95356` — doc-only handoff update after app-code source `9a9fae9b3f`.
-- Current source includes the route camera summary hook, exposed FlockFree settings screen with live dynamic status refresh, camera-data spatial indexing with source/freshness diagnostics, OSM editor tag-prefill reporting with map-center draft action and profile-persisted report-draft status, experimental two-pass offline camera avoidance, profile-persisted applied/fallback/skipped route diagnostics, movement/navigation nearby-camera alerts with profile-persisted last-check status plus a map-center alert test action, cache-only route startup for existing camera data, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, a CYD BLE foreground service using the Android `connectedDevice` foreground-service type with permission-gated background scan restart, phone GPS streaming to CYD over `FYGPS`, local CYD simulation from phone/OsmAnd GPS or current map center when hardware is absent, and persisted CYD detection map/review candidates.
+- Latest source: `155a5382e8` — branded READY build after on-device feature proof.
+- Current source includes FlockFree launcher/adaptive/splash branding with red/cyan visible UI colors, the route camera summary hook, exposed FlockFree settings screen with live dynamic status refresh, camera-data spatial indexing with source/freshness diagnostics, OSM editor tag-prefill reporting with map-center draft action and profile-persisted report-draft status, experimental two-pass offline camera avoidance, profile-persisted applied/fallback/skipped route diagnostics, movement/navigation nearby-camera alerts with profile-persisted last-check status plus a map-center alert test action, cache-only route startup for existing camera data, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, a CYD BLE foreground service using the Android `connectedDevice` foreground-service type with permission-gated background scan restart, phone GPS streaming to CYD over `FYGPS`, local CYD simulation from phone/OsmAnd GPS or current map center when hardware is absent, and persisted CYD detection map/review candidates.
 - **CYD BLE foreground service proof, 2026-06-18 08:40 CDT:** source commit `9a9fae9b3f` (with `connectedDevice` FGS type) built, installed, and validated on-device. `CydBleService` running with `isForeground=true`, `foregroundId=200`, `types=00000010` (connectedDevice), `stopIfKilled=false`, notification channel `flockfree_cyd_service` active. Service survives backgrounding (home key press). CYD hardware is paired: `CYD-Flock-You | Protocol v1 | GPS ready | SD ready | Detections 2`. No crashes in filtered logcat.
 - **On-device feature proof, 2026-06-18 09:30 CDT:** route avoidance, nearby-alert bench check, and OSM editor tag-prefill are proven on the Moto with app-code source `9a9fae9b3f`. The route test used Eric's supplied target, `600 9th Ave S, South St. Paul, MN 55075` (`44.8818584,-93.0457542`), after installing `Us_minnesota_northamerica_2.road.obf` to the app's external `roads/` directory. Driving-profile camera avoidance must be enabled; Browse-map preference state alone does not affect car routing. With Driving avoidance enabled, logcat showed `CameraAvoidanceHelper FlockFree collected 7 temporary avoid road ids` and `RouteProvider FlockFree recalculated route with 7 temporary avoid road ids`; the retained car-profile preference stored `FlockFree: 5 cameras near route (100-meter corridor): Flock Safety: 4, Other: 1; Avoidance applied: 7 camera-adjacent road objects blocked.` Nearby alert bench proof showed a forced map-center alert toast and retained `Last alert check`; OSM reporting proof opened OsmAnd's native POI editor with ALPR/surveillance tags attached. No OSM save/upload was performed.
+- **Branding proof, 2026-06-18 09:48 CDT:** source commit `155a5382e8` replaced launcher/adaptive/splash assets and shifted visible FlockFree settings colors to cyan section headers and red switches. The clean helper build installed on the Moto with readiness `READY`; on-device screenshot proof showed the new dark-red splash/background and branded settings colors.
 
 ## Verified APK
 
 - APK: `OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-debug.apk`
 - Synced artifact: `build-artifacts/FlockFree-gplayFree-legacy-fat-debug.apk`
 - Package: `com.yetiwurks.flockfree`
-- SHA-256: `2ce495d09dba9867d8482a8744cf7ba09b7baae37b00a50434d5e7c8f55feaa4`
-- Source commit: `9a9fae9b3f`
+- SHA-256: `cd93d295d16a2ca71eb46a46e2e0583add3885236ca834cf397a393715005534`
+- Source commit: `155a5382e8`
 - Signature: verifies with APK Signature Scheme v2 using the Android debug certificate
 - Phone install: succeeded over Wi-Fi ADB on `192.168.1.139:39183`
 - Launch: succeeded into `net.osmand.plus.activities.MapActivity`; readiness verdict READY
-- CYD BLE service: source commit `9a9fae9b3f` started on map resume, `isForeground=true`, `foregroundId=200`, foreground-service type `types=00000010` (`connectedDevice`), notification channel `flockfree_cyd_service` registered, and survived backgrounding.
+- CYD BLE service: source commit `9a9fae9b3f` started on map resume, `isForeground=true`, `foregroundId=200`, foreground-service type `types=00000010` (`connectedDevice`), notification channel `flockfree_cyd_service` registered, and survived backgrounding. Latest branded APK source `155a5382e8` retained CYD foreground service and notification readiness.
 - Build info: `build-artifacts/FlockFree-build-info.txt`
-- Diagnostic directory: `logs/flockfree-diagnostics/20260618-093108`
+- Readiness directory: `logs/flockfree-readiness/20260618-094725`
 - Crash check: no fatal FlockFree crash entries in filtered logcat
 
 ## What Is Ready To Test
 
 - FlockFree-branded OsmAnd package installs and launches.
 - FlockFree first-run copy appears on the phone.
+- Launcher/adaptive/splash assets and the visible FlockFree settings palette are now branded away from stock OsmAnd.
 - The in-tree FlockFree plugin is registered and enabled by default.
 - FlockFree has a visible plugin settings screen wired into the OsmAnd plugin settings flow.
 - Camera data loader accepts the live `data.dontgetflocked.com` response, which currently uses a `.gz` URL but returns plain GeoJSON.
@@ -64,14 +66,14 @@
 
 - Route avoidance is still experimental and only works for OsmAnd offline vector routing. It blocks whole road objects and can be coarse.
 - CYD BLE has a map-activity/settings-driven scanner/status/simulation/review MVP with idle scan-on-resume, a foreground service that keeps BLE alive in the background, local phone/map-center simulation fallback, and local candidate persistence, but no sync yet. The background service is validated on-device at app-code source `9a9fae9b3f` with the Android `connectedDevice` foreground-service type.
-- Camera data now has app-private SQLite persistence and Java fallback indexing. A full geohash/tile store is still later work, and the SQLite source path needs fresh APK proof.
+- Camera data now has app-private SQLite persistence and Java fallback indexing. A full geohash/tile store is still later work.
 - The bundled camera seed is a snapshot. Live freshness still depends on the weekly or manual `Refresh camera data` network path.
 - The current OSM reporting helper pre-fills tags and has been validated into OsmAnd's native POI editor. OSM save/upload remains intentionally untested; do not upload bench-test reports.
 
 ## Morning First Steps
 
 1. If Wi-Fi ADB is unreachable, run `scripts/flockfree-adb-recover.sh`. If it still cannot reach `device`, check the recovery bundle's `adb-mdns-after.txt` and `ip-neigh-after.txt`, then wake the phone, confirm same-Wi-Fi and Wireless debugging, copy the current IP:port, and rerun with `--serial PHONE_IP:PORT`.
-2. If app-code changes land after `9a9fae9b3f`, rebuild/install with `scripts/flockfree-user-build-install.sh` so the phone has the newest runtime. The helper runs the no-Gradle readiness gate after install and leaves a `logs/flockfree-readiness/.../readiness-report.txt` with APK freshness, permission, camera cache/database, launch, and crash evidence.
+2. If app-code changes land after `155a5382e8`, rebuild/install with `scripts/flockfree-user-build-install.sh` so the phone has the newest runtime. The helper runs the no-Gradle readiness gate after install and leaves a `logs/flockfree-readiness/.../readiness-report.txt` with APK freshness, permission, camera cache/database, launch, and crash evidence.
 3. Open the app on the Moto G Stylus. It should install as `com.yetiwurks.flockfree`.
 4. Work through or skip the first-run map download flow.
 5. Confirm camera data finishes loading on Wi-Fi.
