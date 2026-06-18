@@ -216,6 +216,8 @@ public class RouteProvider {
 			return null;
 		}
 
+		MissingMapsCalculationResult originalMissingMaps = params.calculationProgress != null
+				? params.calculationProgress.missingMapsCalculationResult : null;
 		RouteCalculationParams avoidedParams = copyParamsForFlockFreeAvoidance(params, avoidIds);
 		try {
 			RouteCalculationResult avoided = findVectorMapsRoute(avoidedParams, calcGPXRoute);
@@ -226,8 +228,16 @@ public class RouteProvider {
 		} catch (IOException e) {
 			log.warn("FlockFree temporary camera avoidance threw; returning original route", e);
 		}
+		restoreFlockFreeProgressState(params, originalMissingMaps);
 		log.warn("FlockFree temporary camera avoidance failed; returning original route");
 		return null;
+	}
+
+	private void restoreFlockFreeProgressState(@NonNull RouteCalculationParams params,
+	                                           @Nullable MissingMapsCalculationResult missingMaps) {
+		if (params.calculationProgress != null) {
+			params.calculationProgress.missingMapsCalculationResult = missingMaps;
+		}
 	}
 
 	@NonNull
