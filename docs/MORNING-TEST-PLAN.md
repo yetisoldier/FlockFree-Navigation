@@ -2,7 +2,7 @@
 
 Goal: prove the debug APK installs over Wi-Fi ADB, launches as FlockFree, and exposes the current camera-awareness MVP without chasing unfinished features.
 
-Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The last verified APK installed successfully on the Moto G Stylus and launched to the map. Current source includes camera indexing, bundled first-use camera seed fallback, camera-data source/freshness diagnostics, experimental two-pass camera avoidance, profile-persisted applied/fallback/skipped route diagnostics, movement/navigation camera alerts with profile-persisted last-check status, OSM editor tag-prefill reporting with map-center draft action and profile-persisted report-draft status, cache-backed route startup, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, a CYD foreground service source path with permission-gated background scan restart and Android `connectedDevice` service type, phone GPS streaming to CYD, local CYD simulation from phone/OsmAnd GPS or current map center when hardware is absent, and persisted CYD detection map/review candidates. Run `scripts/flockfree-user-build-install.sh` before morning feature testing so the installed APK matches the latest source.
+Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The last verified APK installed successfully on the Moto G Stylus and launched to the map. Current source includes SQLite-backed camera persistence, bundled first-use camera seed fallback, camera-data source/freshness diagnostics, experimental two-pass camera avoidance, profile-persisted applied/fallback/skipped route diagnostics, movement/navigation camera alerts with profile-persisted last-check status, OSM editor tag-prefill reporting with map-center draft action and profile-persisted report-draft status, cache/database-backed route startup, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, a CYD foreground service source path with permission-gated background scan restart and Android `connectedDevice` service type, phone GPS streaming to CYD, local CYD simulation from phone/OsmAnd GPS or current map center when hardware is absent, and persisted CYD detection map/review candidates. Run `scripts/flockfree-user-build-install.sh` before morning feature testing so the installed APK matches the latest source.
 
 ## Setup
 
@@ -141,7 +141,8 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 - [ ] Select an ALPR brand preset and confirm OsmAnd's POI editor opens with the surveillance/ALPR tags present in the advanced tag view.
 - [ ] Reopen FlockFree settings and confirm `Last report draft` reports the editor-opened or manual-tag-fallback path for that report attempt; restart the app once and confirm the row still holds the result.
 - [ ] Open plugin/settings surfaces and confirm the FlockFree settings screen is visible.
-- [ ] Confirm the FlockFree settings screen shows a `Camera data` status row after camera data loads, including source `cache`, `bundled seed`, or `network`, plus last-refresh freshness or `Refresh due`.
+- [ ] Confirm the FlockFree settings screen shows a `Camera data` status row after camera data loads, including source `database`, `cache`, `bundled seed`, or `network`, plus last-refresh freshness or `Refresh due`.
+- [ ] After one successful data load, restart the app and confirm the `Camera data` status row can report source `database`.
 - [ ] Tap `Refresh camera data` once on Wi-Fi and confirm the status switches to loading, then refreshes in place or returns to the indexed camera count.
 - [ ] Toggle the camera layer preference if reachable, then return to the map and confirm the layer hides/shows after refresh.
 - [ ] Confirm `Nearby camera alerts`, `Alert distance`, `Last alert check`, and `Check map center alert` are present.
@@ -169,6 +170,7 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 - Do not expect camera avoidance to work for BRouter or online routing. The experimental reroute path only applies to OsmAnd offline vector routing.
 - Do not expect camera avoidance to be subtle. It blocks whole route road objects and falls back to the original route if the avoided route fails.
 - Do not expect sync. Current source has a foreground service source path with permission-gated background scan restart plus scan/connect/request status/simulate from settings, can create a local phone/map-center test marker when hardware is absent, can scan again from the map when CYD BLE is enabled and idle, and can review recent GPS-backed detections from the map; those candidates are persisted only in app-private local storage. The background service was proven on-device at an earlier source commit, but the current `connectedDevice` service-type change still needs a fresh APK proof.
+- Do not expect the camera database to be the final spatial architecture. Current source has app-private SQLite persistence plus an in-memory fallback mirror; a geohash/tile store is still later work, and this source path needs fresh APK proof.
 - Offline first-run camera data should now be available from the bundled seed snapshot, but `Refresh camera data` is still needed to prove live network update behavior.
 - Do not expect polished widgets, quick actions, or a final settings UI beyond the exposed MVP preferences.
 

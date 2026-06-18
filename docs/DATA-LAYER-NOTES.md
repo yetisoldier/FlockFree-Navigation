@@ -16,11 +16,12 @@
 - Parsed camera points now build a coarse in-memory spatial grid. Bounding-box and nearby-camera queries inspect only overlapping grid buckets before exact filtering.
 - The grid is rebuilt atomically with every successful GeoJSON parse, so corrupt cache/network data cannot replace the previous usable camera list.
 - The FlockFree settings screen includes a camera-data diagnostic row with loaded camera count and grid bucket count.
+- Parsed camera points are also written to an app-private SQLite database. Cold startup and route startup can load the database without reparsing GeoJSON, while map/nearby queries use SQLite when the current database is available and fall back to the in-memory grid if needed.
+- The camera-data diagnostic row can now report `database`, `cache`, `bundled seed`, or `network` as the active source.
 
 ## Remaining Performance Work
 
-- The current path still keeps parsed camera points in memory. That is acceptable for a morning test, but it is not the final data architecture.
-- Move camera storage to SQLite or another indexed spatial store before broad daily use so map panning does not scan the full list repeatedly.
-- Consider tile or geohash partitioning for faster viewport reads and lower memory pressure.
+- The current path still keeps parsed camera points mirrored in memory for route/helper fallbacks. That is acceptable for a morning test, but it is not the final data architecture.
+- Consider tile or geohash partitioning on top of SQLite for faster viewport reads and lower memory pressure.
 - Add feed metadata validation if the upstream endpoint exposes an ETag, generation timestamp, or checksum contract.
 - Add last update time and last load failure to the settings diagnostic surface once the plugin UI is more complete.
