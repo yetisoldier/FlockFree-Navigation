@@ -2,7 +2,7 @@
 
 Goal: prove the debug APK installs over Wi-Fi ADB, launches as FlockFree, and exposes the current camera-awareness MVP without chasing unfinished features.
 
-Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The current verified APK installed successfully on the Moto G Stylus and launched into the FlockFree first-run screen. It includes the route-summary hook and exposed FlockFree plugin settings screen. Source now includes newer camera indexing, experimental two-pass camera avoidance, and a CYD BLE scaffold after that APK, so rebuild before testing those newer features.
+Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The current verified APK installed successfully on the Moto G Stylus and launched into the FlockFree first-run screen. It includes the route-summary hook and exposed FlockFree plugin settings screen. Source now includes newer camera indexing, experimental two-pass camera avoidance, OSM editor tag-prefill reporting, and a CYD BLE scaffold after that APK, so rebuild before testing those newer features.
 
 ## Setup
 
@@ -55,6 +55,7 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 - [ ] At zoom 15+, short vendor labels appear where camera data has a known brand.
 - [ ] Tapping a camera opens the `ALPR Camera` details dialog.
 - [ ] Long-press or use map context at a location and confirm `Add ALPR Camera` is present.
+- [ ] Select an ALPR brand preset and confirm OsmAnd's POI editor opens with the surveillance/ALPR tags present in the advanced tag view.
 - [ ] Open plugin/settings surfaces and confirm the FlockFree settings screen is visible.
 - [ ] Confirm the FlockFree settings screen shows a `Camera data` status row after camera data loads.
 - [ ] Toggle the camera layer preference if reachable, then return to the map and confirm the layer hides/shows after refresh.
@@ -78,4 +79,4 @@ adb logcat -d | rg -i 'flockfree|CameraData|FlockFreePlugin|AndroidRuntime|FATAL
 adb shell pidof com.yetiwurks.flockfree
 ```
 
-Pass condition: the app launches, reaches the map, does not crash, camera data indexes, at least one FlockFree camera-layer/reporting path can be observed, and the experimental offline reroute either avoids a camera-adjacent road or safely falls back to the original route.
+Pass condition: the app launches, reaches the map, does not crash, camera data indexes, the add-camera flow pre-fills the OSM editor with ALPR tags, and the experimental offline reroute either avoids a camera-adjacent road or safely falls back to the original route.

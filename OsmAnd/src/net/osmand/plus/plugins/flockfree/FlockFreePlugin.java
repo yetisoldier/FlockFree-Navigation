@@ -176,7 +176,7 @@ public class FlockFreePlugin extends OsmandPlugin {
                                                   Object selectedObj, boolean configureMenu) {
         if (selectedObj instanceof CameraData.CameraPoint) {
             adapter.addItem(new ContextMenuItem(PLUGIN_ID + ".camera_details")
-                    .setTitle("Camera Details")
+                    .setTitle(app.getString(R.string.flockfree_camera_details))
                     .setIcon(R.drawable.ic_action_info_dark)
                     .setOrder(CAMERA_DETAILS_ITEM_ORDER)
                     .setListener((uiAdapter, view, item, isChecked) -> {
@@ -185,7 +185,7 @@ public class FlockFreePlugin extends OsmandPlugin {
                     }));
         }
         adapter.addItem(new ContextMenuItem(PLUGIN_ID + ".add_camera")
-                .setTitle("Add ALPR Camera")
+                .setTitle(app.getString(R.string.flockfree_add_camera))
                 .setIcon(R.drawable.ic_action_plus_dark)
                 .setOrder(ADD_CAMERA_ITEM_ORDER)
                 .setListener((uiAdapter, view, item, isChecked) -> {
@@ -196,18 +196,20 @@ public class FlockFreePlugin extends OsmandPlugin {
 
     public void showCameraDetails(@NonNull MapActivity mapActivity, @NonNull CameraData.CameraPoint camera) {
         StringBuilder sb = new StringBuilder();
-        sb.append("Brand: ").append(camera.brand != null ? camera.brand : "Unknown").append("\n");
-        sb.append("Operator: ").append(camera.operator != null ? camera.operator : "Unknown").append("\n");
-        sb.append("Direction: ").append(camera.direction != null ? camera.direction : "Unknown").append("\n");
-        sb.append("Mount Type: ").append(camera.mountType != null ? camera.mountType : "Unknown").append("\n");
-        sb.append("Surveillance Zone: ").append(camera.surveillanceZone != null ? camera.surveillanceZone : "Unknown").append("\n");
-        sb.append("OSM ID: ").append(camera.osmId != null ? camera.osmId : "N/A").append("\n");
-        sb.append("OSM Type: ").append(camera.osmType != null ? camera.osmType : "N/A").append("\n");
-        sb.append("Last Updated: ").append(camera.osmTimestamp != null ? camera.osmTimestamp : "N/A");
+        String unknown = app.getString(R.string.res_unknown);
+        String na = app.getString(R.string.n_a);
+        sb.append(app.getString(R.string.flockfree_detail_brand)).append(": ").append(camera.brand != null ? camera.brand : unknown).append("\n");
+        sb.append(app.getString(R.string.flockfree_detail_operator)).append(": ").append(camera.operator != null ? camera.operator : unknown).append("\n");
+        sb.append(app.getString(R.string.flockfree_detail_direction)).append(": ").append(camera.direction != null ? camera.direction : unknown).append("\n");
+        sb.append(app.getString(R.string.flockfree_detail_mount_type)).append(": ").append(camera.mountType != null ? camera.mountType : unknown).append("\n");
+        sb.append(app.getString(R.string.flockfree_detail_surveillance_zone)).append(": ").append(camera.surveillanceZone != null ? camera.surveillanceZone : unknown).append("\n");
+        sb.append(app.getString(R.string.flockfree_detail_osm_id)).append(": ").append(camera.osmId != null ? camera.osmId : na).append("\n");
+        sb.append(app.getString(R.string.flockfree_detail_osm_type)).append(": ").append(camera.osmType != null ? camera.osmType : na).append("\n");
+        sb.append(app.getString(R.string.flockfree_detail_last_updated)).append(": ").append(camera.osmTimestamp != null ? camera.osmTimestamp : na);
         android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(mapActivity);
-        builder.setTitle("ALPR Camera")
+        builder.setTitle(R.string.flockfree_alpr_camera)
                 .setMessage(sb.toString())
-                .setPositiveButton("OK", null)
+                .setPositiveButton(R.string.shared_string_ok, null)
                 .show();
     }
 

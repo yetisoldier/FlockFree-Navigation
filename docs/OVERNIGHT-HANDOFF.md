@@ -6,7 +6,7 @@
 - Local path: `/home/yetisoldier/projects/FlockFree-Navigation`
 - Branch: `master`
 - Latest pushed source before the final settings handoff: `9a1b0ca9db Ignore local smoke-test logs`
-- Current source includes the route camera summary hook, exposed FlockFree settings screen, camera-data spatial indexing, experimental two-pass offline camera avoidance, and a low-level CYD BLE UART scaffold.
+- Current source includes the route camera summary hook, exposed FlockFree settings screen, camera-data spatial indexing, OSM editor tag-prefill reporting, experimental two-pass offline camera avoidance, and a low-level CYD BLE UART scaffold.
 
 ## Verified APK
 
@@ -28,6 +28,7 @@
 - Camera data loader accepts the live `data.dontgetflocked.com` response, which currently uses a `.gz` URL but returns plain GeoJSON.
 - Smoke log showed `CameraData Reading camera data payload; gzip=false`.
 - Camera map layer and camera context-menu/reporting code are present in source.
+- The `Add ALPR Camera` flow now opens OsmAnd's POI editor with the selected ALPR tag preset attached to the new node.
 - Route camera summary hook:
   - `FlockFreePlugin.newRouteIsCalculated(boolean)` now watches newly calculated routes when camera avoidance is enabled.
   - `CameraAvoidanceHelper` now checks cameras against route segments instead of only route vertices.
@@ -46,7 +47,7 @@
 - CYD BLE has a low-level client/parser scaffold, but no UI scanner, foreground service, or pending-review workflow yet.
 - Camera data is still held in memory and indexed in Java; persisted SQLite/geohash indexing is a later optimization.
 - First useful camera display needs network access for the live GeoJSON download unless a cache is already present.
-- The current OSM reporting helper needs end-to-end validation before treating it as upload-ready.
+- The current OSM reporting helper pre-fills tags, but still needs end-to-end on-device validation before treating it as upload-ready.
 
 ## Morning First Steps
 
