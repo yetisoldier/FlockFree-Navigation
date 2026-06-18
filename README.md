@@ -22,7 +22,8 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 - **Simulate mode** — `FYSIM` support for bench testing without live RF
 
 ### Route Avoidance
-- **Experimental two-pass offline avoidance** — Identifies camera-adjacent roads and recalculates routes
+- **Iterative relaxation avoidance** — Identifies camera-adjacent roads, blocks them, and recalculates. If full avoidance fails, progressively unblocks the least-camera-impactful roads (up to 4 iterations) until a viable route is found.
+- **Partial avoidance reporting** — When full avoidance isn't possible, reports how many camera roads were blocked and how many cameras remain on the route.
 - **Status persistence** — Route check results persist across app restarts
 
 ### Reporting
@@ -191,6 +192,7 @@ For developers and field testers:
 ## Known Limitations
 
 - Route avoidance is offline-only (requires downloaded vector maps)
+- Iterative relaxation caps at 4 retries to limit recalculation latency; very dense camera areas may still fall back to the original route
 - CYD detection to camera submission is a manual review flow (no auto-upload)
 - Reporting flow opens the editor but does not verify end-to-end OSM upload
 - No live RF drive test completed yet (bench simulation verified only)
