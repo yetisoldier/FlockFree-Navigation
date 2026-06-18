@@ -258,6 +258,18 @@ capture_permission_state() {
   log "wrote ${file}"
 }
 
+capture_service_state() {
+  file="${OUT_DIR}/service-state.txt"
+  shell_script="printf 'activity services:\\n'; dumpsys activity services $PACKAGE 2>/dev/null | grep -Ei 'CydBleService|foreground|startRequested|ServiceRecord|$PACKAGE' -A 12 -B 4 || true; printf '\\nnotifications:\\n'; dumpsys notification --noredact 2>/dev/null | grep -Ei 'FlockFree|CYD|flockfree_cyd_service|$PACKAGE' -A 12 -B 4 || true"
+  {
+    printf '$ %q -s %q shell %q\n\n' "$ADB" "$SERIAL" "$shell_script"
+    "$ADB" -s "$SERIAL" shell "$shell_script"
+    status="$?"
+    printf '\n[exit_status=%s]\n' "$status"
+  } > "$file" 2>&1
+  log "wrote ${file}"
+}
+
 write_summary() {
   adb_state="${1:-unknown}"
   package_installed="${2:-unknown}"
@@ -266,9 +278,12 @@ write_summary() {
   log_file="${OUT_DIR}/logcat-flockfree-camera-fatal.txt"
   app_data_file="${OUT_DIR}/app-data-state.txt"
   permission_file="${OUT_DIR}/permission-state.txt"
+  service_file="${OUT_DIR}/service-state.txt"
   log_lines="0"
   camera_cache_state="not checked"
   cyd_store_state="not checked"
+  cyd_service_state="not checked"
+  cyd_notification_state="not checked"
   fine_location_state="not checked"
   coarse_location_state="not checked"
   bluetooth_scan_state="not checked"
@@ -334,6 +349,18 @@ write_summary() {
       *) bluetooth_toggle_state="$bluetooth_on" ;;
     esac
   fi
+  if [ -f "$service_file" ]; then
+    if grep -q 'CydBleService' "$service_file"; then
+      cyd_service_state="listed"
+    else
+      cyd_service_state="not listed"
+    fi
+    if grep -Eiq 'FlockFree CYD|CYD-Flock-You|flockfree_cyd_service' "$service_file"; then
+      cyd_notification_state="listed"
+    else
+      cyd_notification_state="not listed"
+    fi
+  fi
 
   {
     printf 'FlockFree Moto diagnostics\n'
@@ -352,6 +379,8 @@ write_summary() {
     printf 'Bluetooth permissions: scan %s, connect %s; Bluetooth %s\n' \
       "$bluetooth_scan_state" "$bluetooth_connect_state" "$bluetooth_toggle_state"
     printf 'Notifications permission: %s\n' "$notification_state"
+    printf 'CYD foreground service: %s; notification: %s\n' \
+      "$cyd_service_state" "$cyd_notification_state"
     printf 'Filtered logcat lines: %s\n\n' "$log_lines"
     printf 'Key files:\n'
     printf '%s\n' '- adb-devices-after.txt'
@@ -364,6 +393,7 @@ write_summary() {
     printf '%s\n' '- ui-summary.txt'
     printf '%s\n' '- app-data-state.txt'
     printf '%s\n' '- permission-state.txt'
+    printf '%s\n' '- service-state.txt'
     printf '%s\n' '- logcat-flockfree-camera-fatal.txt'
   } > "${OUT_DIR}/summary.txt"
   log "wrote ${OUT_DIR}/summary.txt"
@@ -419,6 +449,8 @@ capture_ui_snapshot
 capture_app_data_state
 
 capture_permission_state
+
+capture_service_state
 
 capture_logcat_filter
 
