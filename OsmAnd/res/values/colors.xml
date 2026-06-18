@@ -124,7 +124,7 @@
 	<color name="color_osm_edit_modify">#fac403</color>
 	<color name="color_osm_edit_delete">#ee5622</color>
 
-	<color name="splash_screen_background_color">#1A0D0F</color>
+	<color name="splash_screen_background_color">#01091D</color>
 	<color name="backup_restore_icons_blue">#6C19FF</color>
 	<color name="backup_restore_icons_yellow">#FFC30D</color>
 	<color name="backup_restore_icons_green">#12B38B</color>
