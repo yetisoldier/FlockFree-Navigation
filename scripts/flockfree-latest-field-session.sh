@@ -32,10 +32,22 @@ Crash evidence: none found
 EOF
   echo "report" > "$session/field-session-report.txt"
   echo "commands" > "$session/manual-result-commands.txt"
-  OUT_ROOT="$tmp/logs/flockfree-field-session" "$0" --path-only \
-    | grep -q '20260101-010101'
-  OUT_ROOT="$tmp/logs/flockfree-field-session" "$0" \
-    | grep -q 'FlockFree latest field session'
+  path_output="$(OUT_ROOT="$tmp/logs/flockfree-field-session" "$0" --path-only)" || return 1
+  case "$path_output" in
+    *20260101-010101*) ;;
+    *)
+      echo "self-check failed: --path-only selected unexpected session: $path_output" >&2
+      return 1
+      ;;
+  esac
+  summary_output="$(OUT_ROOT="$tmp/logs/flockfree-field-session" "$0")" || return 1
+  case "$summary_output" in
+    *"FlockFree latest field session"*READY*"manual-result-commands.txt"*) ;;
+    *)
+      echo "self-check failed: summary output missing expected content" >&2
+      return 1
+      ;;
+  esac
   echo "FlockFree latest field-session self-check passed."
 }
 
