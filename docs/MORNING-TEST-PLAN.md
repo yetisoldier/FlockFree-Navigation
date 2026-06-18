@@ -22,6 +22,12 @@ scripts/flockfree-user-build-install.sh
 
 That script builds the current APK, copies it to `build-artifacts/`, writes `build-artifacts/FlockFree-build-info.txt` with source commit, clean/dirty state, SHA-256, and signature status, installs it on the default Moto Wi-Fi ADB endpoint, launches it, and captures diagnostics. It runs Gradle, so it is for Eric/manual use rather than agent execution.
 
+Source-only checks that do not run Gradle:
+
+```bash
+scripts/flockfree-source-checks.sh
+```
+
 Manual equivalent:
 
 ```bash

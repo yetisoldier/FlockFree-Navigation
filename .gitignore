@@ -47,6 +47,7 @@ Thumbs.db
 # Output files
 build
 /logs/
+/flockfree-*.png
 
 #Rendering test files
 OsmAnd-java/src/test/resources/rendering/*

@@ -81,3 +81,9 @@ scripts/flockfree-moto-diagnostics.sh
 ```
 
 The collector uses Wi-Fi ADB, defaults to `192.168.1.139:5555`, writes only local ignored files under `logs/flockfree-diagnostics/`, and captures ADB state, package install state, current activity, PID, package metadata, and filtered `FlockFree` / `CameraData` / `FATAL` logcat evidence.
+
+For source-only checks without running Gradle, run:
+
+```bash
+scripts/flockfree-source-checks.sh
+```

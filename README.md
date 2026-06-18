@@ -25,6 +25,12 @@ The helper writes the copied APK and `FlockFree-build-info.txt` under `build-art
 
 That helper intentionally runs Gradle and is for manual use. Agents should not execute it because `AGENTS.md` forbids agent-run Gradle build tasks.
 
+For source-only verification that does not run Gradle:
+
+```bash
+scripts/flockfree-source-checks.sh
+```
+
 Last verified local APK output:
 
 ```text
