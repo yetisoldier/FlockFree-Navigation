@@ -96,8 +96,9 @@ if missing_xml:
 required_fragments = [
     "CAMERA_DATA_REFRESH_KEY",
     "refreshCameraData()",
-    "flockfree_camera_data_loaded_source_summary",
+    "flockfree_camera_data_loaded_source_age_summary",
     "getLastLoadedSourceLabel()",
+    "getLastLoadedFreshnessLabel()",
     "ROUTE_LAST_CHECK_KEY",
     "setupRouteLastCheckPreference()",
     "CYD_CLEAR_DETECTIONS_KEY",

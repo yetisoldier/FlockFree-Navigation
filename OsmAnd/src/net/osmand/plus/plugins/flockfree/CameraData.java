@@ -394,6 +394,35 @@ public class CameraData {
         return app.getString(lastLoadedSource.labelRes);
     }
 
+    @NonNull
+    public synchronized String getLastLoadedFreshnessLabel() {
+        long lastUpdate = getLastUpdateTimestamp();
+        if (lastUpdate <= 0) {
+            return app.getString(R.string.flockfree_camera_data_last_update_never);
+        }
+
+        long ageMs = Math.max(0L, System.currentTimeMillis() - lastUpdate);
+        long ageHours = ageMs / (60L * 60L * 1000L);
+        String ageLabel;
+        if (ageHours < 1) {
+            ageLabel = app.getString(R.string.flockfree_camera_data_last_update_recent);
+        } else if (ageHours == 1) {
+            ageLabel = app.getString(R.string.flockfree_camera_data_last_update_one_hour);
+        } else if (ageHours < 24) {
+            ageLabel = app.getString(R.string.flockfree_camera_data_last_update_hours, ageHours);
+        } else {
+            long ageDays = Math.max(1L, ageHours / 24L);
+            ageLabel = ageDays == 1
+                    ? app.getString(R.string.flockfree_camera_data_last_update_one_day)
+                    : app.getString(R.string.flockfree_camera_data_last_update_days, ageDays);
+        }
+        String refreshState = app.getString(isRefreshDue(lastUpdate)
+                ? R.string.flockfree_camera_data_refresh_due_suffix
+                : R.string.flockfree_camera_data_refresh_current_suffix);
+        return app.getString(R.string.flockfree_camera_data_last_update_with_refresh_state,
+                ageLabel, refreshState);
+    }
+
     public synchronized List<CameraPoint> getCamerasNear(double lat, double lon, double radiusMeters) {
         double latitudeDelta = radiusMeters / 111_000d;
         double longitudeScale = Math.max(0.01d, Math.cos(Math.toRadians(lat)));
