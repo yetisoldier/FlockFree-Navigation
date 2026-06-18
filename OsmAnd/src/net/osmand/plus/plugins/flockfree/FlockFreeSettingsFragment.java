@@ -16,6 +16,7 @@ import net.osmand.plus.plugins.flockfree.cyd.CydHardwareManager;
 import net.osmand.plus.settings.fragments.BaseSettingsFragment;
 import net.osmand.plus.settings.preferences.ListPreferenceEx;
 import net.osmand.plus.settings.preferences.SwitchPreferenceEx;
+import net.osmand.plus.utils.AndroidUtils;
 
 public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 
@@ -166,6 +167,33 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 
 	@Override
 	public boolean onPreferenceChange(Preference preference, Object newValue) {
+		if (plugin.CYD_BLE_ENABLED.getId().equals(preference.getKey())) {
+			if (Boolean.TRUE.equals(newValue)) {
+				MapActivity mapActivity = getMapActivity();
+				if (mapActivity == null) {
+					app.showShortToastMessage(R.string.flockfree_cyd_status_map_unavailable);
+					return false;
+				}
+				if (!AndroidUtils.requestBLEPermissions(mapActivity)) {
+					setupCydStatusPreference();
+					startDynamicStatusRefresh();
+					return false;
+				}
+				AndroidUtils.requestNotificationPermissionIfNeeded(mapActivity);
+				boolean accepted = super.onPreferenceChange(preference, newValue);
+				if (accepted) {
+					startCydScan(mapActivity);
+				}
+				return accepted;
+			}
+			boolean accepted = super.onPreferenceChange(preference, newValue);
+			if (accepted) {
+				CydBleService.stop(app);
+				plugin.getCydHardwareManager().disconnect();
+				setupCydStatusPreference();
+			}
+			return accepted;
+		}
 		boolean accepted = super.onPreferenceChange(preference, newValue);
 		if (!accepted) {
 			return false;
@@ -175,14 +203,6 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 			if (mapActivity != null) {
 				plugin.updateLayers(mapActivity, mapActivity);
 				mapActivity.refreshMap();
-			}
-		} else if (plugin.CYD_BLE_ENABLED.getId().equals(preference.getKey())) {
-			if (Boolean.TRUE.equals(newValue)) {
-				startCydScan();
-			} else {
-				CydBleService.stop(app);
-				plugin.getCydHardwareManager().disconnect();
-				setupCydStatusPreference();
 			}
 		}
 		return true;
@@ -244,7 +264,17 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 			app.showShortToastMessage(R.string.flockfree_cyd_status_map_unavailable);
 			return;
 		}
+		if (!AndroidUtils.requestBLEPermissions(mapActivity)) {
+			setupCydStatusPreference();
+			startDynamicStatusRefresh();
+			return;
+		}
+		AndroidUtils.requestNotificationPermissionIfNeeded(mapActivity);
 		plugin.CYD_BLE_ENABLED.set(true);
+		startCydScan(mapActivity);
+	}
+
+	private void startCydScan(@NonNull MapActivity mapActivity) {
 		CydBleService.start(mapActivity);
 		plugin.getCydHardwareManager().startScanAndConnect(mapActivity);
 		setupCydStatusPreference();

@@ -71,7 +71,7 @@ That APK was built from clean source commit `f5751c5cda9bcaff62fc0d47838ce4f87e8
 - The plugin settings screen is exposed through the OsmAnd plugin settings flow for map layer visibility, route summaries, corridor radius, alert distance, and CYD BLE enablement.
 - A CYD BLE UART path exists for `FYHELLO`, `FYSTATUS`, `FYSIM`, `FYGPS`, `pair_status`, and `detection` messages.
 - If CYD BLE is enabled, returning to the map starts a scan when the CYD manager is idle.
-- Current source includes a CYD foreground service source path with a low-priority notification so BLE monitoring can stay alive when the map is backgrounded. If CYD BLE is still enabled and Bluetooth permissions are already granted, the service can restart scanning without reopening the settings screen.
+- Current source includes a CYD foreground service source path with a low-priority notification so BLE monitoring can stay alive when the map is backgrounded. If CYD BLE is still enabled and Bluetooth permissions are already granted, the service can restart scanning without reopening the settings screen. The prior foreground-service APK proof was captured before the current `connectedDevice` service-type audit fix, so rebuild before treating the latest source as on-device proven.
 - Once the CYD is connected, FlockFree forwards valid phone GPS fixes over `FYGPS` about once per second so the CYD can time/location-stamp detections without DeFlock running separately.
 - The CYD settings status row reports recent phone GPS sends, or a cached phone GPS fix before hardware is connected, making the `FYGPS` stream and local bench-test readiness visible.
 - If CYD hardware is not connected, `Simulate CYD detection` can create a local test marker from the latest phone/OsmAnd location or the current map center so the map and reporting review flow can still be tested indoors.
@@ -80,7 +80,7 @@ That APK was built from clean source commit `f5751c5cda9bcaff62fc0d47838ce4f87e8
 ## Still Stubbed Or Thin
 
 - Camera avoidance is experimental and applies only to OsmAnd offline vector routing. It blocks whole route road objects, which can be coarse on long roads, and falls back to the original route if the avoided route fails.
-- CYD BLE integration now has a foreground service source path with permission-gated background scan restart, but that service is not yet validated on-device in the latest installed APK. Recent detection candidates are persisted locally but not synced anywhere.
+- CYD BLE integration now has a foreground service source path with permission-gated background scan restart. The foreground path was validated on-device at an earlier source commit, but the current `connectedDevice` service-type fix still needs a fresh APK proof. Recent detection candidates are persisted locally but not synced anywhere.
 - Camera storage is an in-memory parsed GeoJSON list with a spatial grid, not a persisted SQLite/geohash database.
 - The bundled camera seed is a snapshot. `Refresh camera data` or the normal weekly refresh is still needed for the latest live camera data.
 - Widgets, quick actions, final settings polish, and rich camera detail UI are placeholders or not implemented.

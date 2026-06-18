@@ -149,6 +149,9 @@ required_fragment_tokens = [
     "plugin.checkCameraAlertAtMapCenter(getMapActivity())",
     "REPORT_MAP_CENTER_KEY",
     "showAddCameraDialogAtMapCenter(getMapActivity())",
+    "AndroidUtils.requestBLEPermissions(mapActivity)",
+    "AndroidUtils.requestNotificationPermissionIfNeeded(mapActivity)",
+    "return false;",
 ]
 missing_fragment = [item for item in required_fragment_tokens if item not in fragment]
 if missing_fragment:
@@ -167,6 +170,10 @@ if missing_reporter:
 required_cyd_tokens = [
     "startScanAndConnectFromService(",
     "startScanAndConnectWithGrantedPermissions(",
+    "createScanFilters()",
+    "ScanFilter.Builder()",
+    "setServiceUuid(new ParcelUuid(CydBleUartClient.UART_SERVICE_UUID))",
+    "setDeviceName(CydBleUartClient.DEFAULT_DEVICE_NAME_PREFIX)",
     "simulateLocalDetection(",
     "getLocalSimulationFix(",
     "map-center-local-test",
@@ -274,10 +281,10 @@ morning = Path("docs/MORNING-TEST-PLAN.md").read_text()
 
 required_manifest = [
     "android.permission.FOREGROUND_SERVICE",
-    "android.permission.FOREGROUND_SERVICE_LOCATION",
+    "android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE",
     "android.permission.POST_NOTIFICATIONS",
     "net.osmand.plus.plugins.flockfree.cyd.CydBleService",
-    'android:foregroundServiceType="location"',
+    'android:foregroundServiceType="connectedDevice"',
 ]
 missing_manifest = [item for item in required_manifest if item not in manifest]
 if missing_manifest:
@@ -297,11 +304,13 @@ required_service = [
     "extends Service",
     "startForeground(",
     "NotificationChannel",
-    "FOREGROUND_SERVICE_TYPE_LOCATION",
+    "FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE",
     "CydHardwareManager",
     "getHardwareManager()",
     "maybeStartBackgroundScan()",
     "intent != null ? intent.getStringExtra(EXTRA_ACTION) : ACTION_START",
+    "maybeStartBackgroundScan();\n\t\t\treturn START_STICKY;",
+    "state == CydHardwareManager.State.IDLE || state == CydHardwareManager.State.ERROR",
     "startScanAndConnectFromService(this)",
     "startForegroundService(intent)",
     "NotificationCompat.Builder",
@@ -333,7 +342,8 @@ for phrase in stale_doc_phrases:
             raise SystemExit(f"stale foreground service wording in {path}: {phrase}")
 required_doc_tokens = [
     "foreground service source path",
-    "not yet validated on-device",
+    "connectedDevice",
+    "fresh APK proof",
 ]
 docs_text = "\n".join([readme, handoff, morning])
 missing_doc_tokens = [item for item in required_doc_tokens if item not in docs_text]

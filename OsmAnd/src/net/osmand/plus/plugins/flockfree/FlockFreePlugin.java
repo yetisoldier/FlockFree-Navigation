@@ -434,7 +434,8 @@ public class FlockFreePlugin extends OsmandPlugin {
         }
         CydBleService.start(activity);
         CydHardwareManager manager = getCydHardwareManager();
-        if (manager.getState() == CydHardwareManager.State.IDLE) {
+        CydHardwareManager.State state = manager.getState();
+        if (state == CydHardwareManager.State.IDLE || state == CydHardwareManager.State.ERROR) {
             manager.startScanAndConnect(activity);
         }
     }

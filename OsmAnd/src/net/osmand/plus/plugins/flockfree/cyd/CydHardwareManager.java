@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanRecord;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
@@ -182,7 +183,7 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 			scanCallback = callback;
 		}
 		try {
-			bluetoothLeScanner.startScan(null, settings, callback);
+			bluetoothLeScanner.startScan(createScanFilters(), settings, callback);
 			handler.postDelayed(this::handleScanTimeout, SCAN_TIMEOUT_MS);
 			return true;
 		} catch (RuntimeException e) {
@@ -365,6 +366,18 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 			setState(State.ERROR, app.getString(R.string.flockfree_cyd_status_not_found));
 			app.showShortToastMessage(R.string.flockfree_cyd_status_not_found);
 		}
+	}
+
+	@NonNull
+	private List<ScanFilter> createScanFilters() {
+		List<ScanFilter> filters = new ArrayList<>();
+		filters.add(new ScanFilter.Builder()
+				.setServiceUuid(new ParcelUuid(CydBleUartClient.UART_SERVICE_UUID))
+				.build());
+		filters.add(new ScanFilter.Builder()
+				.setDeviceName(CydBleUartClient.DEFAULT_DEVICE_NAME_PREFIX)
+				.build());
+		return filters;
 	}
 
 	private ScanCallback createScanCallback(@NonNull Context context) {
