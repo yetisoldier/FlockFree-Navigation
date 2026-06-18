@@ -134,11 +134,23 @@ required_plugin_tokens = [
     "registerStringPreference(",
     "CAMERA_ROUTE_LAST_CHECK_SUMMARY.set(summary)",
     "CAMERA_ALERT_LAST_CHECK_SUMMARY.set(summary)",
+    "checkCameraAlertAtMapCenter(",
+    "checkCameraAlertAt(latitude, longitude",
+    "getMapView().getLatitude()",
+    "forceAlert",
+    "flockfree_alert_last_check_map_unavailable",
     "new CameraReporter(app, CAMERA_REPORT_LAST_DRAFT_SUMMARY)",
 ]
 missing_plugin = [item for item in required_plugin_tokens if item not in plugin]
 if missing_plugin:
     raise SystemExit("missing persisted status preference wiring:\n" + "\n".join(missing_plugin))
+required_fragment_tokens = [
+    "ALERT_CHECK_MAP_CENTER_KEY",
+    "plugin.checkCameraAlertAtMapCenter(getMapActivity())",
+]
+missing_fragment = [item for item in required_fragment_tokens if item not in fragment]
+if missing_fragment:
+    raise SystemExit("missing map-center alert settings wiring:\n" + "\n".join(missing_fragment))
 required_reporter_tokens = [
     "CommonPreference<String> lastReportDraftSummaryPreference",
     "lastReportDraftSummaryPreference.get()",
@@ -283,8 +295,9 @@ required = [
     "Done with attention",
     "morning readiness gate failed",
     "Last alert check",
+    "Check map center alert",
     "Last report draft",
-    "Nearby camera alert behavior and Last alert check status observed",
+    "Map-center or live nearby camera alert behavior and Last alert check status observed",
     "ALPR/surveillance tag prefill and Last report draft status observed",
     "local phone/map-center simulation fallback",
     "Map anchor coordinates",

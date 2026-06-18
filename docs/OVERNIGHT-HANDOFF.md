@@ -6,7 +6,7 @@
 - Local path: `/home/yetisoldier/projects/FlockFree-Navigation`
 - Branch: `master`
 - Latest functional source: current `master` after the map-center CYD simulation fallback pass.
-- Current source includes the route camera summary hook, exposed FlockFree settings screen with live dynamic status refresh, camera-data spatial indexing with source/freshness diagnostics, OSM editor tag-prefill reporting with profile-persisted report-draft status, experimental two-pass offline camera avoidance, profile-persisted applied/fallback/skipped route diagnostics, movement/navigation nearby-camera alerts with profile-persisted last-check status, cache-only route startup for existing camera data, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, phone GPS streaming to CYD over `FYGPS`, local CYD simulation from phone/OsmAnd GPS or current map center when hardware is absent, and persisted CYD detection map/review candidates.
+- Current source includes the route camera summary hook, exposed FlockFree settings screen with live dynamic status refresh, camera-data spatial indexing with source/freshness diagnostics, OSM editor tag-prefill reporting with profile-persisted report-draft status, experimental two-pass offline camera avoidance, profile-persisted applied/fallback/skipped route diagnostics, movement/navigation nearby-camera alerts with profile-persisted last-check status plus a map-center alert test action, cache-only route startup for existing camera data, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, phone GPS streaming to CYD over `FYGPS`, local CYD simulation from phone/OsmAnd GPS or current map center when hardware is absent, and persisted CYD detection map/review candidates.
 
 ## Verified APK
 
@@ -52,7 +52,7 @@
 - The camera-data diagnostic row now shows whether the active data came from cache, bundled seed, or network, plus last-refresh age and whether refresh is current or due.
 - The settings fragment refreshes dynamic status rows in place while camera data is loading or CYD scan/connect/status is active, so morning testers do not need to leave and re-enter the screen to see status settle.
 - The settings screen now includes `Refresh camera data`, which starts an explicit network refresh and leaves existing loaded data in place if the refresh fails.
-- The `Nearby camera alerts` switch and `Alert distance` preference are now active: while navigating or moving, FlockFree checks the nearest indexed camera and shows a cooldown-limited nearby-camera toast. The profile-persisted `Last alert check` settings row preserves the last trigger, no-camera, cooldown, or skipped reason after the toast disappears.
+- The `Nearby camera alerts` switch and `Alert distance` preference are now active: while navigating or moving, FlockFree checks the nearest indexed camera and shows a cooldown-limited nearby-camera toast. `Check map center alert` runs the nearest-camera check at the current map center and forces a toast when a camera is within range, making bench validation possible from a suggested anchor. The profile-persisted `Last alert check` settings row preserves the last trigger, no-camera, cooldown, or skipped reason after the toast disappears.
 - A CYD BLE path exists under `OsmAnd/src/net/osmand/plus/plugins/flockfree/cyd/`, including Nordic UART connection handling, idle auto-scan on map resume when CYD BLE is enabled, parsers for `pair_status` and `detection` JSON, outbound `FYGPS` phone-location streaming, local phone/map-center test-marker creation when hardware is not connected, and FlockFree settings rows for scan/connect, status request, simulated detection, clearing recent detections, and visible phone-GPS-send/status readiness.
 - GPS-backed CYD detections are now retained in memory, persisted to `flockfree-cyd-detections.json` in app-private storage, drawn on the map as CYD diamond markers, selectable from the map/context menu, and can be handed to the existing `Add ALPR Camera` reporting flow.
 
@@ -73,9 +73,9 @@
 5. Confirm camera data finishes loading on Wi-Fi.
 6. Move/zoom to a camera-dense area and verify markers.
 7. Open the plugin settings, confirm the camera-data diagnostic row includes an indexed camera count, source, and freshness/refresh-due status, tap `Refresh camera data` on Wi-Fi, and confirm the row refreshes in place or returns to an indexed camera count.
-8. Confirm the `Nearby camera alerts` / `Alert distance` / `Last alert check` rows are present.
-9. While navigating or moving near a known camera, verify FlockFree shows a nearby-camera toast and does not repeat it continuously.
-10. Reopen FlockFree settings and confirm `Last alert check` preserves the trigger, no-camera, cooldown, or skipped reason after an app restart.
+8. Confirm the `Nearby camera alerts` / `Alert distance` / `Last alert check` / `Check map center alert` rows are present.
+9. Move the map to a suggested camera-dense anchor, tap `Check map center alert`, and confirm `Last alert check` preserves the trigger, no-camera, loading, or disabled result after an app restart.
+10. During a real drive or simulated movement later, confirm the live nearby-camera alert toast appears no more than once per cooldown window.
 11. Enable camera avoidance, calculate a route, and verify the route-summary toast includes an applied/fallback/skipped status line.
 12. Reopen FlockFree settings and confirm `Last route check` preserves the same route summary/status after the toast disappears and after an app restart.
 13. Compare one camera-dense offline route with avoidance off and on. A successful newer build should either route around camera-adjacent road objects, fall back cleanly to the original route, or say why avoidance was skipped.

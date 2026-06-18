@@ -83,6 +83,13 @@
 		android:title="@string/flockfree_alert_last_check" />
 
 	<Preference
+		android:key="flockfree_alert_check_map_center"
+		android:layout="@layout/preference_with_descr"
+		android:persistent="false"
+		android:summary="@string/flockfree_alert_check_map_center_description"
+		android:title="@string/flockfree_alert_check_map_center" />
+
+	<Preference
 		android:layout="@layout/simple_divider_item"
 		android:selectable="false" />
 

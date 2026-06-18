@@ -179,6 +179,22 @@ public class FlockFreePlugin extends OsmandPlugin {
         CAMERA_ALERT_LAST_CHECK_SUMMARY.set(summary);
     }
 
+    public void checkCameraAlertAtMapCenter(@Nullable MapActivity mapActivity) {
+        if (mapActivity == null || mapActivity.getMapView() == null) {
+            setLastCameraAlertCheckSummary(app.getString(R.string.flockfree_alert_last_check_map_unavailable));
+            app.showShortToastMessage(R.string.flockfree_alert_last_check_map_unavailable);
+            return;
+        }
+        double latitude = mapActivity.getMapView().getLatitude();
+        double longitude = mapActivity.getMapView().getLongitude();
+        if (!isValidCoordinate(latitude, longitude)) {
+            setLastCameraAlertCheckSummary(app.getString(R.string.flockfree_alert_last_check_map_unavailable));
+            app.showShortToastMessage(R.string.flockfree_alert_last_check_map_unavailable);
+            return;
+        }
+        checkCameraAlertAt(latitude, longitude, null, false, false, true);
+    }
+
     @Override
     protected List<QuickActionType> getQuickActionTypes() {
         List<QuickActionType> actions = new ArrayList<>();
@@ -365,7 +381,14 @@ public class FlockFreePlugin extends OsmandPlugin {
             return;
         }
         updateCydPhoneLocation(location);
-        String skipReason = getCameraAlertSkipReason(location);
+        Float accuracy = location.hasAccuracy() ? location.getAccuracy() : null;
+        boolean moving = location.hasSpeed() && location.getSpeed() >= MOVING_ALERT_SPEED_MPS;
+        checkCameraAlertAt(location.getLatitude(), location.getLongitude(), accuracy, true, moving, false);
+    }
+
+    private void checkCameraAlertAt(double latitude, double longitude, @Nullable Float accuracy,
+                                    boolean requireNavigationOrMovement, boolean moving, boolean forceAlert) {
+        String skipReason = getCameraAlertSkipReason(accuracy, requireNavigationOrMovement, moving);
         if (skipReason != null) {
             setLastCameraAlertCheckSummary(skipReason);
             return;
@@ -378,19 +401,19 @@ public class FlockFreePlugin extends OsmandPlugin {
         }
         int alertDistance = CAMERA_ALERT_DISTANCE.get();
         List<CameraData.CameraPoint> cameras = data.getCamerasNear(
-                location.getLatitude(), location.getLongitude(), alertDistance);
+                latitude, longitude, alertDistance);
         CameraData.CameraPoint closest = null;
         double closestDistance = Double.MAX_VALUE;
         for (CameraData.CameraPoint camera : cameras) {
             double distance = MapUtils.getDistance(
-                    location.getLatitude(), location.getLongitude(), camera.lat, camera.lon);
+                    latitude, longitude, camera.lat, camera.lon);
             if (distance < closestDistance) {
                 closest = camera;
                 closestDistance = distance;
             }
         }
         if (closest != null) {
-            showCameraAlertIfNeeded(closest, closestDistance);
+            showCameraAlertIfNeeded(closest, closestDistance, forceAlert);
         } else {
             setLastCameraAlertCheckSummary(app.getString(R.string.flockfree_alert_last_check_no_cameras,
                     alertDistance));
@@ -414,7 +437,8 @@ public class FlockFreePlugin extends OsmandPlugin {
     }
 
     @Nullable
-    private String getCameraAlertSkipReason(@NonNull Location location) {
+    private String getCameraAlertSkipReason(@Nullable Float accuracy, boolean requireNavigationOrMovement,
+                                            boolean moving) {
         if (!CAMERA_ALERTS_ENABLED.get()) {
             return app.getString(R.string.flockfree_alert_last_check_disabled);
         }
@@ -422,16 +446,19 @@ public class FlockFreePlugin extends OsmandPlugin {
         if (alertDistance <= 0) {
             return app.getString(R.string.flockfree_alert_last_check_disabled);
         }
-        if (location.hasAccuracy() && location.getAccuracy() > alertDistance) {
+        if (accuracy != null && accuracy > alertDistance) {
             return app.getString(R.string.flockfree_alert_last_check_accuracy,
-                    Math.round(location.getAccuracy()), alertDistance);
+                    Math.round(accuracy), alertDistance);
         }
-        boolean shouldCheck = app.getRoutingHelper().isFollowingMode()
-                || (location.hasSpeed() && location.getSpeed() >= MOVING_ALERT_SPEED_MPS);
+        if (!requireNavigationOrMovement) {
+            return null;
+        }
+        boolean shouldCheck = app.getRoutingHelper().isFollowingMode() || moving;
         return shouldCheck ? null : app.getString(R.string.flockfree_alert_last_check_waiting);
     }
 
-    private void showCameraAlertIfNeeded(@NonNull CameraData.CameraPoint camera, double distanceMeters) {
+    private void showCameraAlertIfNeeded(@NonNull CameraData.CameraPoint camera, double distanceMeters,
+                                         boolean forceAlert) {
         long now = System.currentTimeMillis();
         String cameraKey = getCameraAlertKey(camera);
         String brand = camera.brand != null ? camera.brand : app.getString(R.string.res_unknown);
@@ -439,7 +466,7 @@ public class FlockFreePlugin extends OsmandPlugin {
         long cooldown = cameraKey.equals(lastCameraAlertKey)
                 ? SAME_CAMERA_ALERT_COOLDOWN_MS
                 : CAMERA_ALERT_COOLDOWN_MS;
-        if (now - lastCameraAlertTimeMs < cooldown) {
+        if (!forceAlert && now - lastCameraAlertTimeMs < cooldown) {
             setLastCameraAlertCheckSummary(app.getString(R.string.flockfree_alert_last_check_cooldown,
                     brand, roundedDistance));
             return;
@@ -458,6 +485,13 @@ public class FlockFreePlugin extends OsmandPlugin {
             return camera.osmType + ":" + camera.osmId;
         }
         return Math.round(camera.lat * 1_000_000d) + ":" + Math.round(camera.lon * 1_000_000d);
+    }
+
+    private boolean isValidCoordinate(double latitude, double longitude) {
+        return !Double.isNaN(latitude) && !Double.isInfinite(latitude)
+                && !Double.isNaN(longitude) && !Double.isInfinite(longitude)
+                && latitude >= -90d && latitude <= 90d
+                && longitude >= -180d && longitude <= 180d;
     }
 
     @Override

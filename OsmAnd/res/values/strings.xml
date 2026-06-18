@@ -67,9 +67,12 @@
 	<string name="flockfree_alert_distance_default_summary">300 meters</string>
 	<string name="flockfree_nearby_camera_alert">FlockFree: %1$s camera about %2$d meters away.</string>
 	<string name="flockfree_alert_last_check">Last alert check</string>
+	<string name="flockfree_alert_check_map_center">Check map center alert</string>
+	<string name="flockfree_alert_check_map_center_description">Check the nearest known camera to the current map center and update Last alert check.</string>
 	<string name="flockfree_alert_last_check_none">No alert checked yet.</string>
 	<string name="flockfree_alert_last_check_disabled">Nearby alert skipped: alerts disabled.</string>
 	<string name="flockfree_alert_last_check_loading">Nearby alert skipped: camera data is loading.</string>
+	<string name="flockfree_alert_last_check_map_unavailable">Nearby alert skipped: map center unavailable.</string>
 	<string name="flockfree_alert_last_check_accuracy">Nearby alert skipped: location accuracy %1$d meters exceeds alert distance %2$d meters.</string>
 	<string name="flockfree_alert_last_check_waiting">Nearby alert skipped: waiting for navigation or movement.</string>
 	<string name="flockfree_alert_last_check_no_cameras">Nearby alert: no cameras within %1$d meters.</string>

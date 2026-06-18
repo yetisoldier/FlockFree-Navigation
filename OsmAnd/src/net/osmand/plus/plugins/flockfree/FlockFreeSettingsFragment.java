@@ -24,6 +24,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 	private static final String CAMERA_DATA_REFRESH_KEY = "flockfree_camera_data_refresh";
 	private static final String ROUTE_LAST_CHECK_KEY = "flockfree_route_last_check";
 	private static final String ALERT_LAST_CHECK_KEY = "flockfree_alert_last_check";
+	private static final String ALERT_CHECK_MAP_CENTER_KEY = "flockfree_alert_check_map_center";
 	private static final String REPORT_LAST_DRAFT_KEY = "flockfree_report_last_draft";
 	private static final String CYD_STATUS_KEY = "flockfree_cyd_status";
 	private static final String CYD_CONNECT_KEY = "flockfree_cyd_connect";
@@ -193,6 +194,11 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 			return true;
 		} else if (CYD_CONNECT_KEY.equals(key)) {
 			startCydScan();
+			return true;
+		} else if (ALERT_CHECK_MAP_CENTER_KEY.equals(key)) {
+			plugin.checkCameraAlertAtMapCenter(getMapActivity());
+			setupAlertLastCheckPreference();
+			startDynamicStatusRefresh();
 			return true;
 		} else if (CYD_REQUEST_STATUS_KEY.equals(key)) {
 			plugin.getCydHardwareManager().requestStatus();

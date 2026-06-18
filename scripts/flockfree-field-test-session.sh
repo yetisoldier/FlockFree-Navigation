@@ -189,7 +189,7 @@ Use these while the timed logcat capture is running:
 2. Tap Refresh camera data on Wi-Fi and wait for the row to settle.
 3. Calculate one camera-dense offline route with avoidance enabled.
 4. Reopen settings, restart the app once, and confirm Last route check preserves applied/fallback/skipped status.
-5. Reopen FlockFree settings after a restart and confirm Last alert check explains the last trigger/skip state.
+5. Move the map to a suggested camera-dense anchor, tap Check map center alert, then reopen FlockFree settings after a restart and confirm Last alert check explains the trigger/skip state.
 6. Long-press a map location, choose Add ALPR Camera, and confirm OsmAnd's editor opens with ALPR/surveillance tags.
 7. Reopen FlockFree settings after a restart and confirm Last report draft describes the editor or fallback path.
 8. Enable CYD BLE, scan/connect, request CYD status, and run Simulate CYD detection; if hardware is unavailable, use the local phone/map-center test marker path.
@@ -206,7 +206,7 @@ write_manual_results_template() {
 check_id	status	notes
 camera_data	TODO	Refresh camera data and verify the settings row settles with a source/freshness value.
 route_avoidance	TODO	Calculate a camera-dense offline route with avoidance enabled and capture applied/fallback/skipped status after restart.
-nearby_alerts	TODO	Move or navigate near a known camera and confirm nearby alert behavior plus Last alert check status after restart.
+nearby_alerts	TODO	Use Check map center alert or move/navigate near a known camera and confirm nearby alert behavior plus Last alert check status after restart.
 osm_reporting	TODO	Open Add ALPR Camera and confirm OsmAnd editor/tag prefill plus Last report draft status after restart.
 cyd	TODO	Connect/simulate CYD or use the local phone/map-center simulation fallback, then confirm status, marker, or review flow.
 RESULTS
@@ -224,9 +224,9 @@ write_manual_result_commands() {
     printf '%s\n' "# Route avoidance reported applied/fallback/skipped status and the settings row survived restart."
     printf 'scripts/flockfree-mark-result.py "$SESSION_DIR" route_avoidance PASS --notes %q --summarize\n\n' \
       "Avoidance applied/fallback/skipped status observed after restart"
-    printf '%s\n' "# Nearby alert behavior observed near a known camera and the settings row survived restart."
+    printf '%s\n' "# Map-center or live nearby alert behavior observed near a known camera and the settings row survived restart."
     printf 'scripts/flockfree-mark-result.py "$SESSION_DIR" nearby_alerts PASS --notes %q --summarize\n\n' \
-      "Nearby camera alert behavior and Last alert check status observed after restart"
+      "Map-center or live nearby camera alert behavior and Last alert check status observed after restart"
     printf '%s\n' "# OSM editor opened with ALPR/surveillance tags and the report row survived restart."
     printf 'scripts/flockfree-mark-result.py "$SESSION_DIR" osm_reporting PASS --notes %q --summarize\n\n' \
       "ALPR/surveillance tag prefill and Last report draft status observed after restart"
