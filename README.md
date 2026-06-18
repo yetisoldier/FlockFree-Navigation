@@ -1,188 +1,209 @@
 # FlockFree Navigation
 
-FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR camera awareness. The current branch is a validated MVP/debug build, not a finished consumer release.
+FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR camera awareness, CYD hardware integration, and community reporting.
 
-## Current Build Status
+![FlockFree Splash](docs/screenshots/ff-splash-branding.png)
 
-From the repository root:
+## Features
+
+### Camera Awareness
+- **105,000+ camera database** — Bundled seed of 104,902 ALPR cameras with direction data, stored in SQLite for fast spatial queries
+- **Camera orientation cones** — Translucent view cones rendered on the map at zoom 15+ showing camera heading
+- **Nearby camera alerts** — Proximity notifications with cooldown logic when approaching known cameras
+- **Nearest camera inspection** — Map-center query to find the closest camera within 1,000m
+
+![Map View](docs/screenshots/ff-map.png)
+
+### CYD Hardware Integration
+- **BLE foreground service** — `CydBleService` runs as `connectedDevice` type, survives backgrounding
+- **Global BLE setting** — CYD BLE toggle is global across all OsmAnd profiles
+- **Phone GPS streaming** — Streams phone GPS to CYD hardware via `FYGPS` BLE UART
+- **Detection review workflow** — CYD detections appear as map markers for manual review before submission
+- **Simulate mode** — `FYSIM` support for bench testing without live RF
+
+### Route Avoidance
+- **Experimental two-pass offline avoidance** — Identifies camera-adjacent roads and recalculates routes
+- **Status persistence** — Route check results persist across app restarts
+
+### Reporting
+- **OSM POI editor integration** — Opens OsmAnd's native editor with ALPR/surveillance tags prefilled
+- **Brand presets** — Automatic tagging for known ALPR manufacturers (Flock Safety, Motorola Solutions, etc.)
+- **Draft persistence** — Report drafts survive app restarts
+
+### Branding
+- **FlockFree identity** — Custom blue/white FF road mark on navy splash, cyan headers, red toggles
+- **All asset densities** — Launcher, adaptive, and splash icons in mdpi through xxxhdpi
+
+![FlockFree Settings](docs/screenshots/ff-settings-branding.png)
+
+## Installation
+
+### Option 1: Download the APK (easiest)
+
+1. Go to [Releases](https://github.com/yetisoldier/FlockFree-Navigation/releases)
+2. Download the latest `FlockFree-gplayFree-legacy-fat-debug.apk`
+3. Enable "Install unknown apps" for your browser/Files app in Android settings
+4. Tap the APK to install
+5. Launch **FlockFree** from your app drawer
+
+### Option 2: Build from source
 
 ```bash
-cd /home/yetisoldier/projects/FlockFree-Navigation
-git clone --depth 1 https://github.com/osmandapp/OsmAnd-resources.git ../resources  # skip if ../resources already exists
+git clone https://github.com/yetisoldier/FlockFree-Navigation.git
+cd FlockFree-Navigation
+git clone --depth 1 https://github.com/osmandapp/OsmAnd-resources.git ../resources
 
 ANDROID_HOME=$HOME/Android/Sdk ANDROID_SDK=$HOME/Android/Sdk \
   ./gradlew :OsmAnd:assembleGplayFreeLegacyFatDebug \
   -x test --no-daemon --max-workers=1
 ```
 
-For a one-command manual build/install/launch/diagnostics flow, Eric can run:
+The APK will be at:
+```
+OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-debug.apk
+```
+
+Install to a connected device:
+```bash
+adb install -r OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-debug.apk
+```
+
+### One-command build + install (for developers)
 
 ```bash
 scripts/flockfree-user-build-install.sh
 ```
 
-The helper writes the copied APK and `FlockFree-build-info.txt` under `build-artifacts/` so the morning install can be traced back to a source commit and APK SHA-256.
+This builds, signs, installs over Wi-Fi ADB, launches FlockFree, and runs a readiness check. Add `--field-session` to also start the timed evidence collector.
 
-That helper runs Gradle, installs the APK over Wi-Fi ADB, launches FlockFree, and then runs the no-Gradle readiness gate so the generated report says whether the installed app-code is current and whether the phone is ready for feature testing. Add `--field-session` if you want the timed manual evidence collector to start immediately after the readiness pass.
+## First Run Setup
 
-For source-only verification that does not run Gradle:
+1. **Launch FlockFree** — The app opens to the map. The FlockFree plugin is enabled by default.
+2. **Grant permissions** — Allow location, Bluetooth, and notifications when prompted.
+3. **Download offline maps** (optional but recommended) — Go to Menu → Maps & Resources → Download maps → choose your region. Route avoidance requires offline vector maps.
+4. **Camera data loads automatically** — The bundled seed (104,902 cameras) is available immediately. A network refresh updates from `data.dontgetflocked.com` weekly.
 
-```bash
-scripts/flockfree-source-checks.sh
-```
+![Navigation Drawer](docs/screenshots/ff-drawer.png)
 
-For a one-command no-Gradle morning readiness pass using the already installed APK:
+## Usage Guide
 
-```bash
-scripts/flockfree-morning-readiness.sh
-```
+### Viewing Cameras
 
-It runs source-only checks, primes FlockFree runtime permissions on the Moto, captures diagnostics, and writes `logs/flockfree-readiness/.../readiness-report.txt`.
-The report compares `build-artifacts/FlockFree-build-info.txt` with the current repo and says whether the installed APK is app-code current or whether app/runtime paths changed after the last APK build.
-It ends with a `Readiness verdict` so morning testing starts with either `READY` or a short list of items needing attention.
+Cameras appear on the map at zoom 10+. At zoom 15+, orientation cones show which direction each camera faces. Tap any camera for details (brand, operator, direction, mount type).
 
-Last verified local APK output:
+### Nearby Camera Alerts
 
-```text
-OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-debug.apk
-```
+1. Open Menu → Plugins → FlockFree → Settings
+2. Enable **Nearby camera alerts**
+3. Set the **Alert distance** (default: 200 meters)
+4. While navigating or moving, you will receive a toast when approaching a known camera
 
-Verified debug package/application ID: `com.yetiwurks.flockfree`.
-Verified APK SHA-256: `cd93d295d16a2ca71eb46a46e2e0583add3885236ca834cf397a393715005534`.
-That APK was built from clean source commit `155a5382e8b88eb1ddb95e3ee3791416de5d704e`, installed and launched on a Moto G Stylus over Wi-Fi ADB, and readiness reported `READY` with camera cache/database, permissions, CYD service, and filtered crash checks passing.
+Use **Check map center alert** in settings to bench-test alerts without driving.
 
-## What Works Now
+### Route Avoidance
 
-- App branding, launcher/adaptive/splash icons, and visible app palette are pointed at FlockFree for the `gplayFree` debug build.
-- The FlockFree plugin is registered in OsmAnd and enabled by default.
-- Camera data downloads from `https://data.dontgetflocked.com/cameras.geojson.gz`, is cached as GeoJSON, and refreshes weekly.
-- The data loader handles both gzip and plain GeoJSON because the live `.gz` endpoint currently returns plain GeoJSON.
-- A compressed bundled camera seed is included from `OsmAnd/assets/flockfree/cameras.geojson.gz`, packaged as `assets/flockfree/cameras.geojson`, so a fresh install can show the current 104,902-camera snapshot even if the first network refresh is unavailable.
-- Parsed cameras are persisted to an app-private SQLite database and mirrored into a coarse in-memory spatial grid, so cold starts can reload without reparsing GeoJSON and map/route-corridor lookups avoid full-list scans.
-- The FlockFree settings screen shows whether camera data was loaded from database, cache, bundled seed, or network, includes last-refresh freshness/refresh-due status, refreshes active status rows while loading/scanning, can manually refresh the camera data cache/database, and can show plus retain the nearest known camera within 5 kilometers of the current map center for quick field inspection.
-- Camera points render on the map at zoom 10+ with basic vendor colors and higher-zoom labels.
-- Tapping a rendered camera opens a simple details dialog with brand, operator, direction, mount, surveillance zone, OSM ID/type, and timestamp when present. The map-center nearest-camera action adds distance from the current map center to the same detail view.
-- The map context menu has an `Add ALPR Camera` action that opens OsmAnd's POI editor with the selected ALPR tag preset already attached to a new node.
-- The settings screen includes `Draft report at map center` for bench-testing the same ALPR dialog from a suggested anchor. It keeps a profile-persisted `Last report draft` row so testers can confirm whether the latest ALPR report attempt opened the OSM editor or fell back to manual tags, even after restarting the app.
-- When camera avoidance is enabled, newly calculated routes get a FlockFree toast summary of cameras near the route corridor.
-- The FlockFree settings screen keeps the last route camera/avoidance summary in a profile-persisted row so route-test results can be checked after the toast disappears or the app restarts.
-- Current source can perform one experimental second-pass OsmAnd offline route calculation using temporary impassable road IDs for roads adjacent to known cameras. These IDs are route-scoped and do not pollute the user's Avoid Roads settings.
-- With nearby alerts enabled, FlockFree can warn while navigating or moving when the current GPS fix is within the configured alert distance of the nearest known camera. The settings screen also has `Check map center alert` for bench-testing a suggested camera-dense anchor without driving. A profile-persisted `Last alert check` row shows whether the last check triggered, found no camera, hit cooldown, or skipped for accuracy/movement/data reasons.
-- The plugin settings screen is exposed through the OsmAnd plugin settings flow for map layer visibility, route summaries, corridor radius, alert distance, and CYD BLE enablement.
-- A CYD BLE UART path exists for `FYHELLO`, `FYSTATUS`, `FYSIM`, `FYGPS`, `pair_status`, and `detection` messages.
-- If CYD BLE is enabled, returning to the map starts a scan when the CYD manager is idle.
-- Current source includes a CYD foreground service source path with a low-priority notification so BLE monitoring can stay alive when the map is backgrounded. If CYD BLE is still enabled and Bluetooth permissions are already granted, the service can restart scanning without reopening the settings screen. The latest verified APK proved the Android `connectedDevice` foreground-service type on-device.
-- Once the CYD is connected, FlockFree forwards valid phone GPS fixes over `FYGPS` about once per second so the CYD can time/location-stamp detections without DeFlock running separately.
-- The CYD settings status row reports recent phone GPS sends, or a cached phone GPS fix before hardware is connected, making the `FYGPS` stream and local bench-test readiness visible.
-- If CYD hardware is not connected, `Simulate CYD detection` can create a local test marker from the latest phone/OsmAnd location or the current map center so the map and reporting review flow can still be tested indoors.
-- GPS-backed CYD detections are kept as recent candidates, persisted to a small local JSON store, drawn on the map as distinct CYD markers, and can be reviewed through the existing ALPR camera reporting flow.
+1. Open Menu → Plugins → FlockFree → Settings
+2. Enable **Avoid cameras on routes**
+3. Calculate a route as normal. FlockFree runs a second pass to block roads adjacent to known cameras and reroutes around them.
+4. A toast summary shows how many cameras were found near the route. The result persists in Settings as "Last route check".
 
-## Still Stubbed Or Thin
+Note: Route avoidance works with offline vector maps only.
 
-- Camera avoidance is experimental and applies only to OsmAnd offline vector routing. It blocks whole route road objects, which can be coarse on long roads, and falls back to the original route if the avoided route fails.
-- CYD BLE integration now has a foreground service with permission-gated background scan restart, proven on-device with the Android `connectedDevice` service type. Recent detection candidates are persisted locally but not synced anywhere.
-- Camera storage now has app-private SQLite persistence plus an in-memory route/helper mirror. It is not a full geohash/tile store yet.
-- The bundled camera seed is a snapshot. `Refresh camera data` or the normal weekly refresh is still needed for the latest live camera data.
-- Widgets, quick actions, final settings polish, and rich camera detail UI are placeholders or not implemented.
-- Reporting now pre-fills OsmAnd's OSM POI editor with ALPR tags and has been validated through editor-open on-device. OSM save/upload remains intentionally untested for bench data.
+![Plugins List](docs/screenshots/ff-plugins.png)
 
-## Phone Test Plan
+### Reporting a New Camera
 
-Use [docs/MORNING-TEST-PLAN.md](docs/MORNING-TEST-PLAN.md). The last verified APK has been installed and launched on the Moto G Stylus over Wi-Fi ADB. If source has app-code changes after the last build, start with `scripts/flockfree-user-build-install.sh` so the phone matches current source before feature testing.
+1. **From the map**: Long-press the location → tap **Add ALPR Camera** from the context menu
+2. **From settings**: Use **Draft report at map center** to test the flow from a specific location
+3. Choose the camera brand preset (Flock Safety, Motorola Solutions, etc.)
+4. OsmAnd's POI editor opens with ALPR/surveillance tags prefilled
+5. Review, adjust, and save through the standard OSM editor
 
-For a no-Gradle diagnostic snapshot during morning validation, run:
+Nothing uploads automatically. You always review and confirm before submitting.
 
-```bash
-scripts/flockfree-moto-diagnostics.sh
-```
+### CYD Hardware Integration
 
-It writes local artifacts under ignored `logs/flockfree-diagnostics/` and checks ADB state, package install state, current activity, PID/process state, package metadata, UI screenshot/hierarchy, a FlockFree UI text summary, app-private camera cache, camera database size/row count when local `sqlite3` is available, CYD candidate file state, runtime location/Bluetooth/notification permission state, CYD foreground service/notification state summarized in `summary.txt`, and filtered FlockFree/CameraData/FATAL logcat output.
+The CYD (Cheap Yellow Display) is an optional ESP32-based sensor that detects ALPR camera Wi-Fi signatures. See [CYD-Flock-You](https://github.com/yetisoldier/CYD-Flock-You) for hardware details.
 
-If Wi-Fi ADB returns `No route to host`, retry the endpoint and capture a recovery log:
+#### Pairing a CYD
 
-```bash
-scripts/flockfree-adb-recover.sh
-```
+1. Power on the CYD device
+2. In FlockFree, open Menu → Plugins → FlockFree → Settings
+3. Enable **CYD BLE hardware**
+4. FlockFree scans for `CYD-Flock-You` over Bluetooth LE and connects automatically
+5. The CYD status row in Settings shows connection state, GPS, SD, and detection count
 
-If recovery still cannot reach `device`, confirm the phone is awake, on the same Wi-Fi network, Wireless debugging is enabled, and the IP:port has not changed.
-The recovery bundle includes `adb-mdns-after.txt` and `ip-neigh-after.txt` to help spot a changed Wireless debugging port or a failed old IP.
+#### When CYD Detects Something
 
-For a no-Gradle CYD/GPS permission prep pass on the Moto, run:
+1. The CYD sends a detection event over BLE
+2. FlockFree shows a "CYD detection received" toast
+3. The detection appears as a **cyan diamond marker** on the map labeled `CYD`
+4. Tap the CYD marker → choose **Review as ALPR camera**
+5. Select brand preset, adjust direction if known
+6. OsmAnd's POI editor opens with tags prefilled at the detection coordinates
+7. Review, adjust the position, and submit manually
 
-```bash
-scripts/flockfree-moto-permission-primer.sh
-```
+If the CYD has no GPS fix, the detection is logged but does not create a map marker until coordinates are available.
 
-It grants only FlockFree's declared location, Bluetooth, and notification runtime permissions, then runs the standard diagnostics collector so `summary.txt` confirms whether CYD/GPS testing is permission-ready.
+#### Bench Testing Without Hardware
 
-For a timed no-Gradle evidence bundle while manually walking through the route, OSM reporting, and CYD checks:
+Use **Simulate CYD detection** in Settings to create a test marker from your current phone location or map center. This tests the full review flow without a physical CYD.
 
-```bash
-scripts/flockfree-field-test-session.sh
-```
+## Settings Reference
 
-Or combine the manual rebuild/install/readiness pass with the timed evidence collector:
+| Setting | Description |
+|---------|-------------|
+| Show cameras on map | Toggle camera point visibility |
+| Camera data | Shows database status, source, and last refresh |
+| Refresh camera data | Manually refresh from network |
+| Nearest camera at map center | Find the closest camera within 1km |
+| Avoid cameras on routes | Enable experimental route avoidance |
+| Route corridor radius | Distance from route to check for cameras |
+| Nearby camera alerts | Enable proximity notifications |
+| Alert distance | Radius for proximity alerts |
+| Check map center alert | Bench-test alerts from current map position |
+| Draft report at map center | Open the ALPR reporting flow at map center |
+| CYD BLE hardware | Enable CYD Bluetooth connection |
+| Simulate CYD detection | Create a test detection marker |
+| Request CYD status | Query CYD for telemetry |
 
-```bash
-scripts/flockfree-user-build-install.sh --field-session
-```
+## Verification Scripts
 
-It runs the readiness gate, writes manual prompts, captures filtered logcat during the test window, then captures post-session diagnostics.
-It also writes `test-area-suggestions.txt` with bundled-seed map anchors, prints the first anchors into the session report, creates `manual-test-results.tsv` for PASS/FAIL/SKIP notes during the walk-through, writes ready-made `manual-result-commands.txt` marker commands for the current session, and writes `session-summary.txt` with crash status, observed evidence buckets, manual results, and missing manual checks.
+For developers and field testers:
 
-To reopen the newest field-session summary and find its marker commands:
+| Script | Purpose |
+|--------|---------|
+| `scripts/flockfree-source-checks.sh` | Source-only verification (no build required) |
+| `scripts/flockfree-morning-readiness.sh` | Full readiness check on installed APK |
+| `scripts/flockfree-user-build-install.sh` | Build, install, launch, and verify |
+| `scripts/flockfree-moto-diagnostics.sh` | Capture logcat, UI, and database state |
+| `scripts/flockfree-field-test-session.sh` | Timed evidence collection for manual testing |
+| `scripts/flockfree-adb-recover.sh` | Troubleshoot lost Wi-Fi ADB connections |
 
-```bash
-scripts/flockfree-latest-field-session.sh
-```
+## Technical Details
 
-If the newest attempt stopped at Wi-Fi ADB or network reachability, reopen the latest session that actually saw the phone and installed package:
+- **Package:** `com.yetiwurks.flockfree`
+- **Min Android:** API 21 (Android 5.0)
+- **Target:** Android 14 (API 34)
+- **Camera seed:** 104,902 points (bundled, offline-first)
+- **Camera data source:** [DeFlock](https://deflock.org) / [OpenStreetMap](https://openstreetmap.org)
 
-```bash
-scripts/flockfree-latest-field-session.sh --latest-phone-evidence
-```
+## Known Limitations
 
-To print only the ready-made marker commands for the newest field session:
+- Route avoidance is offline-only (requires downloaded vector maps)
+- CYD detection to camera submission is a manual review flow (no auto-upload)
+- Reporting flow opens the editor but does not verify end-to-end OSM upload
+- No live RF drive test completed yet (bench simulation verified only)
 
-```bash
-scripts/flockfree-latest-field-session.sh --commands-only
-```
+## Companion Hardware
 
-To print only the remaining TODO/FAIL proof rows for the newest field session:
-
-```bash
-scripts/flockfree-latest-field-session.sh --todo-only
-```
-
-If the selected session was captured from an older source commit, this output warns that current `HEAD` differs and should be rebuilt/installed before treating the proof rows as current-source evidence. It also annotates old nearby-alert and CYD rows with the current `Check map center alert` and phone/OsmAnd GPS or map-center simulation paths.
-
-To mark the newest field session directly:
-
-```bash
-scripts/flockfree-mark-latest-result.sh route_avoidance PASS --notes "Avoidance applied toast observed"
-```
-
-To mark a visual/manual result and refresh the summary afterward:
-
-```bash
-scripts/flockfree-mark-result.py logs/flockfree-field-session/RUN_ID route_avoidance PASS --notes "Avoidance applied toast observed" --summarize
-```
-
-With `--summarize`, the helper refreshes both `session-summary.txt` and the generated manual-result block in `field-session-report.txt`.
-
-For offline route-test anchors from the bundled camera seed:
-
-```bash
-scripts/flockfree-suggest-test-areas.py --limit 10 --radius-km 80
-```
-
-It prints camera-dense map anchors that can be used for manual marker, alert, and route-avoidance checks.
+Pair with [CYD-Flock-You](https://github.com/yetisoldier/CYD-Flock-You) firmware v1.2.0+ for ALPR detection hardware. The CYD is an ESP32 with a 2.4" TFT that passively monitors Wi-Fi for Flock-style RF signatures and sends detections to FlockFree over Bluetooth LE.
 
 ## Credits
 
-- Built on [OsmAnd](https://github.com/osmandapp/osmand) under Apache 2.0.
-- Camera data from [DeFlock](https://deflock.org) / [OpenStreetMap](https://openstreetmap.org) contributors.
-- Optional hardware direction from [CYD-Flock-You](https://github.com/yetisoldier/CYD-Flock-You).
+- Built on [OsmAnd](https://github.com/osmandapp/osmand) under Apache 2.0
+- Camera data from [DeFlock](https://deflock.org) / [OpenStreetMap](https://openstreetmap.org) contributors
+- Optional hardware direction from [CYD-Flock-You](https://github.com/yetisoldier/CYD-Flock-You)
 
 ## License
 
