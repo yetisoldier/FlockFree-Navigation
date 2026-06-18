@@ -147,6 +147,8 @@ To print only the remaining TODO/FAIL proof rows for the newest field session:
 scripts/flockfree-latest-field-session.sh --todo-only
 ```
 
+If the selected session was captured from an older source commit, this output now warns that current `HEAD` differs and should be rebuilt/installed before treating the proof rows as current-source evidence. It also annotates old CYD rows that mention only the phone-GPS fallback, because current source can use phone/OsmAnd GPS or the map center for local simulation.
+
 To mark the newest field session directly:
 
 ```bash
