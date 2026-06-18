@@ -56,6 +56,12 @@ To print only the ready-made marker commands for the newest field session:
 scripts/flockfree-latest-field-session.sh --commands-only
 ```
 
+To mark the newest field session directly after a visual/manual check:
+
+```bash
+scripts/flockfree-mark-latest-result.sh route_avoidance PASS --notes "Avoidance applied toast observed"
+```
+
 Offline camera-dense route-test anchors:
 
 ```bash
@@ -170,6 +176,12 @@ scripts/flockfree-mark-result.py logs/flockfree-field-session/RUN_ID route_avoid
 ```
 
 With `--summarize`, the helper refreshes `session-summary.txt` and updates a generated manual-result block in `field-session-report.txt`, so the report remains the primary file to read.
+
+For the latest field session, the shorter equivalent is:
+
+```bash
+scripts/flockfree-mark-latest-result.sh route_avoidance PASS --notes "Avoidance applied toast observed"
+```
 
 To pick data-backed route-test areas from the bundled seed:
 

@@ -131,6 +131,12 @@ To print only the ready-made marker commands for the latest field-session bundle
 scripts/flockfree-latest-field-session.sh --commands-only
 ```
 
+To mark the latest field session directly after a visual/manual check:
+
+```bash
+scripts/flockfree-mark-latest-result.sh route_avoidance PASS --notes "Avoidance applied toast observed"
+```
+
 To mark a visual/manual result and refresh the summary without opening the TSV by hand:
 
 ```bash

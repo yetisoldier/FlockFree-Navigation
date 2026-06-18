@@ -288,6 +288,7 @@ python3 - <<'PY'
 from pathlib import Path
 
 marker = Path("scripts/flockfree-mark-result.py").read_text()
+latest_marker = Path("scripts/flockfree-mark-latest-result.sh").read_text()
 required = [
     "manual-test-results.tsv",
     "VALID_CHECKS",
@@ -303,6 +304,16 @@ required = [
     "update_field_report(",
 ]
 missing = [item for item in required if item not in marker]
+latest_required = [
+    "flockfree-latest-field-session.sh",
+    "flockfree-mark-result.py",
+    "--no-summarize",
+    "--self-check",
+    "Updated latest session:",
+]
+missing.extend(
+    f"latest marker: {item}" for item in latest_required if item not in latest_marker
+)
 if missing:
     raise SystemExit("manual result marker missing expected behavior:\n" + "\n".join(missing))
 print("manual result marker wiring ok")
@@ -349,6 +360,7 @@ log "Script syntax checks"
 bash -n scripts/flockfree-moto-diagnostics.sh \
 	scripts/flockfree-field-test-session.sh \
 	scripts/flockfree-latest-field-session.sh \
+	scripts/flockfree-mark-latest-result.sh \
 	scripts/flockfree-morning-readiness.sh \
 	scripts/flockfree-moto-permission-primer.sh \
 	scripts/flockfree-user-build-install.sh \
@@ -371,6 +383,7 @@ scripts/flockfree-latest-field-session.sh --self-check >/dev/null
 
 log "Manual result marker self-check"
 scripts/flockfree-mark-result.py --self-check >/dev/null
+scripts/flockfree-mark-latest-result.sh --self-check >/dev/null
 
 log "CYD parser/store self-check"
 ANNOTATION_JAR="${ANNOTATION_JAR:-$(find_first_jar '*androidx.annotation/annotation-jvm*')}"

@@ -124,6 +124,12 @@ To print only the ready-made marker commands for the newest field session:
 scripts/flockfree-latest-field-session.sh --commands-only
 ```
 
+To mark the newest field session directly:
+
+```bash
+scripts/flockfree-mark-latest-result.sh route_avoidance PASS --notes "Avoidance applied toast observed"
+```
+
 To mark a visual/manual result and refresh the summary afterward:
 
 ```bash
