@@ -50,6 +50,12 @@ To reopen the newest field-session report path, summary, and marker-command file
 scripts/flockfree-latest-field-session.sh
 ```
 
+If the newest run stopped before reaching the phone, reopen the latest field session with live ADB/package evidence:
+
+```bash
+scripts/flockfree-latest-field-session.sh --latest-phone-evidence
+```
+
 To print only the ready-made marker commands for the newest field session:
 
 ```bash

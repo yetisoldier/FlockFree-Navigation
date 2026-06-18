@@ -309,8 +309,12 @@ required = [
     "--path-only",
     "--commands-only",
     "--todo-only",
+    "--latest-phone-evidence",
     "--session-dir",
     "--self-check",
+    "has_phone_evidence()",
+    "Latest attempt has no live phone evidence",
+    "Last phone-evidence session:",
 ]
 missing = [item for item in required if item not in helper]
 if missing:
@@ -332,6 +336,9 @@ required = [
     "Crash evidence:",
     "parse_manual_results(",
     "has_cyd_evidence(",
+    "Phone GPS ready",
+    "Local CYD test detection created",
+    "FlockFree local test",
     "--self-check",
     "Timed fatal crash evidence lines:",
 ]

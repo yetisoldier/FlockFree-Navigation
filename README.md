@@ -120,6 +120,12 @@ To reopen the newest field-session summary and find its marker commands:
 scripts/flockfree-latest-field-session.sh
 ```
 
+If the newest attempt stopped at Wi-Fi ADB or network reachability, reopen the latest session that actually saw the phone and installed package:
+
+```bash
+scripts/flockfree-latest-field-session.sh --latest-phone-evidence
+```
+
 To print only the ready-made marker commands for the newest field session:
 
 ```bash

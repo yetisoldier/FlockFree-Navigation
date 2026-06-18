@@ -19,6 +19,7 @@ EVIDENCE_PATTERNS = {
 EVIDENCE_ORDER = list(EVIDENCE_PATTERNS.keys()) + ["CYD"]
 CYD_EVIDENCE_PATTERN = re.compile(
     r"\b(FYSTATUS|FYGPS|FYSIM|pair_status|CYD detection received|Phone GPS sent|"
+    r"Phone GPS ready|Local CYD test detection created|FlockFree local test|"
     r"Connected to CYD|CYD status|Simulate CYD detection)\b",
     re.I,
 )
@@ -253,7 +254,9 @@ def self_check() -> int:
             encoding="utf-8",
         )
         (root / "session-logcat-filtered.txt").write_text(
-            "01-01 I CameraData: loaded\n01-01 I FlockFree: Avoidance applied\n",
+            "01-01 I CameraData: loaded\n"
+            "01-01 I FlockFree: Avoidance applied\n"
+            "01-01 I FlockFree: Local CYD test detection created\n",
             encoding="utf-8",
         )
         (root / "manual-test-results.tsv").write_text(
@@ -269,10 +272,10 @@ def self_check() -> int:
             "camera data",
             "route avoidance",
             "OSM reporting",
+            "CYD",
             "Manual result sheet:",
             "Timed fatal crash evidence lines: 0",
             "Crash evidence: none found",
-            "connect/simulate CYD",
         ]
         missing = [item for item in required if item not in result]
         if missing:

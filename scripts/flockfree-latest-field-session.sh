@@ -6,6 +6,7 @@ SESSION_DIR=""
 PATH_ONLY=0
 COMMANDS_ONLY=0
 TODO_ONLY=0
+LATEST_PHONE_EVIDENCE=0
 
 usage() {
   cat <<'USAGE'
@@ -19,6 +20,8 @@ Options:
       --path-only           Print only the selected session directory.
       --commands-only       Print only manual-result marker commands for the session.
       --todo-only           Print remaining TODO/FAIL manual proof rows for the session.
+      --latest-phone-evidence
+                            Select the newest session with live phone/package evidence.
       --self-check          Run a local self-check without using real logs.
   -h, --help                Show this help.
 USAGE
@@ -27,12 +30,16 @@ USAGE
 run_self_check() {
   tmp="$(mktemp -d)"
   trap 'rm -rf "$tmp"' EXIT
-  mkdir -p "$tmp/logs/flockfree-field-session/20260101-010101"
+  mkdir -p "$tmp/logs/flockfree-field-session/20260101-010101/post-diagnostics"
   session="$tmp/logs/flockfree-field-session/20260101-010101"
   cat > "$session/session-summary.txt" <<'EOF'
 FlockFree field-session summary
 Readiness: READY
 Crash evidence: none found
+EOF
+  cat > "$session/post-diagnostics/summary.txt" <<'EOF'
+ADB state: device
+Package installed: yes
 EOF
   echo "report" > "$session/field-session-report.txt"
   echo "scripts/flockfree-mark-result.py \"\$SESSION_DIR\" route_avoidance PASS --notes checked --summarize" \
@@ -43,17 +50,40 @@ camera_data	PASS	Camera data row observed.
 route_avoidance	TODO	Needs route check.
 cyd	FAIL	CYD did not connect.
 EOF
+  mkdir -p "$tmp/logs/flockfree-field-session/20260101-020202"
+  latest="$tmp/logs/flockfree-field-session/20260101-020202"
+  cat > "$latest/session-summary.txt" <<'EOF'
+FlockFree field-session summary
+Readiness: unknown
+ADB/package: unknown
+EOF
+  echo "early stop" > "$latest/field-session-report.txt"
+  echo "scripts/flockfree-mark-result.py \"\$SESSION_DIR\" route_avoidance PASS --notes checked --summarize" \
+    > "$latest/manual-result-commands.txt"
+  cat > "$latest/manual-test-results.tsv" <<'EOF'
+check_id	status	notes
+route_avoidance	TODO	Needs route check.
+cyd	FAIL	CYD did not connect.
+EOF
   path_output="$(OUT_ROOT="$tmp/logs/flockfree-field-session" "$0" --path-only)" || return 1
   case "$path_output" in
-    *20260101-010101*) ;;
+    *20260101-020202*) ;;
     *)
       echo "self-check failed: --path-only selected unexpected session: $path_output" >&2
       return 1
       ;;
   esac
+  phone_path_output="$(OUT_ROOT="$tmp/logs/flockfree-field-session" "$0" --latest-phone-evidence --path-only)" || return 1
+  case "$phone_path_output" in
+    *20260101-010101*) ;;
+    *)
+      echo "self-check failed: --latest-phone-evidence selected unexpected session: $phone_path_output" >&2
+      return 1
+      ;;
+  esac
   summary_output="$(OUT_ROOT="$tmp/logs/flockfree-field-session" "$0")" || return 1
   case "$summary_output" in
-    *"FlockFree latest field session"*READY*"manual-result-commands.txt"*) ;;
+    *"FlockFree latest field session"*"Latest attempt has no live phone evidence"*"manual-result-commands.txt"*) ;;
     *)
       echo "self-check failed: summary output missing expected content" >&2
       return 1
@@ -97,6 +127,10 @@ while [ "$#" -gt 0 ]; do
       TODO_ONLY=1
       shift
       ;;
+    --latest-phone-evidence)
+      LATEST_PHONE_EVIDENCE=1
+      shift
+      ;;
     --self-check)
       run_self_check
       exit 0
@@ -116,17 +150,48 @@ done
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+find_sessions() {
+  find "$OUT_ROOT" -mindepth 1 -maxdepth 1 -type d -exec test -f '{}/field-session-report.txt' ';' -print \
+    | sort
+}
+
+has_phone_evidence() {
+  summary_file="${1}/post-diagnostics/summary.txt"
+  [ -f "$summary_file" ] || return 1
+  grep -q '^ADB state: device' "$summary_file" || return 1
+  grep -q '^Package installed: yes' "$summary_file" || return 1
+}
+
+find_latest_phone_evidence_session() {
+  selected=""
+  while IFS= read -r candidate; do
+    if has_phone_evidence "$candidate"; then
+      selected="$candidate"
+    fi
+  done <<EOF
+$(find_sessions)
+EOF
+  printf '%s\n' "$selected"
+}
+
 if [ -z "$SESSION_DIR" ]; then
   if [ ! -d "$OUT_ROOT" ]; then
     echo "No FlockFree field-session directory found: $OUT_ROOT" >&2
     exit 1
   fi
-  SESSION_DIR="$(find "$OUT_ROOT" -mindepth 1 -maxdepth 1 -type d -exec test -f '{}/field-session-report.txt' ';' -print \
-    | sort | tail -n 1)"
+  if [ "$LATEST_PHONE_EVIDENCE" -eq 1 ]; then
+    SESSION_DIR="$(find_latest_phone_evidence_session)"
+  else
+    SESSION_DIR="$(find_sessions | tail -n 1)"
+  fi
 fi
 
 if [ -z "$SESSION_DIR" ] || [ ! -d "$SESSION_DIR" ]; then
-  echo "No FlockFree field session found." >&2
+  if [ "$LATEST_PHONE_EVIDENCE" -eq 1 ]; then
+    echo "No FlockFree field session with live phone/package evidence found." >&2
+  else
+    echo "No FlockFree field session found." >&2
+  fi
   exit 1
 fi
 
@@ -136,6 +201,10 @@ COMMANDS="${SESSION_DIR}/manual-result-commands.txt"
 PROMPTS="${SESSION_DIR}/manual-test-prompts.txt"
 RESULTS="${SESSION_DIR}/manual-test-results.tsv"
 AREAS="${SESSION_DIR}/test-area-suggestions.txt"
+LAST_PHONE_EVIDENCE_SESSION=""
+if [ "$LATEST_PHONE_EVIDENCE" -eq 0 ]; then
+  LAST_PHONE_EVIDENCE_SESSION="$(find_latest_phone_evidence_session)"
+fi
 
 if [ "$PATH_ONLY" -eq 1 ]; then
   printf '%s\n' "$SESSION_DIR"
@@ -159,6 +228,13 @@ if [ "$TODO_ONLY" -eq 1 ]; then
   echo "FlockFree remaining manual proof"
   echo "=============================="
   echo "Session: $SESSION_DIR"
+  if [ "$LATEST_PHONE_EVIDENCE" -eq 1 ]; then
+    echo "Selection: latest session with live phone/package evidence"
+  elif ! has_phone_evidence "$SESSION_DIR" && [ -n "$LAST_PHONE_EVIDENCE_SESSION" ]; then
+    echo "Latest attempt has no live phone evidence."
+    echo "Last phone-evidence session: $LAST_PHONE_EVIDENCE_SESSION"
+    echo "View it with: scripts/flockfree-latest-field-session.sh --latest-phone-evidence"
+  fi
   echo "Manual result sheet: $RESULTS"
   echo
   awk '
@@ -190,6 +266,13 @@ fi
 echo "FlockFree latest field session"
 echo "=============================="
 echo "Session: $SESSION_DIR"
+if [ "$LATEST_PHONE_EVIDENCE" -eq 1 ]; then
+  echo "Selection: latest session with live phone/package evidence"
+elif ! has_phone_evidence "$SESSION_DIR" && [ -n "$LAST_PHONE_EVIDENCE_SESSION" ]; then
+  echo "Latest attempt has no live phone evidence."
+  echo "Last phone-evidence session: $LAST_PHONE_EVIDENCE_SESSION"
+  echo "View it with: scripts/flockfree-latest-field-session.sh --latest-phone-evidence"
+fi
 echo "Report: $REPORT"
 [ -f "$SUMMARY" ] && echo "Summary: $SUMMARY"
 [ -f "$COMMANDS" ] && echo "Manual marker commands: $COMMANDS"

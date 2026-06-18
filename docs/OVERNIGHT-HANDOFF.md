@@ -130,6 +130,12 @@ To reopen the latest field-session bundle without hunting for the timestamp:
 scripts/flockfree-latest-field-session.sh
 ```
 
+If the latest bundle is only an ADB/network failure, reopen the newest session with live phone/package evidence:
+
+```bash
+scripts/flockfree-latest-field-session.sh --latest-phone-evidence
+```
+
 To print only the ready-made marker commands for the latest field-session bundle:
 
 ```bash
