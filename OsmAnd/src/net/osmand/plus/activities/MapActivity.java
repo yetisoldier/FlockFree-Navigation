@@ -131,7 +131,6 @@ import net.osmand.plus.views.AnimateDraggingMapThread;
 import net.osmand.plus.views.MapLayers;
 import net.osmand.plus.views.MapViewWithLayers;
 import net.osmand.plus.views.OsmandMapTileView;
-import net.osmand.plus.views.OsmandMapTileView.OnDrawMapListener;
 import net.osmand.plus.views.controls.VerticalWidgetPanel;
 import net.osmand.plus.views.layers.MapControlsLayer;
 import net.osmand.plus.views.layers.MapInfoLayer;
@@ -146,12 +145,10 @@ import org.apache.commons.logging.Log;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 
 public class MapActivity extends OsmandActionBarActivity implements DownloadEvents,
 		IRouteInformationListener, AMapPointUpdateListener, MapMarkerChangedListener,
-		OnDrawMapListener, OsmAndAppCustomizationListener, LockUIAdapter,
+		OsmAndAppCustomizationListener, LockUIAdapter,
 		OnPreferenceStartFragmentCallback {
 
 	public static final String INTENT_KEY_PARENT_MAP_ACTIVITY = "intent_parent_map_activity_key";
@@ -159,7 +156,6 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 
 	private static final int ZOOM_LABEL_DISPLAY = 16;
 	private static final int MAX_ZOOM_OUT_STEPS = 2;
-	private static final int SECOND_SPLASH_TIME_OUT = 8000;
 
 	private static final Log LOG = PlatformUtil.getLog(MapActivity.class);
 
@@ -193,7 +189,6 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 
 	private boolean mIsDestroyed;
 	private boolean pendingPause;
-	private Timer splashScreenTimer;
 	private boolean activityRestartNeeded;
 	private boolean stopped = true;
 
@@ -782,23 +777,11 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 		if (fragmentsHelper.isFirstScreenShowing() && (!settings.SHOW_OSMAND_WELCOME_SCREEN.get() || !showOsmAndWelcomeScreen)) {
 			fragmentsHelper.disableFirstUsageFragment();
 		}
-		if (SecondSplashScreenFragment.SHOW && SecondSplashScreenFragment.showInstance(fragmentManager)) {
-			SecondSplashScreenFragment.SHOW = false;
-			SecondSplashScreenFragment.VISIBLE = true;
-			mapView.setOnDrawMapListener(this);
-			splashScreenTimer = new Timer();
-			splashScreenTimer.schedule(new TimerTask() {
-				@Override
-				public void run() {
-					app.runInUIThread(fragmentsHelper::dismissSecondSplashScreen);
-				}
-			}, SECOND_SPLASH_TIME_OUT);
-		} else {
-			if (SecondSplashScreenFragment.VISIBLE) {
-				fragmentsHelper.dismissSecondSplashScreen();
-			}
-			applyScreenOrientation();
+		SecondSplashScreenFragment.SHOW = false;
+		if (SecondSplashScreenFragment.VISIBLE) {
+			fragmentsHelper.dismissSecondSplashScreen();
 		}
+		applyScreenOrientation();
 
 		settings.MAP_SCREEN_ORIENTATION.addListener(mapScreenOrientationSettingListener);
 		settings.USE_SYSTEM_SCREEN_TIMEOUT.addListener(useSystemScreenTimeoutListener);
@@ -857,20 +840,6 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 
 	public boolean isInAppPurchaseAllowed() {
 		return true;
-	}
-
-	@Override
-	public void onDrawOverMap() {
-		getMapView().setOnDrawMapListener(null);
-		cancelSplashScreenTimer();
-		fragmentsHelper.dismissSecondSplashScreen();
-	}
-
-	private void cancelSplashScreenTimer() {
-		if (splashScreenTimer != null) {
-			splashScreenTimer.cancel();
-			splashScreenTimer = null;
-		}
 	}
 
 	public boolean isActivityDestroyed() {
@@ -1111,7 +1080,6 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 		pendingPause = false;
 		OsmandMapTileView mapView = getMapView();
 		mapView.setOnDrawMapListener(null);
-		cancelSplashScreenTimer();
 		app.getMapMarkersHelper().removeListener(this);
 		app.getRoutingHelper().removeListener(this);
 		app.getDownloadThread().resetUiActivity(this);

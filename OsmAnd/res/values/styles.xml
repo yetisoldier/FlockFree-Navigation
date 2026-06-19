@@ -42,6 +42,12 @@
 
     <style name="SplashScreenBaseTheme" parent="OsmandLightTheme.NoActionbar" />
 
+    <style name="FlockFreeLaunchTheme" parent="SplashScreenBaseTheme">
+        <item name="android:windowBackground">@drawable/first_splash_screen_free</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
+
     <style name="FirstSplashScreenCustom" parent="SplashScreenBaseTheme">
         <item name="android:windowBackground">@drawable/first_splash_screen_free</item>
     </style>

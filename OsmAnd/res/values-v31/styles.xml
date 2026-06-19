@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="FlockFreeLaunchTheme" parent="SplashScreenBaseTheme">
+        <item name="android:windowBackground">@drawable/first_splash_screen_free</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_screen_background_color</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/flockfree_splash_transparent_icon</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
+
+    <style name="FirstSplashScreenCustom" parent="SplashScreenBaseTheme">
+        <item name="android:windowBackground">@drawable/first_splash_screen_free</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_screen_background_color</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/flockfree_splash_transparent_icon</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+        <item name="android:windowDisablePreview">true</item>
+    </style>
+
+    <style name="FirstSplashScreenFree" parent="SplashScreenBaseTheme">
+        <item name="android:windowBackground">@drawable/first_splash_screen_free</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_screen_background_color</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/flockfree_splash_transparent_icon</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+        <item name="android:windowDisablePreview">true</item>
+    </style>
+
+    <style name="FirstSplashScreenNightlyFree" parent="SplashScreenBaseTheme">
+        <item name="android:windowBackground">@drawable/first_splash_screen_free_dev</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_screen_background_color</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/flockfree_splash_transparent_icon</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+        <item name="android:windowDisablePreview">true</item>
+    </style>
+
+    <style name="FirstSplashScreenPlus" parent="SplashScreenBaseTheme">
+        <item name="android:windowBackground">@drawable/first_splash_screen_plus</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_screen_background_color</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/flockfree_splash_transparent_icon</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+        <item name="android:windowDisablePreview">true</item>
+    </style>
+
+</resources>

@@ -7,6 +7,8 @@ import static net.osmand.shared.settings.enums.MetricsConstants.MILES_AND_FEET;
 import static net.osmand.shared.settings.enums.MetricsConstants.MILES_AND_METERS;
 import static btools.routingapp.BRouterServiceConnection.BROUTER_CONNECT_TIMEOUT_MS;
 
+import android.app.ActivityManager;
+import android.app.ActivityManager.RunningAppProcessInfo;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetManager;
@@ -144,6 +146,7 @@ import btools.routingapp.IBRouterService;
 public class OsmandApplication extends MultiDexApplication {
 
 	private static final org.apache.commons.logging.Log LOG = PlatformUtil.getLog(OsmandApplication.class);
+	private static final String FLOCKFREE_SPLASH_PROCESS_SUFFIX = ":flockfree_splash";
 
 	final AppInitializer appInitializer = new AppInitializer(this);
 	Handler uiHandler;
@@ -239,6 +242,10 @@ public class OsmandApplication extends MultiDexApplication {
 
 	@Override
 	public void onCreate() {
+		if (isFlockFreeSplashProcess(this)) {
+			super.onCreate();
+			return;
+		}
 		if (RestartActivity.isRestartProcess(this)) {
 			return;
 		}
@@ -302,6 +309,20 @@ public class OsmandApplication extends MultiDexApplication {
 
 		SearchUICore.setDebugMode(PluginsHelper.isDevelopment());
 		BackupHelper.DEBUG = PluginsHelper.isDevelopment();
+	}
+
+	private static boolean isFlockFreeSplashProcess(@NonNull Context context) {
+		ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+		List<RunningAppProcessInfo> processes = manager.getRunningAppProcesses();
+		if (!Algorithms.isEmpty(processes)) {
+			int currentPid = android.os.Process.myPid();
+			for (RunningAppProcessInfo processInfo : processes) {
+				if (processInfo.pid == currentPid) {
+					return processInfo.processName.endsWith(FLOCKFREE_SPLASH_PROCESS_SUFFIX);
+				}
+			}
+		}
+		return false;
 	}
 
 	public boolean isPlusVersionInApp() {
