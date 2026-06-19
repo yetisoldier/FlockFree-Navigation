@@ -1,6 +1,6 @@
 # FlockFree Navigation
 
-FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR camera awareness, CYD hardware integration, and community reporting.
+FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR camera awareness, optional CYD companion hardware integration, and community reporting.
 
 ![FlockFree Splash](docs/screenshots/ff-splash-branding.png)
 
@@ -14,7 +14,8 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 
 ![Map View](docs/screenshots/ff-map.png)
 
-### CYD Hardware Integration
+### Optional CYD Companion Hardware
+- **Optional hardware add-on** — FlockFree works as a standalone navigation app; CYD hardware is only needed for field RF detections
 - **BLE foreground service** — `CydBleService` runs as `connectedDevice` type, survives backgrounding
 - **Global BLE setting** — CYD BLE toggle is global across all OsmAnd profiles
 - **Phone GPS streaming** — Streams phone GPS to CYD hardware via `FYGPS` BLE UART
@@ -45,6 +46,34 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 - **All asset densities** — Launcher, adaptive, and splash icons in mdpi through xxxhdpi
 
 ![FlockFree Settings](docs/screenshots/ff-settings-branding.png)
+
+## Optional Companion Hardware
+
+FlockFree works without extra hardware. The optional [CYD-Flock-You](https://github.com/yetisoldier/CYD-Flock-You) companion device is an ESP32 with a 2.4" TFT that passively monitors Wi-Fi for Flock-style RF signatures and sends candidate detections to FlockFree over Bluetooth LE.
+
+### Pairing a CYD
+
+1. Power on the CYD device
+2. In FlockFree, open Menu → FlockFree
+3. Enable **CYD BLE hardware**
+4. FlockFree scans for `CYD-Flock-You` over Bluetooth LE and connects automatically
+5. The CYD status row in Settings shows connection state, GPS, SD, and detection count
+
+### When CYD Detects Something
+
+1. The CYD sends a detection event over BLE
+2. FlockFree shows a "CYD detection received" toast
+3. The detection appears as a **cyan diamond marker** on the map labeled `CYD`
+4. Tap the CYD marker → choose **Review as ALPR camera**
+5. Select brand preset, adjust direction if known
+6. OsmAnd's POI editor opens with tags prefilled at the detection coordinates
+7. Review, adjust the position, and submit manually
+
+If the CYD has no GPS fix, the detection is logged but does not create a map marker until coordinates are available.
+
+### Bench Testing Without Hardware
+
+Use **Simulate CYD detection** in Settings to create a test marker from your current phone location or map center. This tests the full review flow without a physical CYD.
 
 ## Installation
 
@@ -89,7 +118,7 @@ This builds, signs, installs over Wi-Fi ADB, launches FlockFree, and runs a read
 ## First Run Setup
 
 1. **Launch FlockFree** — The app opens to the map. The FlockFree plugin is enabled by default.
-2. **Grant permissions** — Allow location, Bluetooth, and notifications when prompted.
+2. **Grant permissions** — Allow location and notifications when prompted. Bluetooth is only needed if you use the optional CYD companion hardware.
 3. **Download offline maps** (optional but recommended) — Go to Menu → Maps & Resources → Download maps → choose your region. Route avoidance requires offline vector maps.
 4. **Camera data loads automatically** — The bundled seed (104,902 cameras) is available immediately. A network refresh updates from `data.dontgetflocked.com` weekly.
 
@@ -103,7 +132,7 @@ Cameras appear on the map at zoom 10+. At zoom 15+, orientation cones show which
 
 ### Nearby Camera Alerts
 
-1. Open Menu → Plugins → FlockFree → Settings
+1. Open Menu → FlockFree
 2. Enable **Nearby camera alerts**
 3. Set the **Alert distance** (default: 200 meters)
 4. While navigating or moving, you will receive a toast when approaching a known camera
@@ -112,7 +141,7 @@ Use **Check map center alert** in settings to bench-test alerts without driving.
 
 ### Route Avoidance
 
-1. Open Menu → Plugins → FlockFree → Settings
+1. Open Menu → FlockFree
 2. Enable **Avoid cameras on routes**
 3. Calculate a route as normal. FlockFree runs a second pass to block roads adjacent to known cameras and reroutes around them.
 4. A toast summary shows how many cameras were found near the route. The result persists in Settings as "Last route check".
@@ -130,34 +159,6 @@ Note: Route avoidance works with offline vector maps only.
 5. Review, adjust, and save through the standard OSM editor
 
 Nothing uploads automatically. You always review and confirm before submitting.
-
-### CYD Hardware Integration
-
-The CYD (Cheap Yellow Display) is an optional ESP32-based sensor that detects ALPR camera Wi-Fi signatures. See [CYD-Flock-You](https://github.com/yetisoldier/CYD-Flock-You) for hardware details.
-
-#### Pairing a CYD
-
-1. Power on the CYD device
-2. In FlockFree, open Menu → Plugins → FlockFree → Settings
-3. Enable **CYD BLE hardware**
-4. FlockFree scans for `CYD-Flock-You` over Bluetooth LE and connects automatically
-5. The CYD status row in Settings shows connection state, GPS, SD, and detection count
-
-#### When CYD Detects Something
-
-1. The CYD sends a detection event over BLE
-2. FlockFree shows a "CYD detection received" toast
-3. The detection appears as a **cyan diamond marker** on the map labeled `CYD`
-4. Tap the CYD marker → choose **Review as ALPR camera**
-5. Select brand preset, adjust direction if known
-6. OsmAnd's POI editor opens with tags prefilled at the detection coordinates
-7. Review, adjust the position, and submit manually
-
-If the CYD has no GPS fix, the detection is logged but does not create a map marker until coordinates are available.
-
-#### Bench Testing Without Hardware
-
-Use **Simulate CYD detection** in Settings to create a test marker from your current phone location or map center. This tests the full review flow without a physical CYD.
 
 ## Settings Reference
 
@@ -204,13 +205,9 @@ For developers and field testers:
 
 - Route avoidance is offline-only (requires downloaded vector maps)
 - Iterative relaxation caps at 4 retries to limit recalculation latency; very dense camera areas may still fall back to the original route
-- CYD detection to camera submission is a manual review flow (no auto-upload)
+- Optional CYD detection to camera submission is a manual review flow (no auto-upload)
 - Reporting flow opens the editor but does not verify end-to-end OSM upload
 - No live RF drive test completed yet (bench simulation verified only)
-
-## Companion Hardware
-
-Pair with [CYD-Flock-You](https://github.com/yetisoldier/CYD-Flock-You) firmware v1.2.0+ for ALPR detection hardware. The CYD is an ESP32 with a 2.4" TFT that passively monitors Wi-Fi for Flock-style RF signatures and sends detections to FlockFree over Bluetooth LE.
 
 ## Credits
 
