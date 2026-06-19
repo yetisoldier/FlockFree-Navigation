@@ -9,7 +9,9 @@ ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
 ANDROID_SDK="${ANDROID_SDK:-$ANDROID_HOME}"
 GRADLE_TASK="${GRADLE_TASK:-:OsmAnd:assembleGplayFreeLegacyFatDebug}"
 APK_PATH="$ROOT_DIR/OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-debug.apk"
-ARTIFACT_PATH="$ROOT_DIR/build-artifacts/FlockFree-gplayFree-legacy-fat-debug.apk"
+FLOCKFREE_ARTIFACT_VERSION="${FLOCKFREE_ARTIFACT_VERSION:-local}"
+ARTIFACT_NAME="${ARTIFACT_NAME:-FlockFree-Navigation-${FLOCKFREE_ARTIFACT_VERSION}-sideload.apk}"
+ARTIFACT_PATH="$ROOT_DIR/build-artifacts/$ARTIFACT_NAME"
 BUILD_INFO_PATH="$ROOT_DIR/build-artifacts/FlockFree-build-info.txt"
 PACKAGE_NAME="com.yetiwurks.flockfree"
 FIELD_DURATION="${FIELD_DURATION:-900}"
@@ -26,6 +28,9 @@ Environment:
   PHONE_SERIAL   ADB serial, default: $PHONE_SERIAL
   ANDROID_HOME   Android SDK path, default: $ANDROID_HOME
   GRADLE_TASK    Gradle task, default: $GRADLE_TASK
+  FLOCKFREE_ARTIFACT_VERSION
+                 Sideload artifact version label, default: $FLOCKFREE_ARTIFACT_VERSION
+  ARTIFACT_NAME  Output APK filename, default: $ARTIFACT_NAME
   FIELD_DURATION Timed field-session seconds, default: $FIELD_DURATION
 
 Note: this script runs Gradle. It is for Eric/manual use, not agent execution.

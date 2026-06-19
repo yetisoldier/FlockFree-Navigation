@@ -81,10 +81,12 @@ Use **Simulate CYD detection** in Settings to create a test marker from your cur
 ### Option 1: Download the APK (easiest)
 
 1. Go to [Releases](https://github.com/yetisoldier/FlockFree-Navigation/releases)
-2. Download the latest `FlockFree-gplayFree-legacy-fat-debug.apk`
+2. Download the latest `FlockFree-Navigation-vX.Y.Z-sideload.apk` release asset
 3. Enable "Install unknown apps" for your browser/Files app in Android settings
 4. Tap the APK to install
 5. Launch **FlockFree** from your app drawer
+
+The GitHub APK uses the `-sideload` suffix because it is intended for direct installation outside the Play Store.
 
 ### Option 2: Build from source
 
