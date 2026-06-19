@@ -14,8 +14,9 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 
 ![Map View](docs/screenshots/ff-map.png)
 
-### Optional CYD Companion Hardware
+### Optional CYD (Cheap Yellow Display) Companion Hardware Running Flock You
 - **Optional hardware add-on** — FlockFree works as a standalone navigation app; CYD hardware is only needed for field RF detections
+- https://github.com/yetisoldier/CYD-Flock-You (Flock You CYD firmware)
 - **BLE foreground service** — `CydBleService` runs as `connectedDevice` type, survives backgrounding
 - **Global BLE setting** — CYD BLE toggle is global across all OsmAnd profiles
 - **Phone GPS streaming** — Streams phone GPS to CYD hardware via `FYGPS` BLE UART
