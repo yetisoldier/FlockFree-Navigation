@@ -22,6 +22,25 @@
 		android:summaryOn="@string/shared_string_enabled"
 		android:title="@string/flockfree_cyd_ble" />
 
+	<net.osmand.plus.settings.preferences.SwitchPreferenceEx
+		android:key="wifi_scan_enabled"
+		android:layout="@layout/preference_with_descr_dialog_and_switch"
+		android:summaryOff="@string/shared_string_disabled"
+		android:summaryOn="@string/shared_string_enabled"
+		android:title="@string/flockfree_wifi_scan" />
+
+	<Preference
+		android:key="flockfree_wifi_scan_status"
+		android:layout="@layout/preference_with_descr"
+		android:persistent="false"
+		android:title="@string/flockfree_wifi_scan_status" />
+
+	<Preference
+		android:key="flockfree_wifi_scan_clear"
+		android:layout="@layout/preference_with_descr"
+		android:persistent="false"
+		android:title="@string/flockfree_wifi_scan_clear" />
+
 	<Preference
 		android:layout="@layout/simple_divider_item"
 		android:selectable="false" />

@@ -71,10 +71,30 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 	@Nullable
 	private Float lastPhoneAccuracy;
 	private long lastPhoneLocationAtMs;
+	@Nullable
+	private CydConnectionListener connectionListener;
 
 	public CydHardwareManager(@NonNull OsmandApplication app) {
 		this.app = app;
 		loadPersistedDetections();
+	}
+
+	public interface CydConnectionListener {
+		void onCydConnectionStateChanged(@NonNull State state);
+	}
+
+	public void setConnectionListener(@Nullable CydConnectionListener listener) {
+		this.connectionListener = listener;
+	}
+
+	private void notifyCydConnectionStateChanged() {
+		if (connectionListener != null) {
+			State currentState;
+			synchronized (lock) {
+				currentState = state;
+			}
+			connectionListener.onCydConnectionStateChanged(currentState);
+		}
 	}
 
 	@NonNull
@@ -491,11 +511,15 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 		setState(State.READY, app.getString(R.string.flockfree_cyd_status_ready));
 		app.showShortToastMessage(R.string.flockfree_cyd_status_ready);
 		client.sendStatusRequest();
+		// Notify plugin so it can pause WiFi scanning (CYD does full promiscuous scanning)
+		notifyCydConnectionStateChanged();
 	}
 
 	@Override
 	public void onCydDisconnected() {
 		setState(State.IDLE, app.getString(R.string.flockfree_cyd_status_disconnected));
+		// Notify plugin so it can resume WiFi scanning if enabled
+		notifyCydConnectionStateChanged();
 	}
 
 	@Override

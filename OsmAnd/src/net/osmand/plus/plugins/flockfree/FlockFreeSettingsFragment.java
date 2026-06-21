@@ -1,10 +1,12 @@
 package net.osmand.plus.plugins.flockfree;
 
+import android.Manifest;
 import android.os.Handler;
 import android.os.Looper;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
+import androidx.core.app.ActivityCompat;
 import androidx.preference.Preference;
 
 import net.osmand.plus.R;
@@ -13,6 +15,7 @@ import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.plugins.flockfree.cyd.CydBleService;
 import net.osmand.plus.plugins.flockfree.cyd.CydDetectionCandidate;
 import net.osmand.plus.plugins.flockfree.cyd.CydHardwareManager;
+import net.osmand.plus.plugins.flockfree.wifi.WifiScannerManager;
 import net.osmand.plus.settings.fragments.BaseSettingsFragment;
 import net.osmand.plus.settings.preferences.ListPreferenceEx;
 import net.osmand.plus.settings.preferences.SwitchPreferenceEx;
@@ -22,6 +25,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 
 	private static final long DYNAMIC_STATUS_REFRESH_MS = 1_000L;
 	private static final int MAX_DYNAMIC_STATUS_REFRESH_TICKS = 90;
+	private static final int WIFI_LOCATION_REQUEST_CODE = 46;
 	private static final String CAMERA_DATA_STATUS_KEY = "flockfree_camera_data_status";
 	private static final String CAMERA_DATA_REFRESH_KEY = "flockfree_camera_data_refresh";
 	private static final String CAMERA_NEAREST_MAP_CENTER_KEY = "flockfree_camera_nearest_map_center";
@@ -36,6 +40,8 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 	private static final String CYD_REQUEST_STATUS_KEY = "flockfree_cyd_request_status";
 	private static final String CYD_SIMULATE_DETECTION_KEY = "flockfree_cyd_simulate_detection";
 	private static final String CYD_CLEAR_DETECTIONS_KEY = "flockfree_cyd_clear_detections";
+	private static final String WIFI_SCAN_STATUS_KEY = "flockfree_wifi_scan_status";
+	private static final String WIFI_SCAN_CLEAR_KEY = "flockfree_wifi_scan_clear";
 	private static final Integer[] AVOIDANCE_RADIUS_VALUES = {50, 75, 100, 150, 200, 300, 500};
 	private static final Integer[] ALERT_DISTANCE_VALUES = {100, 200, 300, 500, 750, 1000};
 
@@ -74,6 +80,9 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		setupReportLastDraftPreference();
 		setupSwitchPreference(plugin.CYD_BLE_ENABLED.getId(),
 				R.string.flockfree_cyd_ble_description);
+		setupSwitchPreference(plugin.WIFI_SCAN_ENABLED.getId(),
+				R.string.flockfree_wifi_scan_description);
+		setupWifiScanStatusPreference();
 		setupCydStatusPreference();
 	}
 
@@ -156,6 +165,14 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		}
 	}
 
+	private void setupWifiScanStatusPreference() {
+		Preference preference = findPreference(WIFI_SCAN_STATUS_KEY);
+		if (preference != null) {
+			WifiScannerManager manager = plugin.getWifiScannerManager();
+			preference.setSummary(manager.getStatusSummary());
+		}
+	}
+
 	private void setupDistancePreference(@NonNull String prefId, @NonNull Integer[] values,
 	                                     @StringRes int descriptionId) {
 		ListPreferenceEx preference = findPreference(prefId);
@@ -201,6 +218,35 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 				CydBleService.stop(app);
 				plugin.getCydHardwareManager().disconnect();
 				setupCydStatusPreference();
+				// CYD disconnected - resume WiFi scan if enabled
+				plugin.onCydConnectionStateChanged();
+			}
+			return accepted;
+		}
+		if (plugin.WIFI_SCAN_ENABLED.getId().equals(preference.getKey())) {
+			if (Boolean.TRUE.equals(newValue)) {
+				MapActivity mapActivity = getMapActivity();
+				if (mapActivity == null) {
+					app.showShortToastMessage(R.string.flockfree_cyd_status_map_unavailable);
+					setupWifiScanStatusPreference();
+					return false;
+				}
+				if (!ensureWifiScanLocationReady(mapActivity)) {
+					setupWifiScanStatusPreference();
+					return false;
+				}
+			}
+			boolean accepted = super.onPreferenceChange(preference, newValue);
+			if (accepted) {
+				if (Boolean.TRUE.equals(newValue)) {
+					if (!plugin.ensureWifiScanIfEnabled()) {
+						plugin.WIFI_SCAN_ENABLED.set(false);
+						app.showShortToastMessage(R.string.flockfree_wifi_scan_start_failed);
+					}
+				} else {
+					plugin.getWifiScannerManager().stop();
+				}
+				setupWifiScanStatusPreference();
 			}
 			return accepted;
 		}
@@ -214,6 +260,21 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 				plugin.updateLayers(mapActivity, mapActivity);
 				mapActivity.refreshMap();
 			}
+		}
+		return true;
+	}
+
+	private boolean ensureWifiScanLocationReady(@NonNull MapActivity mapActivity) {
+		if (!AndroidUtils.hasPermission(mapActivity, Manifest.permission.ACCESS_FINE_LOCATION)) {
+			ActivityCompat.requestPermissions(mapActivity,
+					new String[] {Manifest.permission.ACCESS_FINE_LOCATION},
+					WIFI_LOCATION_REQUEST_CODE);
+			app.showShortToastMessage(R.string.flockfree_wifi_scan_location_permission_requested);
+			return false;
+		}
+		if (!plugin.getWifiScannerManager().isReadyToScan()) {
+			app.showShortToastMessage(R.string.flockfree_wifi_scan_location_disabled);
+			return false;
 		}
 		return true;
 	}
@@ -259,6 +320,10 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 				mapActivity.refreshMap();
 			}
 			return true;
+		} else if (WIFI_SCAN_CLEAR_KEY.equals(key)) {
+			plugin.getWifiScannerManager().clearDetections();
+			setupWifiScanStatusPreference();
+			return true;
 		}
 		return super.onPreferenceClick(preference);
 	}
@@ -302,6 +367,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		setupAlertLastCheckPreference();
 		setupReportLastDraftPreference();
 		setupCydStatusPreference();
+		setupWifiScanStatusPreference();
 	}
 
 	private void startDynamicStatusRefresh() {
@@ -317,8 +383,10 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 			return true;
 		}
 		CydHardwareManager.State state = plugin.getCydHardwareManager().getState();
-		return state == CydHardwareManager.State.SCANNING
+		boolean cydActive = state == CydHardwareManager.State.SCANNING
 				|| state == CydHardwareManager.State.CONNECTING
 				|| state == CydHardwareManager.State.READY;
+		boolean wifiActive = plugin.getWifiScannerManager().isScanning();
+		return cydActive || wifiActive;
 	}
 }

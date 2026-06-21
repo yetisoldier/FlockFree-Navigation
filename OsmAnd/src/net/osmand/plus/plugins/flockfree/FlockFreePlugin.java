@@ -14,6 +14,7 @@ import net.osmand.plus.plugins.OsmandPlugin;
 import net.osmand.plus.plugins.flockfree.cyd.CydBleService;
 import net.osmand.plus.plugins.flockfree.cyd.CydDetectionCandidate;
 import net.osmand.plus.plugins.flockfree.cyd.CydHardwareManager;
+import net.osmand.plus.plugins.flockfree.wifi.WifiScannerManager;
 import net.osmand.plus.routing.RouteCalculationResult;
 import net.osmand.plus.plugins.flockfree.widgets.CameraProximityWidget;
 import net.osmand.plus.quickaction.QuickActionType;
@@ -49,6 +50,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     public final CommonPreference<Integer> CAMERA_ALERT_DISTANCE;
     public final CommonPreference<Long> CAMERA_DATA_LAST_UPDATE;
     public final CommonPreference<Boolean> CYD_BLE_ENABLED;
+    public final CommonPreference<Boolean> WIFI_SCAN_ENABLED;
     public final CommonPreference<String> CAMERA_ROUTE_LAST_CHECK_SUMMARY;
     public final CommonPreference<String> CAMERA_ALERT_LAST_CHECK_SUMMARY;
     public final CommonPreference<String> CAMERA_REPORT_LAST_DRAFT_SUMMARY;
@@ -69,6 +71,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     private CameraAvoidanceHelper avoidanceHelper;
     private CameraReporter cameraReporter;
     private CydHardwareManager cydHardwareManager;
+    private WifiScannerManager wifiScannerManager;
     private long lastCameraAlertTimeMs;
     private String lastCameraAlertKey;
     public FlockFreePlugin(OsmandApplication app) {
@@ -97,6 +100,10 @@ public class FlockFreePlugin extends OsmandPlugin {
                 FlockFreePreferences.DEFAULT_CYD_BLE_ENABLED).makeProfile().cache();
         migrateCydBleEnabledToGlobal(cydBleEnabled);
         CYD_BLE_ENABLED = cydBleEnabled;
+        CommonPreference<Boolean> wifiScanEnabled = registerBooleanPreference(
+                FlockFreePreferences.WIFI_SCAN_ENABLED,
+                FlockFreePreferences.DEFAULT_WIFI_SCAN_ENABLED).makeProfile().cache();
+        WIFI_SCAN_ENABLED = wifiScanEnabled;
         CAMERA_ROUTE_LAST_CHECK_SUMMARY = registerStringPreference(
                 FlockFreePreferences.CAMERA_ROUTE_LAST_CHECK_SUMMARY,
                 FlockFreePreferences.DEFAULT_STATUS_SUMMARY).makeProfile().cache();
@@ -186,8 +193,30 @@ public class FlockFreePlugin extends OsmandPlugin {
     public CydHardwareManager getCydHardwareManager() {
         if (cydHardwareManager == null) {
             cydHardwareManager = new CydHardwareManager(app);
+            cydHardwareManager.setConnectionListener(state -> onCydConnectionStateChanged());
         }
         return cydHardwareManager;
+    }
+
+    @NonNull
+    public WifiScannerManager getWifiScannerManager() {
+        if (wifiScannerManager == null) {
+            wifiScannerManager = new WifiScannerManager(app);
+            wifiScannerManager.setListener(new WifiScannerManager.Listener() {
+                @Override
+                public void onWifiFlockDetection(@NonNull WifiScannerManager.WifiFlockDetection detection, boolean isNew) {
+                    if (isNew) {
+                        app.showShortToastMessage(R.string.flockfree_wifi_detection_received);
+                    }
+                }
+
+                @Override
+                public void onWifiScanCycleCompleted(int totalDevicesScanned, int flockMatchesTotal) {
+                    // Could log or update UI — for now just let status refresh handle it
+                }
+            });
+        }
+        return wifiScannerManager;
     }
 
     @NonNull
@@ -489,6 +518,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     public void mapActivityResume(@NonNull MapActivity activity) {
         getCameraData().ensureDataLoaded();
         ensureCydScanIfEnabled(activity);
+        ensureWifiScanIfEnabled();
     }
 
     @Override
@@ -498,6 +528,9 @@ public class FlockFreePlugin extends OsmandPlugin {
         if (cydHardwareManager != null) {
             cydHardwareManager.close();
             cydHardwareManager = null;
+        }
+        if (wifiScannerManager != null) {
+            wifiScannerManager.stop();
         }
     }
 
@@ -561,6 +594,52 @@ public class FlockFreePlugin extends OsmandPlugin {
         CydHardwareManager.State state = manager.getState();
         if (state == CydHardwareManager.State.IDLE || state == CydHardwareManager.State.ERROR) {
             manager.startScanAndConnect(activity);
+        }
+    }
+
+    /**
+     * Start WiFi scanning if enabled, unless a CYD hardware device is connected.
+     * When the CYD is actively scanning (promiscuous WiFi), the phone's WiFi scanner
+     * is redundant and wastes battery — so we disable it.
+     */
+    public boolean ensureWifiScanIfEnabled() {
+        if (!WIFI_SCAN_ENABLED.get()) {
+            if (wifiScannerManager != null) {
+                wifiScannerManager.stop();
+            }
+            return true;
+        }
+        // Auto-disable WiFi scan when CYD is connected — CYD does full promiscuous scanning
+        if (cydHardwareManager != null && cydHardwareManager.getState() == CydHardwareManager.State.READY) {
+            if (wifiScannerManager != null && wifiScannerManager.isScanning()) {
+                app.showToastMessage(R.string.flockfree_wifi_scan_paused_cyd_active);
+                wifiScannerManager.stop();
+            }
+            return true;
+        }
+        WifiScannerManager manager = getWifiScannerManager();
+        if (!manager.isScanning()) {
+            return manager.start();
+        }
+        return true;
+    }
+
+    /**
+     * Called when CYD connection state changes to re-evaluate WiFi scanner.
+     * When CYD becomes READY, stop WiFi scan to save battery.
+     * When CYD disconnects, resume WiFi scan if it was enabled.
+     */
+    public void onCydConnectionStateChanged() {
+        if (cydHardwareManager != null && cydHardwareManager.getState() == CydHardwareManager.State.READY) {
+            if (wifiScannerManager != null && wifiScannerManager.isScanning()) {
+                app.showToastMessage(R.string.flockfree_wifi_scan_paused_cyd_active);
+                wifiScannerManager.stop();
+            }
+        } else {
+            // CYD not ready — resume WiFi scan if enabled
+            if (WIFI_SCAN_ENABLED.get()) {
+                ensureWifiScanIfEnabled();
+            }
         }
     }
 

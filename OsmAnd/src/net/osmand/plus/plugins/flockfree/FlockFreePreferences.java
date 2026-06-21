@@ -19,6 +19,7 @@ public final class FlockFreePreferences {
     public static final String CAMERA_ALERTS_ENABLED = "camera_alerts_enabled";
     public static final String CAMERA_ALERT_DISTANCE = "camera_alert_distance";
     public static final String CYD_BLE_ENABLED = "cyd_ble_enabled";
+    public static final String WIFI_SCAN_ENABLED = "wifi_scan_enabled";
     public static final String CAMERA_ROUTE_LAST_CHECK_SUMMARY = "camera_route_last_check_summary";
     public static final String CAMERA_ALERT_LAST_CHECK_SUMMARY = "camera_alert_last_check_summary";
     public static final String CAMERA_REPORT_LAST_DRAFT_SUMMARY = "camera_report_last_draft_summary";
@@ -32,6 +33,7 @@ public final class FlockFreePreferences {
     public static final int DEFAULT_CAMERA_ALERT_DISTANCE = 300;        // meters
     public static final long DEFAULT_CAMERA_DATA_LAST_UPDATE = 0L;
     public static final boolean DEFAULT_CYD_BLE_ENABLED = false;
+    public static final boolean DEFAULT_WIFI_SCAN_ENABLED = false;
     public static final String DEFAULT_STATUS_SUMMARY = "";
 
     // Bounds
