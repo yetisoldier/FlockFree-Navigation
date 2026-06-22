@@ -92,6 +92,7 @@ public class GeneralRouter implements VehicleRouter {
 	private float maxVehicleSpeed;
 
 	private TLongHashSet impassableRoads;
+	private Map<Long, Float> flockFreeTrafficSpeedMultipliers;
 	
 	private GeneralRouterProfile profile;
 	
@@ -551,7 +552,7 @@ public class GeneralRouter implements VehicleRouter {
  			definedSpd = Math.max(Math.min(spd, maxSpeed), minSpeed);
 			putCache(RouteDataObjectAttribute.ROAD_SPEED, road, definedSpd, dir);
 		}
-		return definedSpd;
+		return applyFlockFreeTrafficSpeedMultiplier(road, definedSpd, maxSpeed);
 	}
 	
 	@Override
@@ -560,7 +561,8 @@ public class GeneralRouter implements VehicleRouter {
 		if (maxVehicleSpeed != maxSpeed) {
 			// not implemented direction usage
 			float spd = getObjContext(RouteDataObjectAttribute.ROAD_SPEED).evaluateFloat(road, defaultSpeed);
-			return Math.max(Math.min(spd, maxVehicleSpeed), minSpeed);
+			return applyFlockFreeTrafficSpeedMultiplier(road,
+					Math.max(Math.min(spd, maxVehicleSpeed), minSpeed), maxVehicleSpeed);
 		}
 		Float sp = getCache(RouteDataObjectAttribute.ROAD_SPEED, road, dir);
 		if (sp == null) {
@@ -569,7 +571,19 @@ public class GeneralRouter implements VehicleRouter {
 			sp = Math.max(Math.min(spd, maxVehicleSpeed), minSpeed);
 			putCache(RouteDataObjectAttribute.ROAD_SPEED, road, sp, dir);
 		}
-		return sp;
+		return applyFlockFreeTrafficSpeedMultiplier(road, sp, maxVehicleSpeed);
+	}
+
+	private float applyFlockFreeTrafficSpeedMultiplier(RouteDataObject road, float baseSpeed, float maxAllowedSpeed) {
+		if (flockFreeTrafficSpeedMultipliers == null || road == null || baseSpeed <= 0) {
+			return baseSpeed;
+		}
+		Float multiplier = flockFreeTrafficSpeedMultipliers.get(road.getId());
+		if (multiplier == null) {
+			return baseSpeed;
+		}
+		float boundedMultiplier = Math.max(0.05f, Math.min(1.5f, multiplier));
+		return Math.max(minSpeed, Math.min(maxAllowedSpeed, baseSpeed * boundedMultiplier));
 	}
 	
 	@Override
@@ -1351,5 +1365,12 @@ public class GeneralRouter implements VehicleRouter {
 			this.impassableRoads.clear();
 		}
 	}
-}
 
+	public void setFlockFreeTrafficSpeedMultipliers(Map<Long, Float> speedMultipliers) {
+		if (speedMultipliers == null || speedMultipliers.isEmpty()) {
+			flockFreeTrafficSpeedMultipliers = null;
+		} else {
+			flockFreeTrafficSpeedMultipliers = new HashMap<>(speedMultipliers);
+		}
+	}
+}

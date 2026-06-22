@@ -51,10 +51,12 @@ public class FlockFreePlugin extends OsmandPlugin {
     public final CommonPreference<Integer> CAMERA_AVOIDANCE_RADIUS;
     public final CommonPreference<Boolean> CAMERA_ALERTS_ENABLED;
     public final CommonPreference<Integer> CAMERA_ALERT_DISTANCE;
+    public final CommonPreference<Boolean> TRAFFIC_ROUTING_ENABLED;
     public final CommonPreference<Long> CAMERA_DATA_LAST_UPDATE;
     public final CommonPreference<Boolean> CYD_BLE_ENABLED;
     public final CommonPreference<Boolean> WIFI_SCAN_ENABLED;
     public final CommonPreference<String> CAMERA_ROUTE_LAST_CHECK_SUMMARY;
+    public final CommonPreference<String> TRAFFIC_ROUTE_LAST_CHECK_SUMMARY;
     public final CommonPreference<String> CAMERA_ALERT_LAST_CHECK_SUMMARY;
     public final CommonPreference<String> CAMERA_REPORT_LAST_DRAFT_SUMMARY;
     public final CommonPreference<String> CAMERA_NEAREST_LAST_CHECK_SUMMARY;
@@ -72,6 +74,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     private FlockFreeLayer cameraLayer;
     private CameraData cameraData;
     private CameraAvoidanceHelper avoidanceHelper;
+    private TrafficRoutingHelper trafficRoutingHelper;
     private CameraReporter cameraReporter;
     private CydHardwareManager cydHardwareManager;
     private WifiScannerManager wifiScannerManager;
@@ -96,6 +99,9 @@ public class FlockFreePlugin extends OsmandPlugin {
         CAMERA_ALERT_DISTANCE = registerIntPreference(
                 FlockFreePreferences.CAMERA_ALERT_DISTANCE,
                 FlockFreePreferences.DEFAULT_CAMERA_ALERT_DISTANCE).makeProfile().cache();
+        TRAFFIC_ROUTING_ENABLED = registerBooleanPreference(
+                FlockFreePreferences.TRAFFIC_ROUTING_ENABLED,
+                FlockFreePreferences.DEFAULT_TRAFFIC_ROUTING_ENABLED).makeProfile().cache();
         CAMERA_DATA_LAST_UPDATE = registerLongPreference(
                 FlockFreePreferences.CAMERA_DATA_LAST_UPDATE,
                 FlockFreePreferences.DEFAULT_CAMERA_DATA_LAST_UPDATE).makeProfile().cache();
@@ -110,6 +116,9 @@ public class FlockFreePlugin extends OsmandPlugin {
         WIFI_SCAN_ENABLED = wifiScanEnabled;
         CAMERA_ROUTE_LAST_CHECK_SUMMARY = registerStringPreference(
                 FlockFreePreferences.CAMERA_ROUTE_LAST_CHECK_SUMMARY,
+                FlockFreePreferences.DEFAULT_STATUS_SUMMARY).makeProfile().cache();
+        TRAFFIC_ROUTE_LAST_CHECK_SUMMARY = registerStringPreference(
+                FlockFreePreferences.TRAFFIC_ROUTE_LAST_CHECK_SUMMARY,
                 FlockFreePreferences.DEFAULT_STATUS_SUMMARY).makeProfile().cache();
         CAMERA_ALERT_LAST_CHECK_SUMMARY = registerStringPreference(
                 FlockFreePreferences.CAMERA_ALERT_LAST_CHECK_SUMMARY,
@@ -204,6 +213,14 @@ public class FlockFreePlugin extends OsmandPlugin {
     }
 
     @NonNull
+    public TrafficRoutingHelper getTrafficRoutingHelper() {
+        if (trafficRoutingHelper == null) {
+            trafficRoutingHelper = new TrafficRoutingHelper(app, this);
+        }
+        return trafficRoutingHelper;
+    }
+
+    @NonNull
     public CameraReporter getCameraReporter() {
         if (cameraReporter == null) {
             cameraReporter = new CameraReporter(app, CAMERA_REPORT_LAST_DRAFT_SUMMARY);
@@ -251,6 +268,18 @@ public class FlockFreePlugin extends OsmandPlugin {
 
     private synchronized void setLastRouteCheckSummary(@NonNull String summary) {
         CAMERA_ROUTE_LAST_CHECK_SUMMARY.set(summary);
+    }
+
+    @NonNull
+    public synchronized String getLastTrafficRouteCheckSummary() {
+        String summary = TRAFFIC_ROUTE_LAST_CHECK_SUMMARY.get();
+        return summary != null && summary.length() > 0
+                ? summary
+                : app.getString(R.string.flockfree_traffic_last_check_none);
+    }
+
+    private synchronized void setLastTrafficRouteCheckSummary(@NonNull String summary) {
+        TRAFFIC_ROUTE_LAST_CHECK_SUMMARY.set(summary);
     }
 
     @NonNull
@@ -736,11 +765,14 @@ public class FlockFreePlugin extends OsmandPlugin {
 
     @Override
     public void newRouteIsCalculated(boolean newRoute) {
-        if (!newRoute || !CAMERA_AVOIDANCE_ENABLED.get()) {
+        if (!newRoute || (!CAMERA_AVOIDANCE_ENABLED.get() && !TRAFFIC_ROUTING_ENABLED.get())) {
             return;
         }
-        getCameraData().ensureDataLoaded();
-        if (!getCameraData().isDataLoaded()) {
+        boolean cameraAvoidanceEnabled = CAMERA_AVOIDANCE_ENABLED.get();
+        if (cameraAvoidanceEnabled) {
+            getCameraData().ensureDataLoaded();
+        }
+        if (cameraAvoidanceEnabled && !getCameraData().isDataLoaded()) {
             String loadingSummary = app.getString(R.string.flockfree_route_camera_data_loading);
             setLastRouteCheckSummary(loadingSummary);
             app.showShortToastMessage(loadingSummary);
@@ -756,11 +788,22 @@ public class FlockFreePlugin extends OsmandPlugin {
             setLastRouteCheckSummary(app.getString(R.string.flockfree_route_last_check_no_route));
             return;
         }
-        CameraAvoidanceHelper helper = getAvoidanceHelper();
-        String routeSummary = helper.getRouteCameraSummaryFromLocations(routeLocations);
-        String avoidanceSummary = helper.consumeLastAvoidanceStatusSummary();
-        if (!avoidanceSummary.isEmpty()) {
-            routeSummary = routeSummary + "\n" + avoidanceSummary;
+        String routeSummary = "";
+        if (cameraAvoidanceEnabled) {
+            CameraAvoidanceHelper helper = getAvoidanceHelper();
+            routeSummary = helper.getRouteCameraSummaryFromLocations(routeLocations);
+            String avoidanceSummary = helper.consumeLastAvoidanceStatusSummary();
+            if (!avoidanceSummary.isEmpty()) {
+                routeSummary = routeSummary + "\n" + avoidanceSummary;
+            }
+        }
+        String trafficSummary = getTrafficRoutingHelper().consumeLastTrafficStatusSummary();
+        if (!trafficSummary.isEmpty()) {
+            setLastTrafficRouteCheckSummary(trafficSummary);
+            routeSummary = routeSummary.isEmpty() ? trafficSummary : routeSummary + "\n" + trafficSummary;
+        }
+        if (routeSummary.isEmpty()) {
+            return;
         }
         setLastRouteCheckSummary(routeSummary);
         app.showToastMessage(routeSummary);

@@ -31,6 +31,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 	private static final String CAMERA_NEAREST_MAP_CENTER_KEY = "flockfree_camera_nearest_map_center";
 	private static final String CAMERA_NEAREST_LAST_CHECK_KEY = "flockfree_camera_nearest_last_check";
 	private static final String ROUTE_LAST_CHECK_KEY = "flockfree_route_last_check";
+	private static final String TRAFFIC_ROUTE_LAST_CHECK_KEY = "flockfree_traffic_last_check";
 	private static final String ALERT_LAST_CHECK_KEY = "flockfree_alert_last_check";
 	private static final String ALERT_CHECK_MAP_CENTER_KEY = "flockfree_alert_check_map_center";
 	private static final String REPORT_LAST_DRAFT_KEY = "flockfree_report_last_draft";
@@ -69,11 +70,14 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		setupNearestCameraLastCheckPreference();
 		setupSwitchPreference(plugin.CAMERA_AVOIDANCE_ENABLED.getId(),
 				R.string.flockfree_camera_avoidance_enabled_description);
-		setupDistancePreference(plugin.CAMERA_AVOIDANCE_RADIUS.getId(), AVOIDANCE_RADIUS_VALUES,
-				R.string.flockfree_avoidance_radius_description);
-		setupRouteLastCheckPreference();
-		setupSwitchPreference(plugin.CAMERA_ALERTS_ENABLED.getId(),
-				R.string.flockfree_nearby_alerts_enabled_description);
+			setupDistancePreference(plugin.CAMERA_AVOIDANCE_RADIUS.getId(), AVOIDANCE_RADIUS_VALUES,
+					R.string.flockfree_avoidance_radius_description);
+			setupRouteLastCheckPreference();
+			setupSwitchPreference(plugin.TRAFFIC_ROUTING_ENABLED.getId(),
+					R.string.flockfree_traffic_routing_enabled_description);
+			setupTrafficRouteLastCheckPreference();
+			setupSwitchPreference(plugin.CAMERA_ALERTS_ENABLED.getId(),
+					R.string.flockfree_nearby_alerts_enabled_description);
 		setupDistancePreference(plugin.CAMERA_ALERT_DISTANCE.getId(), ALERT_DISTANCE_VALUES,
 				R.string.flockfree_alert_distance_description);
 		setupAlertLastCheckPreference();
@@ -126,6 +130,13 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		Preference preference = findPreference(ROUTE_LAST_CHECK_KEY);
 		if (preference != null) {
 			preference.setSummary(plugin.getLastRouteCheckSummary());
+		}
+	}
+
+	private void setupTrafficRouteLastCheckPreference() {
+		Preference preference = findPreference(TRAFFIC_ROUTE_LAST_CHECK_KEY);
+		if (preference != null) {
+			preference.setSummary(plugin.getLastTrafficRouteCheckSummary());
 		}
 	}
 
@@ -363,8 +374,9 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 	private void refreshDynamicStatusPreferences() {
 		setupCameraDataStatusPreference();
 		setupNearestCameraLastCheckPreference();
-		setupRouteLastCheckPreference();
-		setupAlertLastCheckPreference();
+			setupRouteLastCheckPreference();
+			setupTrafficRouteLastCheckPreference();
+			setupAlertLastCheckPreference();
 		setupReportLastDraftPreference();
 		setupCydStatusPreference();
 		setupWifiScanStatusPreference();

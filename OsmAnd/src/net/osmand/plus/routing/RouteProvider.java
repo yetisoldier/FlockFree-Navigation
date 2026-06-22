@@ -33,6 +33,7 @@ import net.osmand.plus.onlinerouting.engine.OnlineRoutingEngine.OnlineRoutingRes
 import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.plugins.flockfree.CameraAvoidanceHelper;
 import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
+import net.osmand.plus.plugins.flockfree.TrafficRoutingHelper;
 import net.osmand.plus.render.NativeOsmandLibrary;
 import net.osmand.plus.routing.GPXRouteParams.GPXRouteParamsBuilder;
 import net.osmand.plus.settings.backend.ApplicationMode;
@@ -80,6 +81,19 @@ public class RouteProvider {
 	private static final int MAX_RELAXATION_ITERATIONS = 4;
 
 	private final GpxRouteHelper gpxRouteHelper = new GpxRouteHelper(this);
+
+	private static class FlockFreeRouteVariant {
+		final RouteCalculationResult result;
+		final Set<Long> activeCameraAvoidanceRoadIds;
+
+		FlockFreeRouteVariant(@NonNull RouteCalculationResult result,
+		                      @Nullable Set<Long> activeCameraAvoidanceRoadIds) {
+			this.result = result;
+			this.activeCameraAvoidanceRoadIds = activeCameraAvoidanceRoadIds == null
+					? Collections.emptySet()
+					: new LinkedHashSet<>(activeCameraAvoidanceRoadIds);
+		}
+	}
 
 	public static Location createLocation(@NonNull WptPt pt) {
 		Location loc = new Location("OsmandRouteProvider");
@@ -142,9 +156,16 @@ public class RouteProvider {
 					res = gpxRouteHelper.calculateGpxRoute(params);
 				} else if (params.mode.getRouteService() == RouteService.OSMAND) {
 					res = findVectorMapsRoute(params, calcGPXRoute);
-					RouteCalculationResult avoided = maybeRecalculateWithFlockFreeAvoidance(params, res, calcGPXRoute);
+					Set<Long> activeCameraAvoidanceRoadIds = Collections.emptySet();
+					FlockFreeRouteVariant avoided = maybeRecalculateWithFlockFreeAvoidance(params, res, calcGPXRoute);
 					if (avoided != null) {
-						res = avoided;
+						res = avoided.result;
+						activeCameraAvoidanceRoadIds = avoided.activeCameraAvoidanceRoadIds;
+					}
+					FlockFreeRouteVariant trafficAdjusted = maybeRecalculateWithFlockFreeTraffic(params, res,
+							calcGPXRoute, activeCameraAvoidanceRoadIds);
+					if (trafficAdjusted != null) {
+						res = trafficAdjusted.result;
 					}
 					if (params.calculationProgress.missingMapsCalculationResult != null) {
 						res.setMissingMapsCalculationResult(params.calculationProgress.missingMapsCalculationResult);
@@ -202,9 +223,9 @@ public class RouteProvider {
 	}
 
 	@Nullable
-	private RouteCalculationResult maybeRecalculateWithFlockFreeAvoidance(@NonNull RouteCalculationParams params,
-	                                                                      @NonNull RouteCalculationResult initial,
-	                                                                      boolean calcGPXRoute) throws IOException {
+	private FlockFreeRouteVariant maybeRecalculateWithFlockFreeAvoidance(@NonNull RouteCalculationParams params,
+	                                                                     @NonNull RouteCalculationResult initial,
+	                                                                     boolean calcGPXRoute) throws IOException {
 		if (params.cameraAvoidanceApplied || !initial.isCalculated()) {
 			return null;
 		}
@@ -247,7 +268,7 @@ public class RouteProvider {
 				log.info("FlockFree recalculated route with " + blockedIds.size()
 						+ " temporary avoid road ids (full avoidance)");
 				avoidanceHelper.recordAvoidanceApplied(blockedIds.size());
-				return avoided;
+				return new FlockFreeRouteVariant(avoided, avoidedParams.temporaryImpassableRoadIds);
 			}
 		} catch (IOException e) {
 			log.warn("FlockFree temporary camera avoidance threw; returning original route", e);
@@ -285,7 +306,7 @@ public class RouteProvider {
 							+ ", remaining cameras on unblocked roads=" + remainingCameraCount);
 					avoidanceHelper.recordAvoidancePartial(blockedIds.size(),
 							totalCameraRoadCount, remainingCameraCount);
-					return avoided;
+					return new FlockFreeRouteVariant(avoided, avoidedParams.temporaryImpassableRoadIds);
 				}
 			} catch (IOException e) {
 				log.warn("FlockFree relaxation iteration " + (i + 1) + " threw", e);
@@ -302,6 +323,72 @@ public class RouteProvider {
 		log.warn("FlockFree iterative relaxation exhausted after " + MAX_RELAXATION_ITERATIONS
 				+ " iterations; returning original route");
 		return null;
+	}
+
+	@Nullable
+	private FlockFreeRouteVariant maybeRecalculateWithFlockFreeTraffic(@NonNull RouteCalculationParams params,
+	                                                                   @NonNull RouteCalculationResult initial,
+	                                                                   boolean calcGPXRoute,
+	                                                                   @NonNull Set<Long> activeCameraAvoidanceRoadIds) {
+		if (params.trafficRoutingApplied || !initial.isCalculated()) {
+			return null;
+		}
+		FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
+		if (plugin == null || !plugin.TRAFFIC_ROUTING_ENABLED.get()) {
+			return null;
+		}
+		TrafficRoutingHelper trafficHelper = plugin.getTrafficRoutingHelper();
+		if (params.previousToRecalculate != null && params.onlyStartPointChanged) {
+			trafficHelper.recordTrafficSkipped(TrafficRoutingHelper.TrafficStatus.SKIPPED_PARTIAL);
+			return null;
+		}
+
+		Map<Long, Float> speedMultipliers = trafficHelper.collectTrafficSpeedMultipliersForRoute(initial);
+		if (speedMultipliers.isEmpty()) {
+			return null;
+		}
+
+		RouteCalculationParams trafficParams = copyParamsForFlockFreeTraffic(params,
+				activeCameraAvoidanceRoadIds, speedMultipliers);
+		try {
+			RouteCalculationResult trafficRoute = findVectorMapsRoute(trafficParams, calcGPXRoute);
+			if (!trafficRoute.isCalculated()) {
+				trafficHelper.recordTrafficFallback(speedMultipliers.size());
+				return null;
+			}
+			if (hasCameraRoadsOnTrafficCandidate(plugin, trafficRoute)) {
+				FlockFreeRouteVariant cameraSafeTraffic =
+						maybeRecalculateWithFlockFreeAvoidance(trafficParams, trafficRoute, calcGPXRoute);
+				if (cameraSafeTraffic != null) {
+					trafficHelper.recordTrafficApplied(speedMultipliers.size());
+					return cameraSafeTraffic;
+				}
+				trafficHelper.recordTrafficFallback(speedMultipliers.size());
+				log.warn("FlockFree traffic candidate rejected because camera avoidance could not preserve a camera-safe route");
+				return null;
+			}
+			trafficHelper.recordTrafficApplied(speedMultipliers.size());
+			return new FlockFreeRouteVariant(trafficRoute, activeCameraAvoidanceRoadIds);
+		} catch (IOException e) {
+			trafficHelper.recordTrafficFallback(speedMultipliers.size());
+			log.warn("FlockFree traffic routing failed; returning previous route", e);
+			return null;
+		}
+	}
+
+	private boolean hasCameraRoadsOnTrafficCandidate(@NonNull FlockFreePlugin plugin,
+	                                                @NonNull RouteCalculationResult candidate) {
+		if (!plugin.CAMERA_AVOIDANCE_ENABLED.get()) {
+			return false;
+		}
+		if (!plugin.getCameraData().isDataLoaded()
+				&& !plugin.getCameraData().ensureCacheLoadedForRouting()) {
+			return true;
+		}
+		List<CameraAvoidanceHelper.RoadWithCameraCount> roadsWithCameras =
+				plugin.getAvoidanceHelper().collectAvoidRoadIdsWithCameraCountForRoute(candidate,
+						plugin.CAMERA_AVOIDANCE_RADIUS.get());
+		return !Algorithms.isEmpty(roadsWithCameras);
 	}
 
 	private void restoreFlockFreeProgressState(@NonNull RouteCalculationParams params,
@@ -339,8 +426,54 @@ public class RouteProvider {
 		}
 		copy.calculationProgressListener = params.calculationProgressListener;
 		copy.alternateResultListener = params.alternateResultListener;
-		copy.temporaryImpassableRoadIds = new LinkedHashSet<>(avoidIds);
+		copy.temporaryImpassableRoadIds = new LinkedHashSet<>();
+		if (!Algorithms.isEmpty(params.temporaryImpassableRoadIds)) {
+			copy.temporaryImpassableRoadIds.addAll(params.temporaryImpassableRoadIds);
+		}
+		copy.temporaryImpassableRoadIds.addAll(avoidIds);
+		if (params.temporaryTrafficSpeedMultipliers != null
+				&& !params.temporaryTrafficSpeedMultipliers.isEmpty()) {
+			copy.temporaryTrafficSpeedMultipliers =
+					new LinkedHashMap<>(params.temporaryTrafficSpeedMultipliers);
+		}
 		copy.cameraAvoidanceApplied = true;
+		copy.trafficRoutingApplied = params.trafficRoutingApplied;
+		return copy;
+	}
+
+	@NonNull
+	private RouteCalculationParams copyParamsForFlockFreeTraffic(@NonNull RouteCalculationParams params,
+	                                                             @NonNull Set<Long> activeCameraAvoidanceRoadIds,
+	                                                             @NonNull Map<Long, Float> speedMultipliers) {
+		RouteCalculationParams copy = new RouteCalculationParams();
+		copy.start = params.start;
+		copy.end = params.end;
+		copy.intermediates = params.intermediates;
+		copy.currentLocation = params.currentLocation;
+		copy.ctx = params.ctx;
+		copy.mode = params.mode;
+		copy.gpxRoute = params.gpxRoute;
+		copy.onlyStartPointChanged = false;
+		copy.fast = params.fast;
+		copy.leftSide = params.leftSide;
+		copy.startTransportStop = params.startTransportStop;
+		copy.targetTransportStop = params.targetTransportStop;
+		copy.inPublicTransportMode = params.inPublicTransportMode;
+		copy.extraIntermediates = params.extraIntermediates;
+		copy.initialCalculation = params.initialCalculation;
+		copy.gpxFile = params.gpxFile;
+		copy.calculationProgress = new RouteCalculationProgress();
+		if (params.calculationProgress != null) {
+			copy.calculationProgress.isCancelled = params.calculationProgress.isCancelled;
+			copy.calculationProgress.routeCalculationStartTime =
+					params.calculationProgress.routeCalculationStartTime;
+		}
+		copy.calculationProgressListener = params.calculationProgressListener;
+		copy.alternateResultListener = params.alternateResultListener;
+		copy.temporaryImpassableRoadIds = new LinkedHashSet<>(activeCameraAvoidanceRoadIds);
+		copy.temporaryTrafficSpeedMultipliers = new LinkedHashMap<>(speedMultipliers);
+		copy.cameraAvoidanceApplied = false;
+		copy.trafficRoutingApplied = true;
 		return copy;
 	}
 
@@ -603,14 +736,19 @@ public class RouteProvider {
 		Double direction = params.start.hasBearing() ? params.start.getBearing() / 180d * Math.PI : null;
 
 		RoutingConfiguration configuration = builder.build(routingProfile, direction, memoryLimits, paramsR);
-		if (!Algorithms.isEmpty(params.temporaryImpassableRoadIds)) {
-			Set<Long> impassableRoads = new HashSet<>(builder.getImpassableRoadLocations());
-			impassableRoads.addAll(params.temporaryImpassableRoadIds);
-			configuration.router.setImpassableRoads(impassableRoads);
-		}
-		if (settings.ENABLE_TIME_CONDITIONAL_ROUTING.getModeValue(params.mode)) {
-			configuration.routeCalculationTime = System.currentTimeMillis();
-		}
+			if (!Algorithms.isEmpty(params.temporaryImpassableRoadIds)) {
+				Set<Long> impassableRoads = new HashSet<>(builder.getImpassableRoadLocations());
+				impassableRoads.addAll(params.temporaryImpassableRoadIds);
+				configuration.router.setImpassableRoads(impassableRoads);
+			}
+			if (params.temporaryTrafficSpeedMultipliers != null
+					&& !params.temporaryTrafficSpeedMultipliers.isEmpty()) {
+				configuration.router.setFlockFreeTrafficSpeedMultipliers(
+						params.temporaryTrafficSpeedMultipliers);
+			}
+			if (settings.ENABLE_TIME_CONDITIONAL_ROUTING.getModeValue(params.mode)) {
+				configuration.routeCalculationTime = System.currentTimeMillis();
+			}
 		configuration.showMinorTurns = settings.SHOW_MINOR_TURNS.getModeValue(params.mode);
 
 		return configuration;

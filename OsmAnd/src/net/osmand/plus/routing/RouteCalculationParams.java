@@ -9,6 +9,7 @@ import net.osmand.router.RouteCalculationProgress;
 import net.osmand.shared.gpx.GpxFile;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class RouteCalculationParams {
@@ -37,7 +38,9 @@ public class RouteCalculationParams {
 	public RouteCalculationProgressListener calculationProgressListener;
 	public RouteCalculationResultListener alternateResultListener;
 	public Set<Long> temporaryImpassableRoadIds;
+	public Map<Long, Float> temporaryTrafficSpeedMultipliers;
 	public boolean cameraAvoidanceApplied;
+	public boolean trafficRoutingApplied;
 
 	public boolean recheckRouteNearestPoint() {
 		return previousToRecalculate != null && onlyStartPointChanged && start != null && gpxRoute != null;

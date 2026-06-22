@@ -68,6 +68,16 @@
 	<string name="flockfree_route_last_check">Last route check</string>
 	<string name="flockfree_route_last_check_none">No route checked yet.</string>
 	<string name="flockfree_route_last_check_no_route">No calculated route available.</string>
+	<string name="flockfree_traffic_routing_enabled">Live traffic routing (experimental)</string>
+	<string name="flockfree_traffic_routing_enabled_description">Use live traffic as a soft routing cost when a provider is configured. Camera avoidance stays higher priority.</string>
+	<string name="flockfree_traffic_last_check">Last traffic routing check</string>
+	<string name="flockfree_traffic_last_check_none">No traffic routing checked yet.</string>
+	<string name="flockfree_traffic_status_disabled">Traffic routing skipped: setting disabled.</string>
+	<string name="flockfree_traffic_status_skipped_partial">Traffic routing skipped during follow-me recalculation.</string>
+	<string name="flockfree_traffic_status_no_provider">Traffic routing skipped: no traffic provider configured.</string>
+	<string name="flockfree_traffic_status_no_data">Traffic routing skipped: no traffic data for this route.</string>
+	<string name="flockfree_traffic_status_applied">Traffic routing applied: %1$d road speed weights used.</string>
+	<string name="flockfree_traffic_status_fallback">Traffic routing fallback: original camera-safe route kept after %1$d traffic road weights failed.</string>
 	<string name="flockfree_route_vendor_flock">Flock Safety</string>
 	<string name="flockfree_route_vendor_motorola">Motorola</string>
 	<string name="flockfree_route_vendor_genetec">Genetec</string>

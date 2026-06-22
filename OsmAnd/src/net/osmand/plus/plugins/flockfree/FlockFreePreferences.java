@@ -18,9 +18,11 @@ public final class FlockFreePreferences {
     public static final String CAMERA_SHOW_LAYER = "camera_show_layer";
     public static final String CAMERA_ALERTS_ENABLED = "camera_alerts_enabled";
     public static final String CAMERA_ALERT_DISTANCE = "camera_alert_distance";
+    public static final String TRAFFIC_ROUTING_ENABLED = "traffic_routing_enabled";
     public static final String CYD_BLE_ENABLED = "cyd_ble_enabled";
     public static final String WIFI_SCAN_ENABLED = "wifi_scan_enabled";
     public static final String CAMERA_ROUTE_LAST_CHECK_SUMMARY = "camera_route_last_check_summary";
+    public static final String TRAFFIC_ROUTE_LAST_CHECK_SUMMARY = "traffic_route_last_check_summary";
     public static final String CAMERA_ALERT_LAST_CHECK_SUMMARY = "camera_alert_last_check_summary";
     public static final String CAMERA_REPORT_LAST_DRAFT_SUMMARY = "camera_report_last_draft_summary";
     public static final String CAMERA_NEAREST_LAST_CHECK_SUMMARY = "camera_nearest_last_check_summary";
@@ -29,6 +31,7 @@ public final class FlockFreePreferences {
     public static final boolean DEFAULT_CAMERA_SHOW_LAYER = true;
     public static final boolean DEFAULT_CAMERA_AVOIDANCE_ENABLED = false;
     public static final boolean DEFAULT_CAMERA_ALERTS_ENABLED = true;
+    public static final boolean DEFAULT_TRAFFIC_ROUTING_ENABLED = false;
     public static final int DEFAULT_CAMERA_AVOIDANCE_RADIUS = 100;     // meters
     public static final int DEFAULT_CAMERA_ALERT_DISTANCE = 300;        // meters
     public static final long DEFAULT_CAMERA_DATA_LAST_UPDATE = 0L;

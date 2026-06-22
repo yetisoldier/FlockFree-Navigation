@@ -62,6 +62,19 @@
 		android:persistent="false"
 		android:title="@string/flockfree_route_last_check" />
 
+	<net.osmand.plus.settings.preferences.SwitchPreferenceEx
+		android:key="traffic_routing_enabled"
+		android:layout="@layout/preference_with_descr_dialog_and_switch"
+		android:summaryOff="@string/shared_string_disabled"
+		android:summaryOn="@string/shared_string_enabled"
+		android:title="@string/flockfree_traffic_routing_enabled" />
+
+	<Preference
+		android:key="flockfree_traffic_last_check"
+		android:layout="@layout/preference_with_descr"
+		android:persistent="false"
+		android:title="@string/flockfree_traffic_last_check" />
+
 	<Preference
 		android:layout="@layout/simple_divider_item"
 		android:selectable="false" />
