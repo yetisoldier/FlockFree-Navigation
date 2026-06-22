@@ -9,7 +9,8 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 ### Camera Awareness
 - **105,000+ camera database** — Bundled seed of 104,902 ALPR cameras with direction data, stored in SQLite for fast spatial queries
 - **Camera orientation cones** — Translucent view cones rendered on the map at zoom 15+ showing camera heading
-- **Nearby camera alerts** — Proximity notifications with cooldown logic when approaching known cameras
+- **Nearby camera alerts** — Toast alerts with vibration when approaching known cameras; cooldown logic prevents repeat alerts for the same camera
+- **WiFi Flock detection** — Passively scans for Flock Safety camera WiFi beacons and triggers alerts + CYD auto-pause when detected
 - **Nearest camera inspection** — Map-center query to find the closest camera within 1,000m
 
 ![Map View](docs/screenshots/ff-map.png)
@@ -22,6 +23,7 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 - **Phone GPS streaming** — Streams phone GPS to CYD hardware via `FYGPS` BLE UART
 - **Detection review workflow** — CYD detections appear as map markers for manual review before submission
 - **Simulate mode** — `FYSIM` support for bench testing without live RF
+- **Auto-pause on Flock detection** — When WiFi Flock detection triggers, the CYD companion is automatically paused
 
 ### Route Avoidance
 - **Iterative relaxation avoidance** — Identifies camera-adjacent roads, blocks them, and recalculates. If full avoidance fails, progressively unblocks the least-camera-impactful roads (up to 4 iterations) until a viable route is found.
@@ -121,7 +123,7 @@ This builds, signs, installs over Wi-Fi ADB, launches FlockFree, and runs a read
 ## First Run Setup
 
 1. **Launch FlockFree** — The app opens to the map. The FlockFree plugin is enabled by default.
-2. **Grant permissions** — Allow location and notifications when prompted. Bluetooth is only needed if you use the optional CYD companion hardware.
+2. **Grant permissions** — Allow location when prompted. Bluetooth is only needed if you use the optional CYD companion hardware. Nearby location is needed for WiFi Flock scanning.
 3. **Download offline maps** (optional but recommended) — Go to Menu → Maps & Resources → Download maps → choose your region. Route avoidance requires offline vector maps.
 4. **Camera data loads automatically** — The bundled seed (104,902 cameras) is available immediately. A network refresh updates from `data.dontgetflocked.com` weekly.
 
@@ -138,9 +140,13 @@ Cameras appear on the map at zoom 10+. At zoom 15+, orientation cones show which
 1. Open Menu → FlockFree
 2. Enable **Nearby camera alerts**
 3. Set the **Alert distance** (default: 200 meters)
-4. While navigating or moving, you will receive a toast when approaching a known camera
+4. While navigating or moving, you will receive a toast alert with vibration when approaching a known camera
+5. Enable **WiFi Flock scan** to also detect Flock Safety cameras via WiFi beacon scanning
 
-Use **Check map center alert** in settings to bench-test alerts without driving.
+Use **Check map center alert** in settings to bench-test alerts without driving. You can also trigger a test alert via ADB:
+```bash
+adb shell am broadcast -a net.osmand.flockfree.TEST_ALERT
+```
 
 ### Route Avoidance
 
@@ -173,8 +179,9 @@ Nothing uploads automatically. You always review and confirm before submitting.
 | Nearest camera at map center | Find the closest camera within 1km |
 | Avoid cameras on routes | Enable experimental route avoidance |
 | Route corridor radius | Distance from route to check for cameras |
-| Nearby camera alerts | Enable proximity notifications |
+| Nearby camera alerts | Enable proximity toast + vibration alerts |
 | Alert distance | Radius for proximity alerts |
+| WiFi Flock scan | Enable WiFi beacon scanning for Flock Safety cameras |
 | Check map center alert | Bench-test alerts from current map position |
 | Draft report at map center | Open the ALPR reporting flow at map center |
 | CYD BLE hardware | Enable CYD Bluetooth connection |
@@ -210,7 +217,7 @@ For developers and field testers:
 - Iterative relaxation caps at 4 retries to limit recalculation latency; very dense camera areas may still fall back to the original route
 - Optional CYD detection to camera submission is a manual review flow (no auto-upload)
 - Reporting flow opens the editor but does not verify end-to-end OSM upload
-- No live RF drive test completed yet (bench simulation verified only)
+- No live RF drive test completed yet (WiFi detection and bench simulation verified only)
 
 ## Credits
 
