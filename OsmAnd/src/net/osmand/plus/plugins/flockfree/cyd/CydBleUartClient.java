@@ -300,6 +300,9 @@ public final class CydBleUartClient implements AutoCloseable {
 				return;
 			}
 			if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+				if (status != BluetoothGatt.GATT_SUCCESS) {
+					emitError("CYD BLE connection failed: " + status, null);
+				}
 				synchronized (lock) {
 					closeLocked(true);
 				}

@@ -41,6 +41,8 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 	private static final Log LOG = PlatformUtil.getLog(CydHardwareManager.class);
 	private static final long SCAN_TIMEOUT_MS = 15_000L;
 	private static final long GPS_SEND_INTERVAL_MS = 1_000L;
+	private static final long CONNECT_RETRY_DELAY_MS = 1_500L;
+	private static final int MAX_CONNECT_RETRIES = 3;
 	private static final int MAX_RECENT_DETECTIONS = 20;
 
 	private final OsmandApplication app;
@@ -48,6 +50,7 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 	private final CydBleUartClient client = new CydBleUartClient(this);
 	private final Object lock = new Object();
 	private final Runnable scanTimeoutRunnable = this::handleScanTimeout;
+	private final Runnable connectRetryRunnable = this::retryScanAndConnect;
 
 	@Nullable
 	private BluetoothLeScanner scanner;
@@ -73,6 +76,8 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 	private long lastPhoneLocationAtMs;
 	@Nullable
 	private CydConnectionListener connectionListener;
+	private int connectRetryAttempts;
+	private boolean manualDisconnect;
 
 	public CydHardwareManager(@NonNull OsmandApplication app) {
 		this.app = app;
@@ -153,7 +158,7 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 			app.showShortToastMessage(R.string.flockfree_cyd_status_permission_requested);
 			return false;
 		}
-		return startScanAndConnectWithGrantedPermissions(activity);
+		return startScanAndConnectWithGrantedPermissions(activity, true);
 	}
 
 	public boolean startScanAndConnectFromService(@NonNull Context context) {
@@ -161,10 +166,10 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 			setState(State.PERMISSION_NEEDED, app.getString(R.string.flockfree_cyd_status_permission_requested));
 			return false;
 		}
-		return startScanAndConnectWithGrantedPermissions(context);
+		return startScanAndConnectWithGrantedPermissions(context, true);
 	}
 
-	private boolean startScanAndConnectWithGrantedPermissions(@NonNull Context context) {
+	private boolean startScanAndConnectWithGrantedPermissions(@NonNull Context context, boolean resetRetries) {
 		BluetoothManager manager = (BluetoothManager) app.getSystemService(Context.BLUETOOTH_SERVICE);
 		BluetoothAdapter adapter = manager != null ? manager.getAdapter() : null;
 		if (adapter == null) {
@@ -185,8 +190,13 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 		}
 		stopScan();
 		handler.removeCallbacks(scanTimeoutRunnable);
+		handler.removeCallbacks(connectRetryRunnable);
 		client.close();
 		synchronized (lock) {
+			if (resetRetries) {
+				connectRetryAttempts = 0;
+			}
+			manualDisconnect = false;
 			lastPairStatus = null;
 			lastDetection = null;
 			lastGpsSentAtMs = 0L;
@@ -355,6 +365,11 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 
 	@SuppressLint("MissingPermission")
 	public void disconnect() {
+		synchronized (lock) {
+			manualDisconnect = true;
+			connectRetryAttempts = 0;
+		}
+		handler.removeCallbacks(connectRetryRunnable);
 		stopScan();
 		client.disconnect();
 		synchronized (lock) {
@@ -389,6 +404,34 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 			setState(State.ERROR, app.getString(R.string.flockfree_cyd_status_not_found));
 			app.showShortToastMessage(R.string.flockfree_cyd_status_not_found);
 		}
+	}
+
+	private void retryScanAndConnect() {
+		synchronized (lock) {
+			if (manualDisconnect || state == State.READY) {
+				return;
+			}
+		}
+		startScanAndConnectWithGrantedPermissions(app, false);
+	}
+
+	private boolean scheduleConnectRetry(@NonNull State previousState) {
+		if (manualDisconnect || previousState == State.IDLE || previousState == State.PERMISSION_NEEDED) {
+			return false;
+		}
+		int attempt;
+		synchronized (lock) {
+			if (connectRetryAttempts >= MAX_CONNECT_RETRIES) {
+				return false;
+			}
+			attempt = ++connectRetryAttempts;
+			state = State.SCANNING;
+			lastMessage = app.getString(R.string.flockfree_cyd_status_scanning)
+					+ " (" + attempt + "/" + MAX_CONNECT_RETRIES + ")";
+		}
+		handler.removeCallbacks(connectRetryRunnable);
+		handler.postDelayed(connectRetryRunnable, CONNECT_RETRY_DELAY_MS * attempt);
+		return true;
 	}
 
 	@NonNull
@@ -507,6 +550,8 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 	public void onCydReady() {
 		synchronized (lock) {
 			lastGpsSentAtMs = 0L;
+			connectRetryAttempts = 0;
+			manualDisconnect = false;
 		}
 		setState(State.READY, app.getString(R.string.flockfree_cyd_status_ready));
 		app.showShortToastMessage(R.string.flockfree_cyd_status_ready);
@@ -516,6 +561,14 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 
 	@Override
 	public void onCydDisconnected() {
+		State previousState;
+		synchronized (lock) {
+			previousState = state;
+		}
+		if (scheduleConnectRetry(previousState)) {
+			notifyCydConnectionStateChanged();
+			return;
+		}
 		setState(State.IDLE, app.getString(R.string.flockfree_cyd_status_disconnected));
 		// Notify plugin so it can resume WiFi scanning if enabled
 		notifyCydConnectionStateChanged();
