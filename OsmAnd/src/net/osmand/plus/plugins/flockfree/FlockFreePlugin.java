@@ -2,7 +2,10 @@ package net.osmand.plus.plugins.flockfree;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Build;
 
 import androidx.annotation.NonNull;
@@ -80,6 +83,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     private WifiScannerManager wifiScannerManager;
     private long lastCameraAlertTimeMs;
     private String lastCameraAlertKey;
+    private BroadcastReceiver debugAlertReceiver;
     public FlockFreePlugin(OsmandApplication app) {
         super(app);
 
@@ -122,6 +126,8 @@ public class FlockFreePlugin extends OsmandPlugin {
         CAMERA_NEAREST_LAST_CHECK_SUMMARY = registerStringPreference(
                 FlockFreePreferences.CAMERA_NEAREST_LAST_CHECK_SUMMARY,
                 FlockFreePreferences.DEFAULT_STATUS_SUMMARY).makeProfile().cache();
+
+        registerDebugAlertReceiver();
     }
 
     private void migrateCydBleEnabledToGlobal(@NonNull CommonPreference<Boolean> preference) {
@@ -138,6 +144,22 @@ public class FlockFreePlugin extends OsmandPlugin {
         if (migrateEnabled) {
             preference.set(true);
         }
+    }
+
+    private void registerDebugAlertReceiver() {
+        debugAlertReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                // Force-trigger a camera alert notification for UI testing
+                String brand = "Flock Safety";
+                int distance = 150;
+                String title = app.getString(R.string.flockfree_nearby_camera_alert, brand, distance);
+                showCameraAlertNotification(title, brand, distance);
+                app.showToastMessage(title);
+            }
+        };
+        app.registerReceiver(debugAlertReceiver, new IntentFilter("net.osmand.flockfree.TEST_ALERT"),
+                Context.RECEIVER_EXPORTED);
     }
 
     @Override
