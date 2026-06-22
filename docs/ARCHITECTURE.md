@@ -725,8 +725,8 @@ bleManager.addListener(new BleDetectionListener() {
     @Override
     public void onDetection(CameraDetection detection) {
         // Add to local DB as a user-reported camera
-        // Show notification
-        // Optionally trigger TTS announcement
+        // Show toast
+        // Optionally trigger vibration
     }
 });
 
@@ -734,7 +734,25 @@ bleManager.addListener(new BleDetectionListener() {
 // BLE_DETECTION_ENABLED → start/stop BleFlockService
 ```
 
-### 6.6 Permissions
+### 6.6 WiFi Flock Detection
+
+The plugin includes a `WifiScannerManager` that uses Android's `WifiManager` to passively scan for Flock Safety camera WiFi beacons:
+
+- Matches scan results against a known Flock OUI list
+- Requires `ACCESS_FINE_LOCATION` and device Location enabled at runtime
+- On detection: triggers toast + vibration alert and auto-pauses CYD companion WiFi scanning
+- Settings toggle: `WIFI_SCAN_ENABLED` preference
+
+### 6.7 Camera Alerts (Toast + Vibration)
+
+Camera alerts use toast + vibration only — no persistent notification:
+
+- `showCameraAlert()` fires a toast with brand and distance info
+- `vibrateForCameraAlert()` triggers a buzz-pause-buzz pattern via `Vibrator` service
+- Cooldown logic: 60s between different cameras, 30s for the same camera
+- Debug trigger via ADB broadcast: `adb shell am broadcast -a net.osmand.flockfree.TEST_ALERT`
+
+### 6.8 Permissions
 
 Add to `AndroidManifest.xml`:
 ```xml
