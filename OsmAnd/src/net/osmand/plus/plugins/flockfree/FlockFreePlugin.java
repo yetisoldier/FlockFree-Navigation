@@ -52,6 +52,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     public final CommonPreference<Boolean> CAMERA_ALERTS_ENABLED;
     public final CommonPreference<Integer> CAMERA_ALERT_DISTANCE;
     public final CommonPreference<Boolean> TRAFFIC_ROUTING_ENABLED;
+    public final CommonPreference<String> TOMTOM_API_KEY;
     public final CommonPreference<Long> CAMERA_DATA_LAST_UPDATE;
     public final CommonPreference<Boolean> CYD_BLE_ENABLED;
     public final CommonPreference<Boolean> WIFI_SCAN_ENABLED;
@@ -102,6 +103,9 @@ public class FlockFreePlugin extends OsmandPlugin {
         TRAFFIC_ROUTING_ENABLED = registerBooleanPreference(
                 FlockFreePreferences.TRAFFIC_ROUTING_ENABLED,
                 FlockFreePreferences.DEFAULT_TRAFFIC_ROUTING_ENABLED).makeProfile().cache();
+        TOMTOM_API_KEY = registerStringPreference(
+                FlockFreePreferences.TOMTOM_API_KEY,
+                FlockFreePreferences.DEFAULT_TOMTOM_API_KEY).makeGlobal().cache();
         CAMERA_DATA_LAST_UPDATE = registerLongPreference(
                 FlockFreePreferences.CAMERA_DATA_LAST_UPDATE,
                 FlockFreePreferences.DEFAULT_CAMERA_DATA_LAST_UPDATE).makeProfile().cache();

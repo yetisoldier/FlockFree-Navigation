@@ -2,6 +2,7 @@ package net.osmand.plus.settings.bottomsheets;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.text.InputType;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
@@ -51,6 +52,12 @@ public class EditTextPreferenceBottomSheet extends BasePreferenceBottomSheet {
 		View view = inflate(R.layout.preference_edit_text_box);
 		editText = view.findViewById(R.id.edit_text);
 		editText.setText(text);
+		if (editTextPreference.isSecret()) {
+			editText.setInputType(InputType.TYPE_CLASS_TEXT
+					| InputType.TYPE_TEXT_VARIATION_PASSWORD
+					| InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+			editText.setSelection(editText.getText().length());
+		}
 		editText.requestFocus();
 
 		ViewGroup editTextLayout = view.findViewById(R.id.text_field_boxes_editTextLayout);

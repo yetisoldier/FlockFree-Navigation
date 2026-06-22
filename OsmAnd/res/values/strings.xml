@@ -70,6 +70,10 @@
 	<string name="flockfree_route_last_check_no_route">No calculated route available.</string>
 	<string name="flockfree_traffic_routing_enabled">Live traffic routing (experimental)</string>
 	<string name="flockfree_traffic_routing_enabled_description">Use live traffic as a soft routing cost when a provider is configured. Camera avoidance stays higher priority.</string>
+	<string name="flockfree_tomtom_api_key">TomTom API key</string>
+	<string name="flockfree_tomtom_api_key_description">Stored only on this device. Leave empty to disable TomTom traffic routing.</string>
+	<string name="flockfree_tomtom_api_key_not_configured">Not configured</string>
+	<string name="flockfree_tomtom_api_key_configured">Configured</string>
 	<string name="flockfree_traffic_last_check">Last traffic routing check</string>
 	<string name="flockfree_traffic_last_check_none">No traffic routing checked yet.</string>
 	<string name="flockfree_traffic_status_disabled">Traffic routing skipped: setting disabled.</string>

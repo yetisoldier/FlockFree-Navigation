@@ -19,6 +19,7 @@ public final class FlockFreePreferences {
     public static final String CAMERA_ALERTS_ENABLED = "camera_alerts_enabled";
     public static final String CAMERA_ALERT_DISTANCE = "camera_alert_distance";
     public static final String TRAFFIC_ROUTING_ENABLED = "traffic_routing_enabled";
+    public static final String TOMTOM_API_KEY = "tomtom_api_key";
     public static final String CYD_BLE_ENABLED = "cyd_ble_enabled";
     public static final String WIFI_SCAN_ENABLED = "wifi_scan_enabled";
     public static final String CAMERA_ROUTE_LAST_CHECK_SUMMARY = "camera_route_last_check_summary";
@@ -32,6 +33,7 @@ public final class FlockFreePreferences {
     public static final boolean DEFAULT_CAMERA_AVOIDANCE_ENABLED = false;
     public static final boolean DEFAULT_CAMERA_ALERTS_ENABLED = true;
     public static final boolean DEFAULT_TRAFFIC_ROUTING_ENABLED = false;
+    public static final String DEFAULT_TOMTOM_API_KEY = "";
     public static final int DEFAULT_CAMERA_AVOIDANCE_RADIUS = 100;     // meters
     public static final int DEFAULT_CAMERA_ALERT_DISTANCE = 300;        // meters
     public static final long DEFAULT_CAMERA_DATA_LAST_UPDATE = 0L;

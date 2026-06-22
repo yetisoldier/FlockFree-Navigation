@@ -69,6 +69,11 @@
 		android:summaryOn="@string/shared_string_enabled"
 		android:title="@string/flockfree_traffic_routing_enabled" />
 
+	<net.osmand.plus.settings.preferences.EditTextPreferenceEx
+		android:key="tomtom_api_key"
+		android:layout="@layout/preference_with_descr"
+		android:title="@string/flockfree_tomtom_api_key" />
+
 	<Preference
 		android:key="flockfree_traffic_last_check"
 		android:layout="@layout/preference_with_descr"

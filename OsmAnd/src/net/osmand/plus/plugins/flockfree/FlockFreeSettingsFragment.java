@@ -17,9 +17,11 @@ import net.osmand.plus.plugins.flockfree.cyd.CydDetectionCandidate;
 import net.osmand.plus.plugins.flockfree.cyd.CydHardwareManager;
 import net.osmand.plus.plugins.flockfree.wifi.WifiScannerManager;
 import net.osmand.plus.settings.fragments.BaseSettingsFragment;
+import net.osmand.plus.settings.preferences.EditTextPreferenceEx;
 import net.osmand.plus.settings.preferences.ListPreferenceEx;
 import net.osmand.plus.settings.preferences.SwitchPreferenceEx;
 import net.osmand.plus.utils.AndroidUtils;
+import net.osmand.util.Algorithms;
 
 public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 
@@ -32,6 +34,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 	private static final String CAMERA_NEAREST_LAST_CHECK_KEY = "flockfree_camera_nearest_last_check";
 	private static final String ROUTE_LAST_CHECK_KEY = "flockfree_route_last_check";
 	private static final String TRAFFIC_ROUTE_LAST_CHECK_KEY = "flockfree_traffic_last_check";
+	private static final String TOMTOM_API_KEY = "tomtom_api_key";
 	private static final String ALERT_LAST_CHECK_KEY = "flockfree_alert_last_check";
 	private static final String ALERT_CHECK_MAP_CENTER_KEY = "flockfree_alert_check_map_center";
 	private static final String REPORT_LAST_DRAFT_KEY = "flockfree_report_last_draft";
@@ -70,14 +73,15 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		setupNearestCameraLastCheckPreference();
 		setupSwitchPreference(plugin.CAMERA_AVOIDANCE_ENABLED.getId(),
 				R.string.flockfree_camera_avoidance_enabled_description);
-			setupDistancePreference(plugin.CAMERA_AVOIDANCE_RADIUS.getId(), AVOIDANCE_RADIUS_VALUES,
-					R.string.flockfree_avoidance_radius_description);
-			setupRouteLastCheckPreference();
-			setupSwitchPreference(plugin.TRAFFIC_ROUTING_ENABLED.getId(),
-					R.string.flockfree_traffic_routing_enabled_description);
-			setupTrafficRouteLastCheckPreference();
-			setupSwitchPreference(plugin.CAMERA_ALERTS_ENABLED.getId(),
-					R.string.flockfree_nearby_alerts_enabled_description);
+		setupDistancePreference(plugin.CAMERA_AVOIDANCE_RADIUS.getId(), AVOIDANCE_RADIUS_VALUES,
+				R.string.flockfree_avoidance_radius_description);
+		setupRouteLastCheckPreference();
+		setupSwitchPreference(plugin.TRAFFIC_ROUTING_ENABLED.getId(),
+				R.string.flockfree_traffic_routing_enabled_description);
+		setupTomTomApiKeyPreference();
+		setupTrafficRouteLastCheckPreference();
+		setupSwitchPreference(plugin.CAMERA_ALERTS_ENABLED.getId(),
+				R.string.flockfree_nearby_alerts_enabled_description);
 		setupDistancePreference(plugin.CAMERA_ALERT_DISTANCE.getId(), ALERT_DISTANCE_VALUES,
 				R.string.flockfree_alert_distance_description);
 		setupAlertLastCheckPreference();
@@ -137,6 +141,19 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		Preference preference = findPreference(TRAFFIC_ROUTE_LAST_CHECK_KEY);
 		if (preference != null) {
 			preference.setSummary(plugin.getLastTrafficRouteCheckSummary());
+		}
+	}
+
+	private void setupTomTomApiKeyPreference() {
+		EditTextPreferenceEx preference = findPreference(TOMTOM_API_KEY);
+		if (preference != null) {
+			String apiKey = plugin.TOMTOM_API_KEY.get();
+			preference.setPersistent(false);
+			preference.setSecret(true);
+			preference.setDescription(R.string.flockfree_tomtom_api_key_description);
+			preference.setSummary(Algorithms.isEmpty(apiKey)
+					? getString(R.string.flockfree_tomtom_api_key_not_configured)
+					: getString(R.string.flockfree_tomtom_api_key_configured));
 		}
 	}
 
@@ -261,6 +278,14 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 			}
 			return accepted;
 		}
+		if (plugin.TOMTOM_API_KEY.getId().equals(preference.getKey())) {
+			String sanitized = newValue != null ? newValue.toString().trim() : "";
+			boolean accepted = super.onPreferenceChange(preference, sanitized);
+			if (accepted) {
+				setupTomTomApiKeyPreference();
+			}
+			return accepted;
+		}
 		boolean accepted = super.onPreferenceChange(preference, newValue);
 		if (!accepted) {
 			return false;
@@ -374,9 +399,10 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 	private void refreshDynamicStatusPreferences() {
 		setupCameraDataStatusPreference();
 		setupNearestCameraLastCheckPreference();
-			setupRouteLastCheckPreference();
-			setupTrafficRouteLastCheckPreference();
-			setupAlertLastCheckPreference();
+		setupRouteLastCheckPreference();
+		setupTomTomApiKeyPreference();
+		setupTrafficRouteLastCheckPreference();
+		setupAlertLastCheckPreference();
 		setupReportLastDraftPreference();
 		setupCydStatusPreference();
 		setupWifiScanStatusPreference();

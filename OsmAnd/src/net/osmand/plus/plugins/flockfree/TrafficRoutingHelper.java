@@ -5,6 +5,7 @@ import androidx.annotation.NonNull;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
 import net.osmand.plus.routing.RouteCalculationResult;
+import net.osmand.util.Algorithms;
 
 import java.util.Collections;
 import java.util.Map;
@@ -30,6 +31,7 @@ public class TrafficRoutingHelper {
 
 	private final OsmandApplication app;
 	private final FlockFreePlugin plugin;
+	private final TomTomTrafficProvider tomTomTrafficProvider = new TomTomTrafficProvider();
 	private TrafficStatus lastTrafficStatus = TrafficStatus.NONE;
 	private int lastTrafficRoadCount;
 
@@ -53,10 +55,17 @@ public class TrafficRoutingHelper {
 			return Collections.emptyMap();
 		}
 
-		// Provider integration comes next. This method is the narrow adapter that
-		// will turn TomTom/HERE flow speed into per-road speed multipliers.
-		recordTrafficSkipped(TrafficStatus.SKIPPED_NO_PROVIDER);
-		return Collections.emptyMap();
+		String tomTomApiKey = plugin.TOMTOM_API_KEY.get();
+		if (Algorithms.isEmpty(tomTomApiKey)) {
+			recordTrafficSkipped(TrafficStatus.SKIPPED_NO_PROVIDER);
+			return Collections.emptyMap();
+		}
+		Map<Long, Float> multipliers = tomTomTrafficProvider.collectSpeedMultipliers(
+				route.getOriginalRoute(), tomTomApiKey.trim());
+		if (multipliers.isEmpty()) {
+			recordTrafficSkipped(TrafficStatus.SKIPPED_NO_DATA);
+		}
+		return multipliers;
 	}
 
 	public synchronized void recordTrafficApplied(int roadCount) {

@@ -8,6 +8,7 @@ import androidx.preference.EditTextPreference;
 public class EditTextPreferenceEx extends EditTextPreference {
 
 	private String description;
+	private boolean secret;
 
 	public EditTextPreferenceEx(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
 		super(context, attrs, defStyleAttr, defStyleRes);
@@ -35,5 +36,13 @@ public class EditTextPreferenceEx extends EditTextPreference {
 
 	public void setDescription(int descriptionResId) {
 		setDescription(getContext().getString(descriptionResId));
+	}
+
+	public boolean isSecret() {
+		return secret;
+	}
+
+	public void setSecret(boolean secret) {
+		this.secret = secret;
 	}
 }
