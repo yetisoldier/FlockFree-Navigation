@@ -29,6 +29,9 @@ import net.osmand.render.RenderingRuleSearchRequest;
 import net.osmand.render.RenderingRulesStorage;
 import net.osmand.shared.palette.domain.PaletteConstants;
 import net.osmand.shared.routing.ColoringType;
+import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
+import net.osmand.plus.plugins.flockfree.TrafficRoutingHelper;
 import net.osmand.util.Algorithms;
 
 import org.apache.commons.logging.Log;
@@ -153,6 +156,20 @@ public abstract class BaseRouteLayer extends OsmandMapLayer {
 			routeGradientPalette = settings.ROUTE_GRADIENT_PALETTE.getModeValue(mode);
 		}
 
+		// Auto-switch to traffic coloring when traffic routing is enabled
+		// and the user hasn't explicitly set a custom coloring type
+		FlockFreePlugin flockFreePlugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
+		if (flockFreePlugin != null) {
+			TrafficRoutingHelper trafficHelper = flockFreePlugin.getTrafficRoutingHelper();
+			if (trafficHelper.isTrafficColoringAvailable()) {
+				boolean userSetCustomColoring = routeColoringType != ColoringType.DEFAULT
+						&& !routeColoringType.isCustomColor();
+				if (!userSetCustomColoring) {
+					routeColoringType = ColoringType.ATTRIBUTE;
+					routeInfoAttribute = TrafficRoutingHelper.TRAFFIC_ROUTE_INFO_ATTRIBUTE;
+				}
+			}
+		}
 	}
 
 	@Override

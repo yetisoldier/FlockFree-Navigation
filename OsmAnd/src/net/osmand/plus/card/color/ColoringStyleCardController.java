@@ -9,6 +9,9 @@ import net.osmand.plus.card.base.multistate.BaseMultiStateCardController;
 import net.osmand.plus.card.base.multistate.CardState;
 import net.osmand.plus.card.color.cstyle.OnSelectColoringStyleListener;
 import net.osmand.plus.palette.contract.IExternalPaletteListener;
+import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
+import net.osmand.plus.plugins.flockfree.TrafficRoutingHelper;
 import net.osmand.plus.routing.ColoringStyleAlgorithms;
 import net.osmand.shared.palette.domain.PaletteItem;
 import net.osmand.shared.routing.ColoringType;
@@ -110,7 +113,13 @@ public abstract class ColoringStyleCardController extends BaseMultiStateCardCont
 	protected List<String> collectRouteInfoAttributes() {
 		RenderingRulesStorage currentRenderer = app.getRendererRegistry().getCurrentSelectedRenderer();
 		RenderingRulesStorage defaultRenderer = app.getRendererRegistry().defaultRender();
-		return RouteStatisticsHelper.getRouteStatisticAttrsNames(currentRenderer, defaultRenderer, true);
+		List<String> attrs = new ArrayList<>(RouteStatisticsHelper.getRouteStatisticAttrsNames(currentRenderer, defaultRenderer, true));
+		// Add synthetic traffic attribute when FlockFree traffic coloring is available
+		FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
+		if (plugin != null && plugin.getTrafficRoutingHelper().isTrafficColoringAvailable()) {
+			attrs.add(TrafficRoutingHelper.TRAFFIC_ROUTE_INFO_ATTRIBUTE);
+		}
+		return attrs;
 	}
 
 	@NonNull

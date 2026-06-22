@@ -2,6 +2,7 @@ package net.osmand.plus.plugins.flockfree;
 
 import android.net.Uri;
 
+import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -27,6 +28,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
 
 /**
@@ -50,6 +56,122 @@ public class TomTomTrafficProvider {
 	private static final float MIN_APPLIED_SLOWDOWN = 0.92f;
 
 	private final Map<String, CachedFlow> flowCache = new HashMap<>();
+
+	// Traffic color cache for route line coloring
+	private static final long COLOR_CACHE_TTL_MS = 90_000L;
+	private static final int MAX_CONCURRENT_COLOR_FETCHES = 3;
+	private static final int MAX_COLOR_FETCHES_PER_CYCLE = 30;
+	private final ConcurrentHashMap<String, CachedColor> trafficColorCache = new ConcurrentHashMap<>();
+
+	// Traffic colors (ARGB)
+	public static final int COLOR_ROAD_CLOSED = 0xFF8B0000;
+	public static final int COLOR_FREE_FLOW = 0xFF00A854;
+	public static final int COLOR_SLOW = 0xFFFFC107;
+	public static final int COLOR_CONGESTED = 0xFFE53935;
+	public static final int COLOR_NO_DATA = 0xFF4285F4;
+
+	/**
+	 * Returns a traffic color int for the given speed ratio and road closure state.
+	 * Used for Google Maps-style traffic-colored route lines.
+	 */
+	@ColorInt
+	public static int getTrafficColor(double speedRatio, boolean roadClosure) {
+		if (roadClosure) {
+			return COLOR_ROAD_CLOSED;
+		}
+		if (speedRatio >= 0.9d) {
+			return COLOR_FREE_FLOW;
+		}
+		if (speedRatio >= 0.5d) {
+			return COLOR_SLOW;
+		}
+		return COLOR_CONGESTED;
+	}
+
+	/**
+	 * Returns the cached traffic color for a segment midpoint, or the default
+	 * no-data color if the cache has no valid entry.
+	 */
+	@ColorInt
+	public int getTrafficColorForSegment(double lat, double lon) {
+		String key = formatColorCacheKey(lat, lon);
+		CachedColor cached = trafficColorCache.get(key);
+		if (cached != null && System.currentTimeMillis() - cached.createdAtMs <= COLOR_CACHE_TTL_MS) {
+			return cached.color;
+		}
+		return COLOR_NO_DATA;
+	}
+
+	/**
+	 * Prefetch traffic colors for a list of segment midpoints by querying the
+	 * TomTom Flow Segment Data API. Colors are cached for later retrieval.
+	 *
+	 * @param segmentMidpoints List of [lat, lon] pairs for each segment midpoint
+	 * @param apiKey            TomTom API key
+	 * @return Map of "lat,lon" → color int for successfully fetched segments
+	 */
+	@NonNull
+	public Map<String, Integer> prefetchTrafficColors(@NonNull List<double[]> segmentMidpoints,
+	                                                    @NonNull String apiKey) {
+		Map<String, Integer> result = new ConcurrentHashMap<>();
+		if (Algorithms.isEmpty(apiKey) || segmentMidpoints.isEmpty()) {
+			return result;
+		}
+		ExecutorService executor = Executors.newFixedThreadPool(MAX_CONCURRENT_COLOR_FETCHES);
+		AtomicInteger completed = new AtomicInteger(0);
+		for (double[] midpoint : segmentMidpoints) {
+			if (completed.get() >= MAX_COLOR_FETCHES_PER_CYCLE) {
+				break;
+			}
+			if (midpoint == null || midpoint.length < 2) {
+				continue;
+			}
+			double lat = midpoint[0];
+			double lon = midpoint[1];
+			if (!isValidCoordinate(lat, lon)) {
+				continue;
+			}
+			String key = formatColorCacheKey(lat, lon);
+			CachedColor existing = trafficColorCache.get(key);
+			if (existing != null && System.currentTimeMillis() - existing.createdAtMs <= COLOR_CACHE_TTL_MS) {
+				result.put(key, existing.color);
+				continue;
+			}
+			completed.incrementAndGet();
+			executor.submit(() -> {
+				try {
+					TrafficFlow flow = requestFlow(new RouteSample(0L, lat, lon), apiKey);
+					int color;
+					if (flow == null) {
+						color = COLOR_NO_DATA;
+					} else if (flow.roadClosure) {
+						color = COLOR_ROAD_CLOSED;
+					} else if (flow.confidence < MIN_CONFIDENCE || flow.currentSpeedKmph <= 0d || flow.freeFlowSpeedKmph <= 0d) {
+						color = COLOR_NO_DATA;
+					} else {
+						double ratio = flow.currentSpeedKmph / flow.freeFlowSpeedKmph;
+						color = getTrafficColor(ratio, false);
+					}
+					trafficColorCache.put(key, new CachedColor(color, System.currentTimeMillis()));
+					result.put(key, color);
+				} catch (Exception e) {
+					LOG.warn("Failed to prefetch traffic color for " + key, e);
+				}
+			});
+		}
+		executor.shutdown();
+		try {
+			executor.awaitTermination(15, TimeUnit.SECONDS);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
+		return result;
+	}
+
+	@NonNull
+	private static String formatColorCacheKey(double lat, double lon) {
+		return String.format(Locale.US, "%.4f,%.4f", lat, lon);
+	}
 
 	@NonNull
 	public Map<Long, Float> collectSpeedMultipliers(@NonNull List<RouteSegmentResult> route,
@@ -249,6 +371,16 @@ public class TomTomTrafficProvider {
 
 		CachedFlow(@NonNull TrafficFlow flow, long createdAtMs) {
 			this.flow = flow;
+			this.createdAtMs = createdAtMs;
+		}
+	}
+
+	private static class CachedColor {
+		final int color;
+		final long createdAtMs;
+
+		CachedColor(int color, long createdAtMs) {
+			this.color = color;
 			this.createdAtMs = createdAtMs;
 		}
 	}

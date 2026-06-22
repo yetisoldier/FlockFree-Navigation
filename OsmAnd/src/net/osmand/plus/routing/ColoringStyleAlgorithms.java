@@ -12,6 +12,9 @@ import net.osmand.shared.gpx.primitives.TrkSegment;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.card.color.ColoringStyle;
 import net.osmand.plus.inapp.InAppPurchaseUtils;
+import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
+import net.osmand.plus.plugins.flockfree.TrafficRoutingHelper;
 import net.osmand.plus.render.MapRenderRepositories;
 
 import net.osmand.plus.track.helpers.SelectedGpxFile;
@@ -45,6 +48,11 @@ public class ColoringStyleAlgorithms {
 			return false;
 		}
 		if (coloringType.isRouteInfoAttribute()) {
+			if (TrafficRoutingHelper.TRAFFIC_ROUTE_INFO_ATTRIBUTE.equals(attributeName)) {
+				FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
+				return plugin != null && plugin.getTrafficRoutingHelper().isTrafficColoringAvailable()
+						&& !Algorithms.isEmpty(route.getOriginalRoute());
+			}
 			return !Algorithms.isEmpty(route.getOriginalRoute())
 					&& isAttributeAvailableForDrawing(app, route.getOriginalRoute(), attributeName);
 		}
@@ -93,6 +101,13 @@ public class ColoringStyleAlgorithms {
 	                                                     @Nullable String attributeName) {
 		if (Algorithms.isEmpty(routeSegments) || Algorithms.isEmpty(attributeName)) {
 			return false;
+		}
+
+		// Traffic attribute is a synthetic attribute computed from live TomTom data,
+		// not from rendering rules. Check plugin availability instead.
+		if (TrafficRoutingHelper.TRAFFIC_ROUTE_INFO_ATTRIBUTE.equals(attributeName)) {
+			FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
+			return plugin != null && plugin.getTrafficRoutingHelper().isTrafficColoringAvailable();
 		}
 
 		RenderingRulesStorage currentRenderer = app.getRendererRegistry().getCurrentSelectedRenderer();

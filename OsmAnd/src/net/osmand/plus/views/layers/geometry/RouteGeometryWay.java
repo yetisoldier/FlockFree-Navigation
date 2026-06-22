@@ -20,15 +20,21 @@ import net.osmand.data.RotatedTileBox;
 import net.osmand.shared.routing.ColoringType;
 import net.osmand.plus.routing.RouteCalculationResult;
 import net.osmand.plus.routing.RoutingHelper;
+import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
+import net.osmand.plus.plugins.flockfree.TrafficRoutingHelper;
+import net.osmand.plus.plugins.flockfree.TomTomTrafficProvider;
 import net.osmand.plus.utils.ColorUtilities;
 import net.osmand.plus.utils.NativeUtilities;
 import net.osmand.plus.views.layers.RouteActionPoint;
 import net.osmand.plus.views.layers.geometry.GeometryWayDrawer.DrawPathData31;
+import net.osmand.router.RouteSegmentResult;
 import net.osmand.shared.ColorPalette;
 import net.osmand.util.Algorithms;
 import net.osmand.util.MapUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -97,6 +103,59 @@ public class RouteGeometryWay extends
 		Paint.Cap cap = routeColoringType.isGradient() || routeColoringType.isRouteInfoAttribute() ?
 				Paint.Cap.ROUND : getContext().getAttrs().paint.getStrokeCap();
 		getContext().getAttrs().customColorPaint.setStrokeCap(cap);
+	}
+
+	@Override
+	protected List<Integer> getRouteInfoAttributesColors(List<Location> locations, List<RouteSegmentResult> routeSegments) {
+		if (TrafficRoutingHelper.TRAFFIC_ROUTE_INFO_ATTRIBUTE.equals(routeInfoAttribute)
+				&& routeSegments != null && !routeSegments.isEmpty()) {
+			return getTrafficColors(locations, routeSegments);
+		}
+		return super.getRouteInfoAttributesColors(locations, routeSegments);
+	}
+
+	@NonNull
+	private List<Integer> getTrafficColors(@NonNull List<Location> locations,
+	                                       @NonNull List<RouteSegmentResult> routeSegments) {
+		FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
+		if (plugin == null) {
+			return super.getRouteInfoAttributesColors(locations, routeSegments);
+		}
+		TrafficRoutingHelper helper = plugin.getTrafficRoutingHelper();
+		if (!helper.isTrafficColoringAvailable()) {
+			return super.getRouteInfoAttributesColors(locations, routeSegments);
+		}
+		List<Integer> segmentColors = helper.getTrafficColorsForRoute(routeSegments);
+		if (Algorithms.isEmpty(segmentColors)) {
+			return Collections.emptyList();
+		}
+
+		// Map segment colors to location indices, replicating the logic from
+		// MultiColoringGeometryWay.getRouteInfoAttributesColors()
+		int firstSegmentLocationIdx = getIdxOfFirstSegmentLocation(locations, routeSegments);
+		List<Integer> colors = new ArrayList<>(locations.size());
+		for (int i = 0; i < routeSegments.size(); i++) {
+			int color = i < segmentColors.size() ? segmentColors.get(i) : TomTomTrafficProvider.COLOR_NO_DATA;
+
+			if (i == 0) {
+				for (int j = 0; j < firstSegmentLocationIdx; j++) {
+					colors.add(color);
+				}
+			}
+
+			int pointsSize = Math.abs(routeSegments.get(i).getStartPointIndex() - routeSegments.get(i).getEndPointIndex());
+			for (int j = 0; j < pointsSize; j++) {
+				colors.add(color);
+			}
+
+			if (i == routeSegments.size() - 1) {
+				int start = colors.size();
+				for (int j = start; j < locations.size(); j++) {
+					colors.add(color);
+				}
+			}
+		}
+		return colors;
 	}
 
 	public boolean updateRoute(@NonNull RotatedTileBox tb, @NonNull RouteCalculationResult route) {
