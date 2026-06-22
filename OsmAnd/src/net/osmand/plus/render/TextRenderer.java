@@ -1,8 +1,6 @@
 package net.osmand.plus.render;
 
 
-import static net.osmand.plus.views.mapwidgets.widgets.NextTurnBaseWidget.SHIELD_HEIGHT_DP;
-
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -41,7 +39,8 @@ import gnu.trove.procedure.TIntObjectProcedure;
 
 public class TextRenderer {
 
-	public static final String DROID_SERIF = "Droid Serif";
+	public static final String DROID_SERIF = "sans-serif";
+	private static final int MAP_SHIELD_HEIGHT_DP = 24;
 
 	private final Context context;
 	private final OsmandApplication app;
@@ -254,7 +253,7 @@ public class TextRenderer {
 				int iconWidth = ico.getIntrinsicWidth();
 				float xyRatio = (float) iconWidth / iconHeight;
 
-				int viewHeightPx = AndroidUtils.dpToPx(rc.ctx, SHIELD_HEIGHT_DP);
+				int viewHeightPx = AndroidUtils.dpToPx(rc.ctx, MAP_SHIELD_HEIGHT_DP);
 				int viewWidthPx = (int) (viewHeightPx * xyRatio);
 
 				float left = text.centerX - viewWidthPx / 2f * coef - 0.5f;

@@ -31,9 +31,14 @@ tasks.register('collectMiscResources', Copy) {
 }
 
 tasks.register('collectRenderingStylesResources', Sync) {
-	from "../../resources/rendering_styles"
+	from("../../resources/rendering_styles") {
+		exclude "default.render.xml"
+	}
 	into "src/main/resources/net/osmand/render"
 	include "*.xml"
+	preserve {
+		include "default.render.xml"
+	}
 }
 
 tasks.register('collectRegionsInfoResources', Download) {
@@ -147,4 +152,3 @@ dependencies {
 	implementation 'net.sf.kxml:kxml2:2.1.8'
 	implementation fileTree(include: ['*.jar'], dir: 'libs')
 }
-

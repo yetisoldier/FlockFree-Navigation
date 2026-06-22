@@ -25,6 +25,8 @@ import java.util.List;
 
 public class OsmandMap {
 
+	private static final float MAX_FLOCKFREE_MAP_TEXT_SCALE = 1.05f;
+
 	private final OsmandApplication app;
 
 	private final MapViewTrackingUtilities mapViewTrackingUtilities;
@@ -140,7 +142,7 @@ public class OsmandMap {
 	}
 
 	public float getTextScale() {
-		float scale = app.getSettings().TEXT_SCALE.get();
+		float scale = Math.min(app.getSettings().TEXT_SCALE.get(), MAX_FLOCKFREE_MAP_TEXT_SCALE);
 		return scale * getCarDensityScaleCoef();
 	}
 

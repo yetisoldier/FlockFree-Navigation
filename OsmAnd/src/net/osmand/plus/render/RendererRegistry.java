@@ -58,7 +58,9 @@ public class RendererRegistry {
 	public static final String OSMASSISTANT_RENDER = "OSM Assistant";
 	public static final String PUBLICTRANSPORTROUTES_RENDER = "Public transport routes";
 
-	public static boolean IGNORE_CACHED_STYLES = false; // enable to overwrite RENDERERS_DIR styles (debug)
+	// FlockFree ships a branded default renderer. Always prefer bundled internal
+	// styles so stale files in RENDERERS_DIR cannot mask packaged map updates.
+	public static boolean IGNORE_CACHED_STYLES = true;
 
 	private final OsmandApplication app;
 
