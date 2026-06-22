@@ -127,8 +127,10 @@
 	<dimen name="map_mode_button_width">56dp</dimen>
 
 	<dimen name="map_address_height">40dp</dimen>
+	<dimen name="street_name_widget_min_height">36dp</dimen>
+	<dimen name="street_name_widget_text_size">20sp</dimen>
 	<dimen name="map_button_size">48dp</dimen>
-	<dimen name="map_small_button_size">40dp</dimen>
+	<dimen name="map_small_button_size">38dp</dimen>
 	<dimen name="map_small_button_margin">4dp</dimen>
 
 	<dimen name="map_ruler_width">120dp</dimen>
@@ -141,7 +143,7 @@
 	<dimen name="map_button_shadow_height">78dp</dimen>
 	<dimen name="map_button_shadow_width">52dp</dimen>
 	<dimen name="map_button_shadow_margin">3dp</dimen>
-	<dimen name="map_widget_icon">24dp</dimen>
+	<dimen name="map_widget_icon">22dp</dimen>
 	<dimen name="map_widget_height">32dp</dimen>
 	<dimen name="map_widget_image">80dp</dimen>
 	<dimen name="map_button_spacing">8dp</dimen>
@@ -154,7 +156,7 @@
 
 	<dimen name="map_button_inset_shadow">1dp</dimen>
 	<dimen name="map_button_inset">2dp</dimen>
-	<dimen name="map_button_rect_rad">2dp</dimen>
+	<dimen name="map_button_rect_rad">8dp</dimen>
 	<dimen name="map_button_stroke">1dp</dimen>
 	<dimen name="map_button_stroke_dark">1dp</dimen>
 	<dimen name="map_route_planning_land_width">320dp</dimen>

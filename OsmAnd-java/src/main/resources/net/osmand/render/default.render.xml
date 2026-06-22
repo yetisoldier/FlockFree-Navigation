@@ -1231,10 +1231,10 @@
 			</case>
 		</renderingAttribute>
 		<renderingAttribute name="trackColor">
-			<case maxzoom="13" attrColorValue="#569D37">
+			<case maxzoom="13" attrColorValue="#8AB37D">
 				<apply_if nightMode="true" attrColorValue="#4F7A73"/>
 			</case>
-			<case attrColorValue="#628F59">
+			<case attrColorValue="#7FA775">
 				<apply_if nightMode="true" attrColorValue="#4F7A73"/>
 			</case>
 		</renderingAttribute>
@@ -1250,23 +1250,23 @@
 			<!--<case hikingRoutesOSMC="walkingRoutesOSMC" attrColorValue="#aaebe7e4"/>-->
 			<case attrColorValue="#30ebe7e4"/>
 		</renderingAttribute>
-		<renderingConstant name="trackStrokeWidth" value="1:1"/>
-		<renderingConstant name="trackWithSurfaceStrokeWidth" value="1:1"/>
-		<renderingConstant name="trackLowZoomStrokeWidth" value="0.7"/>
-		<renderingConstant name="trackLowZoomStrokeWidth2" value="1.1"/>
-		<renderingConstant name="trackPathEffect" value="5_2_2_2"/>
+		<renderingConstant name="trackStrokeWidth" value="0.75:0.75"/>
+		<renderingConstant name="trackWithSurfaceStrokeWidth" value="0.75:0.75"/>
+		<renderingConstant name="trackLowZoomStrokeWidth" value="0.4"/>
+		<renderingConstant name="trackLowZoomStrokeWidth2" value="0.7"/>
+		<renderingConstant name="trackPathEffect" value="6_4"/>
 		<renderingConstant name="trackBridgeWidth" value="4:2.5"/>
 		<renderingConstant name="trackBridgeInnerWidth" value="3:2"/>
 		<renderingConstant name="trackTunnelPathEffect" value="3_3"/>
 		<renderingAttribute name="cyclewayColor">
-			<case attrColorValue="#178fe5">
+			<case attrColorValue="#8ECBE7">
 				<apply_if nightMode="true" attrColorValue="#395fbf">
 					<apply_if baseAppMode="bicycle" attrColorValue="#00FFFF"/>
 				</apply_if>
 			</case>
 		</renderingAttribute>
-		<renderingConstant name="cyclewayStrokeWidth" value="0.9"/>
-		<renderingConstant name="cyclewayPathEffect" value="7_3"/>
+		<renderingConstant name="cyclewayStrokeWidth" value="0.55"/>
+		<renderingConstant name="cyclewayPathEffect" value="6_5"/>
 		<renderingAttribute name="rungsColor">
 			<case attrColorValue="#C70BFF"/>
 		</renderingAttribute>
@@ -1300,7 +1300,7 @@
 				<apply_if nightMode="true" attrColorValue="#6D7DA1"/>
 			</case>
 		</renderingAttribute>
-		<renderingConstant name="footwayStrokeWidth" value="1"/>
+		<renderingConstant name="footwayStrokeWidth" value="0.6"/>
 		<!-- NOTE: For full alignment with Touring view, we either need to make sure low zoom rules take no effect if germanRoadAtlas is selected, or define extra lowZoomColors (identical with high zoom colors) for germanRoadAtlas case -->
 		<renderingAttribute name="stepsRampColor">
 			<case attrColorValue="$footwayColor">
@@ -1317,9 +1317,9 @@
 				<apply_if nightMode="true" attrColorValue="$footwayColor"/>
 			</case>
 		</renderingAttribute>
-		<renderingConstant name="pathStrokeWidth" value="1.5"/>
-		<renderingConstant name="pathLowZoomStrokeWidth" value="0.6"/>
-		<renderingConstant name="pathPathEffect" value="2_2"/>
+		<renderingConstant name="pathStrokeWidth" value="0.75"/>
+		<renderingConstant name="pathLowZoomStrokeWidth" value="0.4"/>
+		<renderingConstant name="pathPathEffect" value="6_5"/>
 		<renderingConstant name="pathLowZoomPathEffect" value=""/>
 		<renderingConstant name="sacScaleColor" value="#e23cad"/>
 		<!-- NOTE: The SAC scale colors as used in the Touring view are closer to the conventions as used in the Swiss alpine hiking maps. The values below deviate from that convention. For reference see https://wiki.openstreetmap.org/wiki/Key:sac_scale -->
@@ -2488,10 +2488,10 @@
 		<renderingConstant name="unclassifiedMinZoom" value="12"/>
 		<renderingConstant name="serviceMinZoom" value="13"/>
 		<renderingConstant name="roadMinZoom" value="14"/>
-		<renderingConstant name="trackMinZoom" value="12"/>
-		<renderingConstant name="pathMinZoom" value="12"/>
-		<renderingConstant name="footwayMinZoom" value="12"/>
-		<renderingConstant name="cyclewayMinZoom" value="13"/>
+		<renderingConstant name="trackMinZoom" value="13"/>
+		<renderingConstant name="pathMinZoom" value="15"/>
+		<renderingConstant name="footwayMinZoom" value="15"/>
+		<renderingConstant name="cyclewayMinZoom" value="15"/>
 		<renderingConstant name="bridlewayMinZoom" value="13"/>
 		<renderingConstant name="powerTowerLineMinZoom" value="14"/>
 
@@ -4380,7 +4380,7 @@
 				</switch>
 				<!-- Highway text -->
 				<switch>
-					<switch textHaloRadius="$textHaloRadius" textOnPath="true" nameTag="">
+					<switch textHaloRadius="$textHaloRadius" textOnPath="true" nameTag="" textMinDistance="80" intersectionMargin="24">
 						<case minzoom="16" tag="area:highway" value="motorway" textColor="$motorwayTextColor" textHaloColor="$motorwayRoadColor" textBold="true" textItalic="true" textOrder="50" textWrapWidth="25"/>
 						<case tag="highway" value="motorway" textColor="$motorwayTextColor" textHaloColor="$motorwayRoadColor" textOrder="50">
 							<apply_if nightMode="true" textBold="true"/>
@@ -4403,28 +4403,27 @@
 						<case minzoom="16" tag="area:highway" value="secondary" textColor="$secondaryTextColor" textHaloColor="$secondaryRoadColor" textBold="true" textItalic="true" textOrder="61" textWrapWidth="25"/>
 						<case tag="highway" value="secondary_link" textColor="$secondaryTextColor" textHaloColor="$secondaryRoadColor" textOrder="62"/>
 						<apply_if minzoom="13">
-							<case maxzoom="13" textSize="9"/>
-							<case maxzoom="14" textSize="9"/>
-							<case maxzoom="15" textSize="10"/>
-							<case maxzoom="16" textSize="12"/>
-							<case maxzoom="17" textSize="14"/>
-							<case minzoom="18" textSize="16"/>
+							<case maxzoom="13" textSize="8"/>
+							<case maxzoom="14" textSize="8"/>
+							<case maxzoom="15" textSize="9"/>
+							<case maxzoom="16" textSize="11"/>
+							<case maxzoom="17" textSize="12"/>
+							<case minzoom="18" textSize="14"/>
 						</apply_if>
 					</switch>
 
-					<switch minzoom="16" textHaloRadius="$textHaloRadius" textColor="$tertiaryTextColor" textOnPath="true" textHaloColor="$tertiaryRoadColor" nameTag="">
+					<switch minzoom="16" textHaloRadius="$textHaloRadius" textColor="$tertiaryTextColor" textOnPath="true" textHaloColor="$tertiaryRoadColor" nameTag="" textMinDistance="90" intersectionMargin="24">
 						<case tag="highway" value="tertiary" textOrder="94"/>
 						<case minzoom="16" tag="area:highway" value="tertiary" textBold="true" textItalic="true" textOrder="95" intersectsWith="any" textWrapWidth="25"/>
 						<case tag="highway" value="tertiary_link" textOrder="96"/>
 						<apply>
-							<case maxzoom="16" textSize="10"/>
-							<case maxzoom="16" textSize="11"/>
-							<case maxzoom="17" textSize="13"/>
-							<case minzoom="18" textSize="15"/>
+							<case maxzoom="16" textSize="9"/>
+							<case maxzoom="17" textSize="11"/>
+							<case minzoom="18" textSize="13"/>
 						</apply>
 					</switch>
 
-					<switch minzoom="16" nameTag="">
+					<switch minzoom="16" nameTag="" textMinDistance="100" intersectionMargin="28">
 						<switch>
 							<switch textColor="$residentialTextColor" textHaloRadius="$textHaloRadius" textHaloColor="$residentialRoadColor">
 								<case tag="highway" value="unclassified" textOrder="122"/>
@@ -4458,10 +4457,9 @@
 							<case minzoom="16" tag="area:highway" value="pedestrian" textBold="true" textItalic="true" textOrder="64" textWrapWidth="25" intersectsWith="any"/>
 						</switch>
 						<apply textOnPath="true">
-							<case maxzoom="16" textSize="10"/>
-							<case maxzoom="16" textSize="11"/>
-							<case maxzoom="17" textSize="13"/>
-							<case minzoom="18" textSize="15"/>
+							<case maxzoom="16" textSize="9"/>
+							<case maxzoom="17" textSize="11"/>
+							<case minzoom="18" textSize="13"/>
 						</apply>
 					</switch>
 					<apply_if baseAppMode="bicycle" nightMode="false" additional="cyclestreet=yes" textColor="#ffffff"/>
@@ -4479,7 +4477,7 @@
 					</apply>
 				</case>
 
-				<switch minzoom="14">
+				<switch minzoom="16">
 					<switch nameTag="">
 						<case minzoom="16" tag="area:highway" value="track" textWrapWidth="25" textOrder="189"/>
 						<case minzoom="16" tag="area:highway" value="cycleway" textWrapWidth="25" textOrder="189"/>
@@ -4496,7 +4494,7 @@
 						<case tag="highway" value="steps" textOrder="194"/>
 						<case tag="highway" value="raceway" textOrder="192"/>
 						<case tag="highway" value="road" textOrder="120"/>
-						<apply maxzoom="14" textSize="12"/>
+						<apply maxzoom="16" textSize="10"/>
 					</switch>
 					<switch>
 						<case tag="highway" value="track" nameTag="" textOrder="188"/>
@@ -4511,29 +4509,26 @@
 						<apply>
 							<case nameTag="" nameTag2="ref"/>
 							<case nameTag="ref"/>
-							<apply maxzoom="14" textSize="12"/>
+							<apply maxzoom="16" textSize="10"/>
 						</apply>
 					</switch>
 					<apply textColor="#000000" textHaloRadius="$highwayTrackTextHaloRadiusDay" textHaloColor="$highwayTrackTextHaloColorDay" textOnPath="true"/>
-					<apply_if minzoom="15">
-						<case maxzoom="15" textSize="13"/>
-						<case maxzoom="16" textSize="14"/>
-						<case maxzoom="17" textSize="16"/>
-						<case minzoom="18" textSize="18"/>
+					<apply_if minzoom="16">
+						<case maxzoom="16" textSize="10"/>
+						<case maxzoom="17" textSize="12"/>
+						<case minzoom="18" textSize="14"/>
 						<apply_if nightMode="true" textColor="#ffffff" textHaloColor="#77777777"/>
 					</apply_if>
 				</switch>
-				<switch minzoom="15" nameTag="" textOnPath="true">
+				<switch minzoom="17" nameTag="" textOnPath="true">
 					<case tag="highway" value="footway" textOrder="190" textColor="#000000" textHaloColor="$highwayTrackTextHaloColorDay">
 						<apply_if nightMode="true" textColor="#ffffff" textHaloColor="#77777777"/>
 					</case>
 					<case minzoom="16" tag="area:highway" value="footway" textOrder="191" textColor="$pedestrianTextColor" textHaloColor="$pedestrianRoadColor"/>
 					<case minzoom="16" tag="area:highway" value="steps" textOrder="191" textColor="$pedestrianTextColor" textHaloColor="$pedestrianRoadColor"/>
 					<apply>
-						<case maxzoom="15" textSize="13"/>
-						<case maxzoom="16" textSize="14"/>
-						<case maxzoom="17" textSize="16"/>
-						<case minzoom="18" textSize="18"/>
+						<case maxzoom="17" textSize="11"/>
+						<case minzoom="18" textSize="13"/>
 					</apply>
 					<apply textHaloRadius="$textHaloRadius"/>
 				</switch>
@@ -4944,7 +4939,7 @@
 			</case>
 
 			<!-- Natural -->
-			<case minzoom="12" tag="leisure" value="park" nameTag="" textSize="12" textWrapWidth="15" textHaloRadius="$textHaloRadius" textHaloColor="#aaffffff" textColor="$parkTextColorDay" textItalic="true" textOrder="103">
+			<case minzoom="15" tag="leisure" value="park" nameTag="" textSize="11" textWrapWidth="12" textMinDistance="120" intersectionMargin="28" textHaloRadius="$textHaloRadius" textHaloColor="#aaffffff" textColor="$parkTextColorDay" textItalic="true" textOrder="103">
 				<apply_if nightMode="true" textColor="#9fe39f" textHaloColor="#88444444"/>
 			</case>
 
@@ -5185,7 +5180,7 @@
 
 				<!-- National Forest, Wilderness, National Park: (http://wiki.openstreetmap.org/wiki/US_Forest_Service_Data)
 				all have boundary=national_park: National forests with landuse=forest, Wilderness with leisure=nature_reserve, NatPark just boundary=national_park (protected_areas need not be rendered for this) -->
-				<switch textSize="12" textColor="$forestTextColorDay" textWrapWidth="20" textHaloRadius="$textHaloRadius" textHaloColor="#ccffffff" nameTag="">
+				<switch textSize="11" textColor="$forestTextColorDay" textWrapWidth="18" textHaloRadius="$textHaloRadius" textHaloColor="#ccffffff" nameTag="" textMinDistance="120" intersectionMargin="28">
 					<switch textItalic="true">
 						<case minzoom="12" tag="natural" value="wood" textOrder="202" textDy="8"/>
 						<case minzoom="$naturalScrubTextMinZoom" tag="natural" value="scrub" textOrder="244"/>
@@ -5196,8 +5191,8 @@
 						<case hidePOILabels="false" minzoom="9" tag="landuse" value="forest" textOrder="201">
 							<apply_if baseAppMode="car" moreDetailed="false" maxzoom="17" disable="true"/>
 						</case>
-						<case minzoom="14" tag="landuse" value="meadow" textOrder="243"/>
-						<case minzoom="15" tag="landuse" value="recreation_ground" textOrder="242"/>
+						<case minzoom="15" tag="landuse" value="meadow" textOrder="243"/>
+						<case minzoom="16" tag="landuse" value="recreation_ground" textOrder="242"/>
 						<case minzoom="12" tag="landuse" value="orchard" textOrder="239"/>
 						<case minzoom="12" tag="landuse" value="plant_nursery" textOrder="239"/>
 						<case minzoom="15" tag="landuse" value="greenhouse_horticulture" textOrder="239"/>
@@ -5208,8 +5203,8 @@
 						<case minzoom="12" tag="landuse" value="farmland" textOrder="248"/>
 						<case minzoom="14" tag="natural" value="grassland" textOrder="250"/>
 						<case minzoom="12" tag="natural" value="fell" textOrder="250"/>
-						<case minzoom="15" tag="leisure" value="dog_park" textOrder="250"/>
-						<case minzoom="9" tag="leisure" value="nature_reserve" textOrder="102"/>
+						<case minzoom="16" tag="leisure" value="dog_park" textOrder="250"/>
+						<case minzoom="12" tag="leisure" value="nature_reserve" textOrder="102"/>
 						<case minzoom="15" tag="osmand_nature_reserve" value="line" textOnPath="true" textMinDistance="100"/>
 						<case minzoom="12" tag="admin_level" value="2" textOnPath="true"/>
 						<case minzoom="12" tag="admin_level" value="4" textOnPath="true"/>
@@ -5238,12 +5233,12 @@
 						<case minzoom="13" tag="natural" value="shoal"/>
 						<apply_if engine_v1="false" textDy="0"/>
 					</switch>
-					<case hidePOILabels="false" minzoom="12" tag="leisure" value="garden" nameTag="" textOrder="168"/>
-					<case minzoom="14" tag="leisure" value="common" textOrder="169" nameTag=""/>
+					<case hidePOILabels="false" minzoom="16" tag="leisure" value="garden" nameTag="" textOrder="168"/>
+					<case minzoom="16" tag="leisure" value="common" textOrder="169" nameTag=""/>
 					<switch nameTag="">
-						<case minzoom="15" tag="leisure" value="golf_course" textOrder="105" textDy="5"/>
-						<case minzoom="15" tag="leisure" value="pitch" textOrder="254"/>
-						<case minzoom="14" tag="leisure" value="bleachers" textOrder="254"/>
+						<case minzoom="16" tag="leisure" value="golf_course" textOrder="105" textDy="5"/>
+						<case minzoom="17" tag="leisure" value="pitch" textOrder="254"/>
+						<case minzoom="17" tag="leisure" value="bleachers" textOrder="254"/>
 						<apply_if moreDetailed="false" maxzoom="15" disable="true"/>
 					</switch>
 					<apply_if nightMode="true" textColor="#9fe39f" textHaloColor="#aa444444"/>

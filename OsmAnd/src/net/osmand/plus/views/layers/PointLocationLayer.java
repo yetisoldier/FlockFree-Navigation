@@ -73,6 +73,11 @@ public class PointLocationLayer extends OsmandMapLayer
 	private static final long BEARING_GRACE_PERIOD_MS = 5_000L;
 	protected static final int MIN_ZOOM = 3;
 	protected static final int RADIUS = 7;
+	private static final float FLOCKFREE_LOCATION_MARKER_SCALE = 0.78f;
+	private static final float FLOCKFREE_NAVIGATION_MARKER_SCALE = 0.84f;
+	private static final float FLOCKFREE_CORE_ACCURACY_ALPHA = 0.12f;
+	private static final float FLOCKFREE_LEGACY_ACCURACY_ALPHA = 0.10f;
+	private static final float FLOCKFREE_LEGACY_ACCURACY_STROKE_ALPHA = 0.48f;
 
 	private Paint headingPaint;
 	private Paint area;
@@ -282,7 +287,15 @@ public class PointLocationLayer extends OsmandMapLayer
 			mapMarkersCollection.setPriority(Long.MAX_VALUE);
 		}
 		return CoreMapMarker.createAndAddToCollection(getContext(), mapMarkersCollection, id,
-				getPointsOrder(), icon, model3d, headingIconId, getTextScale(), profileColor, withHeading);
+				getPointsOrder(), icon, model3d, headingIconId, getFlockFreeMarkerScale(id), profileColor, withHeading);
+	}
+
+	private float getFlockFreeMarkerScale(int id) {
+		float baseScale = getTextScale();
+		return switch (id) {
+			case MARKER_ID_NAVIGATION, MARKER_ID_NAVIGATION_HEADING -> baseScale * FLOCKFREE_NAVIGATION_MARKER_SCALE;
+			default -> baseScale * FLOCKFREE_LOCATION_MARKER_SCALE;
+		};
 	}
 
 	private void setMarkerProvider() {
@@ -341,7 +354,7 @@ public class PointLocationLayer extends OsmandMapLayer
 				sectorDirection = showHeading
 						? navigationMarkerWithHeading.marker.getOnMapSurfaceIconDirection(navigationMarkerWithHeading.onSurfaceHeadingIconKey)
 						: 0.0f;
-				sectorRadius = (float) (showHeading
+				sectorRadius = (float) (showHeading && headingIcon != null
 						? Math.max(headingIcon.getWidth(), headingIcon.getHeight()) / 2
 						: 0);
 			}
@@ -363,7 +376,7 @@ public class PointLocationLayer extends OsmandMapLayer
 				sectorDirection = showHeading
 						? locationMarkerWithHeading.marker.getOnMapSurfaceIconDirection(locationMarkerWithHeading.onSurfaceHeadingIconKey)
 						: 0.0f;
-				sectorRadius = (float) (showHeading
+				sectorRadius = (float) (showHeading && headingIcon != null
 						? Math.max(headingIcon.getWidth(), headingIcon.getHeight()) / 2
 						: 0);
 			}
@@ -377,7 +390,7 @@ public class PointLocationLayer extends OsmandMapLayer
 		MapRendererView mapRenderer = getMapRenderer();
 		if (mapRenderer != null) {
 			if (withCircle) {
-				mapRenderer.setMyLocationCircleColor(circleColor.withAlpha(0.2f));
+				mapRenderer.setMyLocationCircleColor(circleColor.withAlpha(FLOCKFREE_CORE_ACCURACY_ALPHA));
 				mapRenderer.setMyLocationCirclePosition(circleLocation31);
 				mapRenderer.setMyLocationCircleRadius(circleRadius);
 				mapRenderer.setMyLocationSectorDirection(sectorDirection);
@@ -634,10 +647,12 @@ public class PointLocationLayer extends OsmandMapLayer
 			if (bearing != null) {
 				canvas.rotate(bearing - 90, locationX, locationY);
 				if (navigationIcon != null) {
-					AndroidUtils.drawScaledLayerDrawable(canvas, navigationIcon, locationX, locationY, textScale);
+					AndroidUtils.drawScaledLayerDrawable(canvas, navigationIcon, locationX, locationY,
+							textScale * FLOCKFREE_NAVIGATION_MARKER_SCALE);
 				}
 			} else if (locationIcon != null) {
-				AndroidUtils.drawScaledLayerDrawable(canvas, locationIcon, locationX, locationY, textScale);
+				AndroidUtils.drawScaledLayerDrawable(canvas, locationIcon, locationX, locationY,
+						textScale * FLOCKFREE_LOCATION_MARKER_SCALE);
 			}
 		}
 	}
@@ -862,12 +877,12 @@ public class PointLocationLayer extends OsmandMapLayer
 				locationModel = null;
 			}
 			headingIconId = locationIconType.getHeadingIconId();
-			headingIcon = getScaledBitmap(headingIconId);
+			headingIcon = getScaledBitmap(headingIconId, textScale * FLOCKFREE_LOCATION_MARKER_SCALE);
 
 			if (!hasMapRenderer) {
 				headingPaint.setColorFilter(new PorterDuffColorFilter(profileColor, PorterDuff.Mode.SRC_IN));
-				area.setColor(ColorUtilities.getColorWithAlpha(profileColor, 0.16f));
-				aroundArea.setColor(profileColor);
+				area.setColor(ColorUtilities.getColorWithAlpha(profileColor, FLOCKFREE_LEGACY_ACCURACY_ALPHA));
+				aroundArea.setColor(ColorUtilities.getColorWithAlpha(profileColor, FLOCKFREE_LEGACY_ACCURACY_STROKE_ALPHA));
 			}
 			markersInvalidated = true;
 		}

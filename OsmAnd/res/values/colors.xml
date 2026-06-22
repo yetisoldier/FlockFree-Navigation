@@ -37,8 +37,8 @@
 	<color name="icon_color_active_light">#063A5A</color>
 	<color name="icon_color_active_dark">#4FC3F7</color>
 	<color name="icon_color_warning">#EE5622</color>
-	<color name="map_button_icon_color_light">#727272</color>
-	<color name="map_button_icon_color_dark">#cccccc</color>
+	<color name="map_button_icon_color_light">#5F6368</color>
+	<color name="map_button_icon_color_dark">#DADCE0</color>
 	<color name="map_button_background_color_light">#FFFFFF</color>
 	<color name="map_button_background_color_dark">#000000</color>
 	<color name="icon_color_inverse_light">#FFFFFF</color>
@@ -250,16 +250,16 @@
 	<color name="fab_color_pressed">#052B43</color>
 
 	<color name="map_widget_icon_color">#063A5A</color>
-	<color name="map_widget_stroke">#4C000000</color>
+	<color name="map_widget_stroke">#26000000</color>
 	<color name="map_widget_light">#fff</color>
-	<color name="map_widget_dark">#a0000000</color>
-	<color name="map_widget_dark_stroke">#80ffffff</color>
-	<color name="map_widget_dark_pressed">#80aaaaaa</color>
-	<color name="map_widget_light_trans">#80ffffff</color>
-	<color name="map_widget_light_pressed">#e5e5e5</color>
-	<color name="map_widget_blue">#536dfe</color>
+	<color name="map_widget_dark">#CC202124</color>
+	<color name="map_widget_dark_stroke">#33ffffff</color>
+	<color name="map_widget_dark_pressed">#663C4043</color>
+	<color name="map_widget_light_trans">#E6ffffff</color>
+	<color name="map_widget_light_pressed">#F1F3F4</color>
+	<color name="map_widget_blue">#4285F4</color>
 	<color name="map_widget_red">#FF1717</color>
-	<color name="map_widget_blue_pressed">#485dd9</color>
+	<color name="map_widget_blue_pressed">#3367D6</color>
 	<color name="google_maps_blue">#4285F4</color>
 	<color name="google_maps_blue_night">#5C8DFF</color>
 	<color name="google_maps_text_primary">#202124</color>
