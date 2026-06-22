@@ -178,10 +178,15 @@ public class LanesWidget extends MapWidget {
 	public void updateColors(@NonNull TextState textState) {
 		super.updateColors(textState);
 
-		getView().setBackgroundResource(textState.boxFree);
+		getView().setBackgroundResource(textState.night
+				? textState.boxFree
+				: R.drawable.bg_white_rounded_card);
 
 		shadowRadius = textState.textShadowRadius / 2;
-		updateTextColor(lanesText, lanesShadowText, textState.textColor,
+		int textColor = textState.night
+				? textState.textColor
+				: app.getColor(R.color.google_maps_text_primary);
+		updateTextColor(lanesText, lanesShadowText, textColor,
 				textState.textShadowColor, textState.textBold, shadowRadius);
 	}
 

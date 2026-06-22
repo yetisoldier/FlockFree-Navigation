@@ -11,7 +11,7 @@
         android:layout_width="@dimen/standard_icon_size"
         android:layout_height="@dimen/standard_icon_size"
         android:src="@drawable/ic_action_arrow_up"
-        android:tint="?attr/active_color_basic"
+        android:tint="@color/card_and_list_background_light"
         android:contentDescription="@string/shared_string_navigation"
         android:layout_gravity="center" />
 

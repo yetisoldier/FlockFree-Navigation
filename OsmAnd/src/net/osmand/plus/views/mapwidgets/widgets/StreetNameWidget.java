@@ -383,13 +383,18 @@ public class StreetNameWidget extends MapWidget {
 		shadowRadius = textState.textShadowRadius;
 
 		View view = getView();
-		view.setBackgroundResource(textState.widgetBackgroundId);
+		view.setBackgroundResource(isNightMode()
+				? textState.widgetBackgroundId
+				: R.drawable.bg_white_rounded_card);
 
 		TextView waypointText = view.findViewById(R.id.waypoint_text);
 		TextView waypointTextShadow = view.findViewById(R.id.waypoint_text_shadow);
-		updateTextColor(addressText, addressTextShadow, textState.textColor,
+		int primaryTextColor = ContextCompat.getColor(app, isNightMode()
+				? R.color.text_color_primary_dark
+				: R.color.google_maps_text_primary);
+		updateTextColor(addressText, addressTextShadow, primaryTextColor,
 				textState.textShadowColor, textState.textBold, shadowRadius);
-		updateTextColor(waypointText, waypointTextShadow, textState.textColor,
+		updateTextColor(waypointText, waypointTextShadow, primaryTextColor,
 				textState.textShadowColor, textState.textBold, shadowRadius / 2);
 
 		int exitRefTextColorId = isNightMode()

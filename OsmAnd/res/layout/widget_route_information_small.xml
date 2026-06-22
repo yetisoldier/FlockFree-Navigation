@@ -43,15 +43,15 @@
             android:gravity="start|center_vertical"
             android:includeFontPadding="false"
             android:maxLines="1"
-            android:textColor="?android:textColorPrimary"
+            android:textColor="@color/google_maps_text_primary"
             android:textSize="24sp"
             app:textViewType="multi"
             app:multiTextViewEx_primaryText="20:33"
             app:multiTextViewEx_secondaryText="13 h 2 m"
             app:multiTextViewEx_tertiaryText="331 km"
-            app:multiTextViewEx_tertiaryTextColor="?android:textColorSecondary"
+            app:multiTextViewEx_tertiaryTextColor="@color/google_maps_text_secondary"
             app:multiTextViewEx_separator=" • "
-            app:multiTextViewEx_separatorColor="?android:textColorSecondary" />
+            app:multiTextViewEx_separatorColor="@color/google_maps_text_secondary" />
 
     </FrameLayout>
 
@@ -61,7 +61,7 @@
         android:layout_height="match_parent"
         android:layout_gravity="center_vertical"
         android:layout_marginVertical="9dp"
-        android:background="?android:listDivider" />
+        android:background="@color/divider_color_light" />
 
     <!-- Secondary block -->
     <FrameLayout
@@ -78,7 +78,7 @@
             android:gravity="start|top"
             android:includeFontPadding="false"
             android:maxLines="1"
-            android:textColor="?android:textColorPrimary"
+            android:textColor="@color/google_maps_text_primary"
             android:textSize="16sp"
             tools:text="01:27" />
 
@@ -89,7 +89,7 @@
             android:gravity="start|bottom"
             android:includeFontPadding="false"
             android:maxLines="1"
-            android:textColor="?android:textColorPrimary"
+            android:textColor="@color/google_maps_text_primary"
             android:textSize="16sp"
             tools:text="9 h 23 m" />
 

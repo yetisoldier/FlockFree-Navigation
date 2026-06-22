@@ -5,6 +5,8 @@
 	android:id="@+id/widget_bg"
 	android:layout_width="match_parent"
 	android:layout_height="@dimen/simple_widget_large_height"
+	android:background="@drawable/bg_white_rounded_card"
+	android:elevation="4dp"
 	android:orientation="vertical"
 	android:paddingHorizontal="16dp"
 	android:paddingVertical="6dp">
@@ -40,7 +42,7 @@
 				android:gravity="start|center"
 				android:includeFontPadding="false"
 				android:maxLines="1"
-				android:textColor="@color/text_color_primary_light"
+				android:textColor="@color/google_maps_blue"
 				android:textSize="36sp"
 				tools:text="Value" />
 
@@ -52,7 +54,7 @@
 				android:gravity="start|center"
 				android:includeFontPadding="false"
 				android:maxLines="1"
-				android:textColor="@color/text_color_secondary_light"
+				android:textColor="@color/google_maps_text_secondary"
 				android:textSize="36sp"
 				tools:text="Value" />
 
@@ -102,7 +104,7 @@
 
 				android:includeFontPadding="false"
 				android:maxLines="1"
-				android:textColor="@color/text_color_primary_light"
+				android:textColor="@color/google_maps_text_primary"
 				android:textSize="20sp"
 				tools:text="Value" />
 

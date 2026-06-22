@@ -6,7 +6,8 @@
 	android:layout_height="wrap_content"
 	android:layout_gravity="center_horizontal|top"
 	android:layout_marginTop="@dimen/map_button_margin"
-	android:background="@drawable/btn_round"
+	android:background="@drawable/bg_white_rounded_card"
+	android:elevation="4dp"
 	android:orientation="vertical"
 	android:visibility="gone">
 
@@ -33,7 +34,7 @@
 			android:layout_marginHorizontal="@dimen/widget_turn_lane_border"
 			android:importantForAccessibility="no"
 			android:maxLines="1"
-			android:textColor="@color/activity_background_color_dark"
+			android:textColor="@color/google_maps_text_primary"
 			android:textSize="@dimen/map_button_text_size"
 			tools:text="1048 km" />
 
@@ -44,7 +45,7 @@
 			android:layout_gravity="center"
 			android:layout_marginHorizontal="@dimen/widget_turn_lane_border"
 			android:maxLines="1"
-			android:textColor="@color/activity_background_color_dark"
+			android:textColor="@color/google_maps_text_primary"
 			android:textSize="@dimen/map_button_text_size"
 			tools:text="1048 km" />
 

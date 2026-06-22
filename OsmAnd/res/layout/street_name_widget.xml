@@ -5,7 +5,8 @@
 	android:id="@+id/street_name_widget"
 	android:layout_width="match_parent"
 	android:layout_height="wrap_content"
-	android:background="@drawable/btn_flat"
+	android:background="@drawable/bg_white_rounded_card"
+	android:elevation="4dp"
 	android:minHeight="@dimen/map_address_height">
 
 	<LinearLayout
@@ -60,7 +61,7 @@
 				android:importantForAccessibility="no"
 				android:maxLines="1"
 				android:singleLine="true"
-				android:textColor="@color/activity_background_color_dark"
+				android:textColor="@color/google_maps_text_primary"
 				android:textSize="@dimen/map_widget_text_size"
 				tools:text="Long Street Name" />
 
@@ -72,7 +73,7 @@
 				android:ellipsize="end"
 				android:maxLines="1"
 				android:singleLine="true"
-				android:textColor="@color/activity_background_color_dark"
+				android:textColor="@color/google_maps_text_primary"
 				android:textSize="@dimen/map_widget_text_size"
 				tools:text="Long Street Name" />
 
@@ -108,7 +109,7 @@
 				android:layout_gravity="center_vertical"
 				android:layout_marginStart="@dimen/favorites_icon_padding"
 				android:maxLines="2"
-				android:textColor="@color/osmand_orange"
+				android:textColor="@color/google_maps_blue"
 				android:textSize="@dimen/default_list_text_size"
 				app:typefaceWeight="medium" />
 
@@ -120,7 +121,7 @@
 				android:layout_marginStart="@dimen/favorites_icon_padding"
 				android:drawablePadding="@dimen/favorites_icon_padding"
 				android:maxLines="1"
-				android:textColor="@color/osmand_orange"
+				android:textColor="@color/google_maps_blue"
 				android:textSize="@dimen/default_list_text_size"
 				app:typefaceWeight="medium"
 				android:visibility="gone" />
@@ -141,7 +142,7 @@
 				android:ellipsize="end"
 				android:importantForAccessibility="no"
 				android:maxLines="2"
-				android:textColor="@color/activity_background_color_dark"
+				android:textColor="@color/google_maps_text_primary"
 				android:textSize="@dimen/map_button_text_size"
 				tools:text="Waypoint" />
 
@@ -151,7 +152,7 @@
 				android:layout_height="wrap_content"
 				android:ellipsize="end"
 				android:maxLines="2"
-				android:textColor="@color/activity_background_color_dark"
+				android:textColor="@color/google_maps_text_primary"
 				android:textSize="@dimen/map_button_text_size"
 				tools:text="Waypoint" />
 

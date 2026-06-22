@@ -260,6 +260,10 @@
 	<color name="map_widget_blue">#536dfe</color>
 	<color name="map_widget_red">#FF1717</color>
 	<color name="map_widget_blue_pressed">#485dd9</color>
+	<color name="google_maps_blue">#4285F4</color>
+	<color name="google_maps_blue_night">#5C8DFF</color>
+	<color name="google_maps_text_primary">#202124</color>
+	<color name="google_maps_text_secondary">#5F6368</color>
 	<color name="map_window_outer_color">#99000000</color>
 	<color name="map_window_stroke_dark">#3F3F3F</color>
 	<color name="map_alert_stroke_light">#66000000</color>
@@ -352,16 +356,16 @@
 	<color name="nav_track">#CCaa0088</color>
 	<color name="nav_track_fluorescent">#CC00ddff</color>
 	<color name="transport_route_line">#CC2f7af5</color>
-	<color name="transport_route_walk_line">#882A4BD1</color>
+	<color name="transport_route_walk_line">#4285F4</color>
 
 	<color name="nav_track_walk_fill">#ff407ef5</color>
 	<color name="nav_track_walk_stroke">#ff1f478c</color>
 
-	<color name="nav_arrow_distant">#C0C0C0</color>
-	<color name="nav_arrow">#FADE23</color>
+	<color name="nav_arrow_distant">#5F6368</color>
+	<color name="nav_arrow">#4285F4</color>
 	<color name="nav_arrow_stroke_color">#000000</color>
-	<color name="nav_arrow_imminent">#2EFF00</color>
-	<color name="nav_arrow_circle_color_light">#D9D9D9</color>
+	<color name="nav_arrow_imminent">#4285F4</color>
+	<color name="nav_arrow_circle_color_light">#FFFFFF</color>
 	<color name="nav_arrow_circle_color_dark">#737373</color>
 
 	<color name="nav_point">#FA5050</color>

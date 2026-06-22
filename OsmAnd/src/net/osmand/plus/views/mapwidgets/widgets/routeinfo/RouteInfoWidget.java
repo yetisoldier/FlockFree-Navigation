@@ -111,8 +111,13 @@ public class RouteInfoWidget extends MapWidget implements ISupportVerticalPanel,
 		inflater.inflate(getContentLayoutId(), container);
 		collectViews();
 		if (textState != null) {
-			container.setBackgroundResource(textState.widgetBackgroundId);
-			int color = ColorUtilities.getSecondaryActiveColor(app, nightMode);
+			container.setBackgroundResource(nightMode
+					? textState.widgetBackgroundId
+					: R.drawable.bg_white_rounded_card);
+			container.setElevation(nightMode ? 0 : AndroidUtils.dpToPx(app, 4));
+			int color = nightMode
+					? ColorUtilities.getSecondaryActiveColor(app, true)
+					: app.getColor(R.color.google_maps_blue);
 			Drawable normal = UiUtilities.createTintedDrawable(app, R.drawable.rectangle_rounded_small, color);
 
 			int rippleDrawableId = nightMode ? R.drawable.ripple_solid_dark_3dp : R.drawable.ripple_solid_light_3dp;
@@ -232,8 +237,12 @@ public class RouteInfoWidget extends MapWidget implements ISupportVerticalPanel,
 	private void updatePrimaryBlock(@NonNull DestinationInfo destinationInfo,
 	                                @NonNull DisplayValue[] displayValues) {
 		WidgetSize size = getWidgetSize();
-		int primaryColor = ColorUtilities.getPrimaryTextColor(app, nightMode);
-		int secondaryColor = ColorUtilities.getSecondaryTextColor(app, nightMode);
+		int primaryColor = nightMode
+				? ColorUtilities.getPrimaryTextColor(app, true)
+				: app.getColor(R.color.google_maps_text_primary);
+		int secondaryColor = nightMode
+				? ColorUtilities.getSecondaryTextColor(app, true)
+				: app.getColor(R.color.google_maps_text_secondary);
 
 		Map<DisplayValue, String> data = prepareDisplayData(destinationInfo);
 		String value1 = Objects.requireNonNull(data.get(displayValues[0]));
@@ -270,6 +279,14 @@ public class RouteInfoWidget extends MapWidget implements ISupportVerticalPanel,
 
 	private void updateSecondaryBlock(@Nullable DestinationInfo destinationInfo,
 	                                  @NonNull DisplayValue[] displayValues) {
+		int primaryColor = nightMode
+				? ColorUtilities.getPrimaryTextColor(app, true)
+				: app.getColor(R.color.google_maps_text_primary);
+		int secondaryColor = nightMode
+				? ColorUtilities.getSecondaryTextColor(app, true)
+				: app.getColor(R.color.google_maps_text_secondary);
+		tvPrimaryLine2.setTextColor(primaryColor);
+		tvSecondaryLine2.setTextColor(secondaryColor);
 		if (destinationInfo != null) {
 			Map<DisplayValue, String> data = prepareDisplayData(destinationInfo);
 			tvPrimaryLine2.setText(data.get(displayValues[0]));
