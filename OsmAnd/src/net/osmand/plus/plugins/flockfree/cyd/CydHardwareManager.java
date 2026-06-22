@@ -510,7 +510,6 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 		}
 		setState(State.READY, app.getString(R.string.flockfree_cyd_status_ready));
 		app.showShortToastMessage(R.string.flockfree_cyd_status_ready);
-		client.sendStatusRequest();
 		// Notify plugin so it can pause WiFi scanning (CYD does full promiscuous scanning)
 		notifyCydConnectionStateChanged();
 	}

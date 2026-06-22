@@ -46,6 +46,7 @@ public final class CydBleUartClient implements AutoCloseable {
 
 	private static final int REQUESTED_MTU = 247;
 	private static final int DEFAULT_ATT_PAYLOAD_BYTES = 20;
+	private static final long INITIAL_WRITE_DELAY_MS = 200L;
 
 	private final Handler mainHandler = new Handler(Looper.getMainLooper());
 	private final Object lock = new Object();
@@ -149,7 +150,7 @@ public final class CydBleUartClient implements AutoCloseable {
 			if (!ready || bluetoothGatt == null || rxCharacteristic == null || closed) {
 				return false;
 			}
-			int chunkSize = Math.max(DEFAULT_ATT_PAYLOAD_BYTES, maxPayloadBytes);
+			int chunkSize = DEFAULT_ATT_PAYLOAD_BYTES;
 			for (int offset = 0; offset < data.length; offset += chunkSize) {
 				int end = Math.min(data.length, offset + chunkSize);
 				writeQueue.add(Arrays.copyOfRange(data, offset, end));
@@ -177,11 +178,11 @@ public final class CydBleUartClient implements AutoCloseable {
 			writeInProgress = true;
 		}
 
+		int writeType = getSupportedWriteType(characteristic);
 		boolean started;
-		characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+		characteristic.setWriteType(writeType);
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-			int result = gatt.writeCharacteristic(characteristic, chunk,
-					BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+			int result = gatt.writeCharacteristic(characteristic, chunk, writeType);
 			started = result == BluetoothStatusCodes.SUCCESS;
 		} else {
 			characteristic.setValue(chunk);
@@ -190,10 +191,22 @@ public final class CydBleUartClient implements AutoCloseable {
 		if (!started) {
 			synchronized (lock) {
 				writeInProgress = false;
+				writeQueue.clear();
 			}
 			emitError("CYD BLE write could not be started", null);
-			writeNextChunk();
+			close();
 		}
+	}
+
+	private int getSupportedWriteType(@NonNull BluetoothGattCharacteristic characteristic) {
+		int properties = characteristic.getProperties();
+		if ((properties & BluetoothGattCharacteristic.PROPERTY_WRITE) != 0) {
+			return BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT;
+		}
+		if ((properties & BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0) {
+			return BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE;
+		}
+		return BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT;
 	}
 
 	@SuppressLint("MissingPermission")
@@ -354,7 +367,7 @@ public final class CydBleUartClient implements AutoCloseable {
 						ready = true;
 					}
 					emitReady();
-					sendHello();
+					mainHandler.postDelayed(CydBleUartClient.this::sendHello, INITIAL_WRITE_DELAY_MS);
 				} else {
 					emitError("CYD BLE notification descriptor write failed: " + status, null);
 					close();
@@ -368,6 +381,12 @@ public final class CydBleUartClient implements AutoCloseable {
 		                                  int status) {
 			if (status != BluetoothGatt.GATT_SUCCESS) {
 				emitError("CYD BLE characteristic write failed: " + status, null);
+				synchronized (lock) {
+					writeInProgress = false;
+					writeQueue.clear();
+				}
+				close();
+				return;
 			}
 			synchronized (lock) {
 				writeInProgress = false;
