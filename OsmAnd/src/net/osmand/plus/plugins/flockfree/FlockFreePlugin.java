@@ -1,10 +1,14 @@
 package net.osmand.plus.plugins.flockfree;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Context;
+import android.os.Build;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
+import androidx.core.app.NotificationCompat;
 
 import net.osmand.Location;
 import net.osmand.plus.OsmandApplication;
@@ -62,6 +66,8 @@ public class FlockFreePlugin extends OsmandPlugin {
     private static final int CYD_DETAILS_ITEM_ORDER = 7860;
     private static final int ADD_CAMERA_ITEM_ORDER = 7900;
     private static final long CAMERA_ALERT_COOLDOWN_MS = 90_000L;
+    private static final String CAMERA_ALERT_CHANNEL_ID = "flockfree_camera_alert";
+    private static final int CAMERA_ALERT_NOTIFICATION_ID = 7901;
     private static final long SAME_CAMERA_ALERT_COOLDOWN_MS = 10 * 60_000L;
     private static final float MOVING_ALERT_SPEED_MPS = 2.0f;
     private static final int MAP_CENTER_CAMERA_SEARCH_RADIUS_METERS = 5_000;
@@ -682,8 +688,45 @@ public class FlockFreePlugin extends OsmandPlugin {
         lastCameraAlertKey = cameraKey;
         setLastCameraAlertCheckSummary(app.getString(R.string.flockfree_alert_last_check_triggered,
                 brand, roundedDistance));
-        app.showShortToastMessage(R.string.flockfree_nearby_camera_alert,
-                brand, roundedDistance);
+
+        // High-priority heads-up notification with large icon — much more noticeable than a toast
+        String title = app.getString(R.string.flockfree_nearby_camera_alert, brand, roundedDistance);
+        showCameraAlertNotification(title, brand, roundedDistance);
+        // Also show a long-duration toast as a secondary visual cue
+        app.showToastMessage(title);
+    }
+
+    private void showCameraAlertNotification(@NonNull String title, @NonNull String brand, int distanceM) {
+        NotificationManager notificationManager = (NotificationManager) app.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (notificationManager == null) return;
+
+        // Create high-importance channel for heads-up notifications (API 26+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = notificationManager.getNotificationChannel(CAMERA_ALERT_CHANNEL_ID);
+            if (channel == null) {
+                channel = new NotificationChannel(
+                        CAMERA_ALERT_CHANNEL_ID,
+                        "FlockFree Camera Alerts",
+                        NotificationManager.IMPORTANCE_HIGH);
+                channel.setDescription("Alerts when approaching Flock safety cameras");
+                channel.enableVibration(true);
+                channel.setVibrationPattern(new long[]{0, 400, 200, 400});
+                notificationManager.createNotificationChannel(channel);
+            }
+        }
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(app, CAMERA_ALERT_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_action_device_camera)
+                .setContentTitle("\uD83D\uDEA8 Flock Camera Ahead")
+                .setContentText(title)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(title))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setAutoCancel(true)
+                .setVibrate(new long[]{0, 400, 200, 400});
+
+        notificationManager.notify(CAMERA_ALERT_NOTIFICATION_ID, builder.build());
     }
 
     @NonNull
