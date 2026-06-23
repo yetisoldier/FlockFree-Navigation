@@ -426,8 +426,8 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         float x = tileBox.getPixXFromLatLon(camera.lat, camera.lon);
         float y = tileBox.getPixYFromLatLon(camera.lat, camera.lon);
         int color = getBrandColor(camera.brand);
-        markerPaint.setColor(color);
-        float radius = dpToPx(6);
+        float outerRadius = dpToPx(7);
+        float innerRadius = dpToPx(5);
 
         // Draw orientation cone when direction is available and zoom is high enough
         if (tileBox.getZoom() >= 15) {
@@ -437,15 +437,32 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
             }
         }
 
-        canvas.drawCircle(x, y, radius, markerPaint);
+        // Outer ring: brand-color stroked circle (POI pin style)
         markerPaint.setStyle(Paint.Style.STROKE);
-        markerPaint.setColor(darkenColor(color));
-        canvas.drawCircle(x, y, radius, markerPaint);
+        markerPaint.setColor(color);
+        markerPaint.setStrokeWidth(dpToPx(2));
+        canvas.drawCircle(x, y, outerRadius, markerPaint);
+
+        // Inner white filled circle
+        markerPaint.setStyle(Paint.Style.FILL);
+        markerPaint.setColor(Color.WHITE);
+        canvas.drawCircle(x, y, innerRadius, markerPaint);
+
+        // Tiny camera glyph in brand color: rectangle body + circular lens
+        markerPaint.setColor(color);
+        float camW = dpToPx(3);
+        float camH = dpToPx(2);
+        float camLeft = x - camW / 2f;
+        float camTop = y - camH / 2f;
+        canvas.drawRect(camLeft, camTop, camLeft + camW, camTop + camH, markerPaint);
+        canvas.drawCircle(x, y, dpToPx(0.8f), markerPaint);
+
+        // Restore markerPaint to default FILL state for other callers
         markerPaint.setStyle(Paint.Style.FILL);
 
         if (tileBox.getZoom() >= 15) {
             String label = getShortBrandName(camera.brand);
-            canvas.drawText(label, x, y - radius - dpToPx(2), textPaint);
+            canvas.drawText(label, x, y - outerRadius - dpToPx(3), textPaint);
         }
     }
 
