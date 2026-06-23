@@ -14,13 +14,17 @@ import net.osmand.data.LatLon;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
+import net.osmand.plus.helpers.TargetPointsHelper;
+import net.osmand.plus.helpers.TargetPoint;
 import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.plugins.srtm.SRTMPlugin;
 import net.osmand.plus.routing.RouteCalculationResult;
+import net.osmand.plus.routing.RoutingHelper;
 import net.osmand.plus.search.ShowQuickSearchMode;
 import net.osmand.plus.settings.backend.OsmandSettings;
 import net.osmand.plus.utils.OsmAndFormatter;
 import net.osmand.util.Algorithms;
+import net.osmand.util.MapUtils;
 
 import java.util.List;
 
@@ -116,6 +120,101 @@ public final class FlockFreeNavigationAssistant {
 			return app.getString(R.string.flockfree_arrival_summary, destinationName);
 		}
 		return app.getString(R.string.flockfree_arrival_summary_generic);
+	}
+
+	/**
+	 * Computes which side of the street the destination is on relative to the
+	 * approach direction of the route. Returns a string like "On the left" or
+	 * "On the right", or null if it cannot be determined.
+	 *
+	 * Algorithm: take the bearing of the last route segment leading to the
+	 * destination, then compute the bearing from the last route point to the
+	 * destination LatLon. If the destination bearing is to the left of the
+	 * approach bearing, the destination is on the left side.
+	 *
+	 * @param app         the OsmandApplication
+	 * @return side-of-street text, or null if not determinable
+	 */
+	@Nullable
+	public static String getDestinationSideOfStreet(@NonNull OsmandApplication app) {
+		RoutingHelper routingHelper = app.getRoutingHelper();
+		if (!routingHelper.isRouteCalculated()) {
+			return null;
+		}
+		RouteCalculationResult route = routingHelper.getRoute();
+		if (route == null || !route.isCalculated()) {
+			return null;
+		}
+		TargetPointsHelper targetHelper = app.getTargetPointsHelper();
+		TargetPoint target = targetHelper.getPointToNavigate();
+		if (target == null) {
+			return null;
+		}
+		LatLon destLatLon = target.getLatLon();
+		if (destLatLon == null) {
+			return null;
+		}
+		List<Location> routeLocations = route.getImmutableAllLocations();
+		if (routeLocations == null || routeLocations.size() < 2) {
+			return null;
+		}
+		// Get the last route location (closest to destination)
+		Location lastRouteLoc = routeLocations.get(routeLocations.size() - 1);
+		// Get the approach bearing: bearing from second-to-last to last route point
+		Location secondLastRouteLoc = routeLocations.get(routeLocations.size() - 2);
+		float approachBearing = secondLastRouteLoc.bearingTo(lastRouteLoc);
+		// Get the bearing from the last route point to the actual destination
+		Location destLocation = new Location("");
+		destLocation.setLatitude(destLatLon.getLatitude());
+		destLocation.setLongitude(destLatLon.getLongitude());
+		float destBearing = lastRouteLoc.bearingTo(destLocation);
+		// Compute the signed angle difference (destBearing - approachBearing)
+		// Positive = right side, negative = left side
+		float delta = normalizeAngle(destBearing - approachBearing);
+		if (delta >= 0) {
+			return app.getString(R.string.flockfree_arrival_preview_side_right);
+		} else {
+			return app.getString(R.string.flockfree_arrival_preview_side_left);
+		}
+	}
+
+	/**
+	 * Normalizes an angle to the range [-180, 180].
+	 */
+	private static float normalizeAngle(float angle) {
+		while (angle > 180) angle -= 360;
+		while (angle < -180) angle += 360;
+		return angle;
+	}
+
+	/**
+	 * Returns the destination name from the current navigation target, or null
+	 * if no destination is set.
+	 */
+	@Nullable
+	public static String getDestinationName(@NonNull OsmandApplication app) {
+		TargetPointsHelper targetHelper = app.getTargetPointsHelper();
+		TargetPoint target = targetHelper.getPointToNavigate();
+		if (target == null) {
+			return null;
+		}
+		String name = target.getPointDescription(app).getName();
+		if (Algorithms.isEmpty(name)) {
+			return null;
+		}
+		return name;
+	}
+
+	/**
+	 * Returns the distance in meters to the current navigation destination,
+	 * or -1 if no route is active.
+	 */
+	public static float getDistanceToDestination(@NonNull OsmandApplication app) {
+		RoutingHelper routingHelper = app.getRoutingHelper();
+		if (!routingHelper.isRouteCalculated()) {
+			return -1;
+		}
+		return routingHelper.getLeftDistance();
 	}
 
 	private static boolean toggleLayer(@NonNull MapActivity mapActivity, @NonNull OsmandApplication app,

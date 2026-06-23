@@ -20,6 +20,7 @@ import net.osmand.plus.plugins.flockfree.cyd.CydHardwareManager;
 import net.osmand.plus.plugins.flockfree.wifi.WifiScannerManager;
 import net.osmand.plus.routing.RouteCalculationResult;
 import net.osmand.plus.plugins.flockfree.widgets.CameraProximityWidget;
+import net.osmand.plus.plugins.flockfree.widgets.BuildingTransparencyController;
 import net.osmand.plus.plugins.flockfree.widgets.NavigationTiltController;
 import net.osmand.plus.plugins.flockfree.widgets.TrafficStatusWidget;
 import net.osmand.plus.quickaction.QuickActionType;
@@ -81,6 +82,9 @@ public class FlockFreePlugin extends OsmandPlugin {
     public static final float NAVIGATION_TILT_MIN = FlockFreePreferences.MIN_NAVIGATION_TILT_ANGLE;
     public static final float NAVIGATION_TILT_MAX = FlockFreePreferences.MAX_NAVIGATION_TILT_ANGLE;
 
+    // Building transparency during turns
+    public final OsmandPreference<Boolean> BUILDING_TRANSPARENCY_ENABLED;
+
     // Context menu item order
     private static final int CAMERA_DETAILS_ITEM_ORDER = 7800;
     private static final int CYD_REVIEW_ITEM_ORDER = 7850;
@@ -103,6 +107,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     private CydHardwareManager cydHardwareManager;
     private WifiScannerManager wifiScannerManager;
     private NavigationTiltController navigationTiltController;
+    private BuildingTransparencyController buildingTransparencyController;
     private long lastCameraAlertTimeMs;
     private String lastCameraAlertKey;
     private BroadcastReceiver debugAlertReceiver;
@@ -185,6 +190,9 @@ public class FlockFreePlugin extends OsmandPlugin {
         NAVIGATION_TILT_ANGLE = registerFloatPreference(
                 FlockFreePreferences.NAVIGATION_TILT_ANGLE,
                 FlockFreePreferences.DEFAULT_NAVIGATION_TILT_ANGLE).makeProfile().cache();
+        BUILDING_TRANSPARENCY_ENABLED = registerBooleanPreference(
+                FlockFreePreferences.BUILDING_TRANSPARENCY_ENABLED,
+                FlockFreePreferences.DEFAULT_BUILDING_TRANSPARENCY_ENABLED).makeProfile().cache();
 
         migrateDefaultRendererToFlockFree();
         applyFlockFreeVisualDefaults();
@@ -387,6 +395,13 @@ public class FlockFreePlugin extends OsmandPlugin {
             navigationTiltController = new NavigationTiltController(app, this);
         }
         navigationTiltController.register();
+    }
+
+    private void ensureBuildingTransparencyController() {
+        if (buildingTransparencyController == null) {
+            buildingTransparencyController = new BuildingTransparencyController(app, this);
+        }
+        buildingTransparencyController.register();
     }
 
     @androidx.annotation.Nullable
@@ -753,8 +768,12 @@ public class FlockFreePlugin extends OsmandPlugin {
         net.osmand.plus.plugins.flockfree.widgets.FlockFreeNavigationBar.ensureInitialized(app);
         // Initialize Google Maps-style floating report button
         net.osmand.plus.plugins.flockfree.widgets.NavigationReportButton.ensureInitialized(app, activity);
+        // Initialize search-along-route chips (Gas, Food, Coffee, Parking, EV Charging)
+        net.osmand.plus.plugins.flockfree.widgets.SearchAlongRouteChips.ensureInitialized(app);
         // Initialize 3D navigation tilt controller
         ensureNavigationTiltController();
+        // Initialize building transparency controller for turn approach
+        ensureBuildingTransparencyController();
     }
 
     @Override
@@ -763,6 +782,7 @@ public class FlockFreePlugin extends OsmandPlugin {
         ensureCydScanIfEnabled(activity);
         ensureWifiScanIfEnabled();
         ensureNavigationTiltController();
+        ensureBuildingTransparencyController();
     }
 
     @Override
@@ -788,6 +808,10 @@ public class FlockFreePlugin extends OsmandPlugin {
         if (navigationTiltController != null) {
             navigationTiltController.unregister();
             navigationTiltController = null;
+        }
+        if (buildingTransparencyController != null) {
+            buildingTransparencyController.unregister();
+            buildingTransparencyController = null;
         }
     }
 

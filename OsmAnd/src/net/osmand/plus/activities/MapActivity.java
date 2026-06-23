@@ -1259,16 +1259,7 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 		flockFreeNavigationActions = findViewById(R.id.flockfree_navigation_actions);
 		setFlockFreeNavigationAction(R.id.flockfree_route_preview_chip,
 				v -> FlockFreeNavigationAssistant.showRoutePreview(this));
-		setFlockFreeNavigationAction(R.id.flockfree_stop_gas_chip,
-				v -> FlockFreeNavigationAssistant.openAddStopSearch(this, "gas station"));
-		setFlockFreeNavigationAction(R.id.flockfree_stop_coffee_chip,
-				v -> FlockFreeNavigationAssistant.openAddStopSearch(this, "coffee"));
-		setFlockFreeNavigationAction(R.id.flockfree_stop_food_chip,
-				v -> FlockFreeNavigationAssistant.openAddStopSearch(this, "food"));
-		setFlockFreeNavigationAction(R.id.flockfree_stop_parking_chip,
-				v -> FlockFreeNavigationAssistant.openAddStopSearch(this, "parking"));
-		setFlockFreeNavigationAction(R.id.flockfree_stop_ev_chip,
-				v -> FlockFreeNavigationAssistant.openAddStopSearch(this, "EV charging"));
+		// Search-along-route chip clicks are handled by SearchAlongRouteChips
 
 		flockFreeFasterRoutePrompt = findViewById(R.id.flockfree_faster_route_prompt);
 		flockFreeFasterRoutePromptText = findViewById(R.id.flockfree_faster_route_prompt_text);
@@ -1302,10 +1293,9 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 		}
 		boolean navigationUiActive = isFlockFreeNavigationUiActive();
 		boolean showFlockFreeControls = visible && !navigationUiActive;
-		boolean showNavigationActions = visible && navigationUiActive;
 		AndroidUiHelper.updateVisibility(flockFreeSearchBar, showFlockFreeControls);
 		AndroidUiHelper.updateVisibility(flockFreeLayersButton, showFlockFreeControls);
-		AndroidUiHelper.updateVisibility(flockFreeNavigationActions, showNavigationActions);
+		// Chip visibility is managed by SearchAlongRouteChips (route listener + update loop)
 		View trafficLegend = findViewById(R.id.flockfree_traffic_legend);
 		if (trafficLegend != null) {
 			AndroidUiHelper.updateVisibility(trafficLegend, false);

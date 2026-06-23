@@ -5,6 +5,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -19,6 +20,7 @@ import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.helpers.DayNightHelper;
 import net.osmand.plus.settings.enums.ThemeUsageContext;
 import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.FlockFreeNavigationAssistant;
 import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.plugins.flockfree.TrafficRoutingHelper;
 import net.osmand.plus.routing.IRouteInformationListener;
@@ -43,6 +45,9 @@ public class FlockFreeNavigationBar implements IRouteInformationListener {
 
 	private static final long UPDATE_INTERVAL_MS = 1000L;
 	private static final long REATTACH_INTERVAL_MS = 2000L;
+	private static final float ARRIVAL_PREVIEW_DISTANCE_M = 500f;
+	private static final float ARRIVAL_HIDE_DISTANCE_M = 600f;
+	private static final float ARRIVAL_ARRIVED_DISTANCE_M = 50f;
 
 	@Nullable
 	private static FlockFreeNavigationBar instance;
@@ -69,6 +74,15 @@ public class FlockFreeNavigationBar implements IRouteInformationListener {
 	private ImageButton closeButton;
 	@Nullable
 	private View accentBar;
+	@Nullable
+	private LinearLayout arrivalRow;
+	@Nullable
+	private TextView arrivalNameText;
+	@Nullable
+	private TextView arrivalSideText;
+
+	private boolean arrivalRowVisible;
+	private boolean arrivalToastShown;
 
 	private boolean registered;
 	private boolean visible;
@@ -150,6 +164,9 @@ public class FlockFreeNavigationBar implements IRouteInformationListener {
 		trafficText = barView.findViewById(R.id.flockfree_nav_bar_traffic_text);
 		closeButton = barView.findViewById(R.id.flockfree_nav_bar_close);
 		accentBar = barView.findViewById(R.id.flockfree_nav_bar_accent);
+		arrivalRow = barView.findViewById(R.id.flockfree_nav_bar_arrival_row);
+		arrivalNameText = barView.findViewById(R.id.flockfree_nav_bar_arrival_name);
+		arrivalSideText = barView.findViewById(R.id.flockfree_nav_bar_arrival_side);
 
 		if (closeButton != null) {
 			closeButton.setOnClickListener(v -> {
@@ -234,6 +251,7 @@ public class FlockFreeNavigationBar implements IRouteInformationListener {
 		}
 
 		updateTrafficInfo();
+		updateArrivalPreview();
 	}
 
 	@NonNull
@@ -328,6 +346,115 @@ public class FlockFreeNavigationBar implements IRouteInformationListener {
 			}
 			accentBar.setBackgroundColor(accentColor);
 		}
+
+		// Update arrival row colors too
+		if (arrivalRowVisible) {
+			updateArrivalRowColors();
+		}
+	}
+
+	// --- Arrival Preview ---
+
+	/**
+	 * Updates the arrival preview row based on distance to destination.
+	 * Shows the row when within {@link #ARRIVAL_PREVIEW_DISTANCE_M} meters,
+	 * hides it when beyond {@link #ARRIVAL_HIDE_DISTANCE_M} meters (hysteresis).
+	 */
+	private void updateArrivalPreview() {
+		if (arrivalRow == null) {
+			return;
+		}
+		float distanceMeters = FlockFreeNavigationAssistant.getDistanceToDestination(app);
+		if (distanceMeters < 0) {
+			hideArrivalRow();
+			return;
+		}
+
+		boolean shouldShow;
+		if (arrivalRowVisible) {
+			// Hysteresis: hide only when beyond 600m
+			shouldShow = distanceMeters <= ARRIVAL_HIDE_DISTANCE_M;
+		} else {
+			// Show when within 500m
+			shouldShow = distanceMeters <= ARRIVAL_PREVIEW_DISTANCE_M;
+		}
+
+		if (shouldShow) {
+			showArrivalRow(distanceMeters);
+		} else {
+			hideArrivalRow();
+		}
+	}
+
+	private void showArrivalRow(float distanceMeters) {
+		if (!arrivalRowVisible) {
+			arrivalRowVisible = true;
+			arrivalRow.setVisibility(View.VISIBLE);
+			arrivalToastShown = false;
+		}
+
+		String destName = FlockFreeNavigationAssistant.getDestinationName(app);
+		if (destName == null) {
+			destName = app.getString(R.string.flockfree_arrival_preview_arrived_generic);
+		}
+
+		if (distanceMeters <= ARRIVAL_ARRIVED_DISTANCE_M) {
+			// Very close — show "You have arrived"
+			if (arrivalNameText != null) {
+				arrivalNameText.setText(app.getString(R.string.flockfree_arrival_preview_arrived, destName));
+			}
+			if (arrivalSideText != null) {
+				arrivalSideText.setText("");
+				arrivalSideText.setVisibility(View.GONE);
+			}
+			// Show a one-time toast
+			if (!arrivalToastShown) {
+				arrivalToastShown = true;
+				app.showToastMessage(app.getString(R.string.flockfree_arrival_preview_arrived, destName));
+			}
+		} else {
+			// Approaching — show destination name + side of street
+			if (arrivalNameText != null) {
+				arrivalNameText.setText(destName);
+			}
+			String sideText = FlockFreeNavigationAssistant.getDestinationSideOfStreet(app);
+			if (arrivalSideText != null) {
+				if (sideText != null) {
+					arrivalSideText.setText(sideText);
+					arrivalSideText.setVisibility(View.VISIBLE);
+				} else {
+					arrivalSideText.setText("");
+					arrivalSideText.setVisibility(View.GONE);
+				}
+			}
+		}
+
+		updateArrivalRowColors();
+	}
+
+	private void hideArrivalRow() {
+		if (arrivalRowVisible) {
+			arrivalRowVisible = false;
+			arrivalRow.setVisibility(View.GONE);
+			arrivalToastShown = false;
+		}
+	}
+
+	private void updateArrivalRowColors() {
+		boolean nightMode = app.getDaynightHelper().isNightMode(
+				app.getSettings().getApplicationMode(), ThemeUsageContext.MAP);
+		int nameColor = nightMode
+				? app.getResources().getColor(R.color.google_maps_nav_bar_text_night)
+				: app.getResources().getColor(R.color.google_maps_text_primary);
+		int sideColor = nightMode
+				? app.getResources().getColor(R.color.google_maps_nav_bar_text_secondary_night)
+				: app.getResources().getColor(R.color.google_maps_text_secondary);
+		if (arrivalNameText != null) {
+			arrivalNameText.setTextColor(nameColor);
+		}
+		if (arrivalSideText != null) {
+			arrivalSideText.setTextColor(sideColor);
+		}
 	}
 
 	// --- IRouteInformationListener ---
@@ -339,11 +466,13 @@ public class FlockFreeNavigationBar implements IRouteInformationListener {
 
 	@Override
 	public void routeWasCancelled() {
+		hideArrivalRow();
 		hide();
 	}
 
 	@Override
 	public void routeWasFinished() {
+		hideArrivalRow();
 		hide();
 	}
 }

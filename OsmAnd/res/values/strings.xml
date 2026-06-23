@@ -30,7 +30,7 @@
 	<string name="flockfree_stop_coffee">Coffee</string>
 	<string name="flockfree_stop_food">Food</string>
 	<string name="flockfree_stop_parking">Parking</string>
-	<string name="flockfree_stop_ev">EV</string>
+	<string name="flockfree_stop_ev">EV Charging</string>
 	<string name="flockfree_route_preview_title">Route options</string>
 	<string name="flockfree_route_preview_no_route">No active route is available yet.</string>
 	<string name="flockfree_route_preview_fastest">Fastest</string>
@@ -92,6 +92,11 @@
 	<string name="flockfree_faster_route_undone">Previous route restored.</string>
 	<string name="flockfree_arrival_summary">Arrived at %1$s. Parking and walking handoff are one tap away in Search.</string>
 	<string name="flockfree_arrival_summary_generic">Arrived. Parking and walking handoff are one tap away in Search.</string>
+	<string name="flockfree_arrival_preview_title">Arriving at %1$s</string>
+	<string name="flockfree_arrival_preview_side_left">On the left</string>
+	<string name="flockfree_arrival_preview_side_right">On the right</string>
+	<string name="flockfree_arrival_preview_arrived">You have arrived at %1$s</string>
+	<string name="flockfree_arrival_preview_arrived_generic">You have arrived</string>
 	<string name="flockfree_notification_camera_state">Camera: %1$s</string>
 	<string name="flockfree_notification_traffic_state">Traffic: %1$s</string>
 	<string name="flockfree_plugin_name">FlockFree - Camera Awareness</string>
@@ -297,6 +302,9 @@
 	<string name="flockfree_nav_bar_moderate_traffic">Moderate traffic</string>
 	<string name="flockfree_nav_bar_heavy_traffic">Heavy traffic</string>
 	<string name="flockfree_nav_bar_no_traffic_data">No traffic data</string>
+	<string name="flockfree_nav_bar_arrival_approaching">Approaching · %1$s</string>
+	<string name="flockfree_nav_bar_arrival_side_left">On the left</string>
+	<string name="flockfree_nav_bar_arrival_side_right">On the right</string>
 
 	<!-- FlockFree navigation report button -->
 	<string name="flockfree_report_sheet_title">Report</string>

@@ -272,6 +272,7 @@
 	<color name="navigation_card_text_primary_night">#FFFFFF</color>
 	<color name="navigation_card_text_secondary_night">#80CBC4</color>
 	<color name="google_maps_text_primary">#202124</color>
+	<color name="google_maps_text_primary_night">#E8EAED</color>
 	<color name="google_maps_text_secondary">#5F6368</color>
 	<color name="google_maps_eta_green">#00A854</color>
 	<color name="google_maps_eta_green_night">#00C853</color>

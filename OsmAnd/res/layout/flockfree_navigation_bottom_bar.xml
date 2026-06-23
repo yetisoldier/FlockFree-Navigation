@@ -3,95 +3,158 @@
 	xmlns:tools="http://schemas.android.com/tools"
 	android:id="@+id/flockfree_nav_bar"
 	android:layout_width="match_parent"
-	android:layout_height="72dp"
-	android:orientation="horizontal"
-	android:gravity="center_vertical"
+	android:layout_height="wrap_content"
+	android:orientation="vertical"
 	android:background="@color/google_maps_nav_bar_bg"
 	android:elevation="8dp"
-	android:paddingStart="0dp"
-	android:paddingEnd="4dp"
 	android:visibility="gone">
 
-	<!-- Left accent strip (green/amber/red based on traffic) -->
-	<View
-		android:id="@+id/flockfree_nav_bar_accent"
-		android:layout_width="6dp"
-		android:layout_height="match_parent"
-		android:background="@color/google_maps_eta_green" />
-
-	<!-- Left side: ETA + distance/arrival -->
+	<!-- Main nav bar row (horizontal) -->
 	<LinearLayout
-		android:layout_width="0dp"
-		android:layout_height="wrap_content"
-		android:layout_weight="1"
-		android:orientation="vertical"
+		android:layout_width="match_parent"
+		android:layout_height="72dp"
+		android:orientation="horizontal"
 		android:gravity="center_vertical"
-		android:paddingStart="16dp"
-		android:paddingEnd="8dp">
+		android:paddingStart="0dp"
+		android:paddingEnd="4dp">
 
-		<!-- ETA time (green, bold, large) -->
-		<TextView
-			android:id="@+id/flockfree_nav_bar_eta"
+		<!-- Left accent strip (green/amber/red based on traffic) -->
+		<View
+			android:id="@+id/flockfree_nav_bar_accent"
+			android:layout_width="6dp"
+			android:layout_height="match_parent"
+			android:background="@color/google_maps_eta_green" />
+
+		<!-- Left side: ETA + distance/arrival -->
+		<LinearLayout
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:orientation="vertical"
+			android:gravity="center_vertical"
+			android:paddingStart="16dp"
+			android:paddingEnd="8dp">
+
+			<!-- ETA time (green, bold, large) -->
+			<TextView
+				android:id="@+id/flockfree_nav_bar_eta"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textColor="@color/google_maps_eta_green"
+				android:textSize="22sp"
+				android:textStyle="bold"
+				android:letterSpacing="-0.01"
+				android:text="28 min"
+				tools:ignore="HardcodedText" />
+
+			<!-- Distance + arrival time (gray, secondary) -->
+			<TextView
+				android:id="@+id/flockfree_nav_bar_secondary"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textColor="@color/google_maps_text_secondary"
+				android:textSize="13sp"
+				android:layout_marginTop="1dp"
+				android:text="18 mi · 9:27 AM"
+				tools:ignore="HardcodedText" />
+
+		</LinearLayout>
+
+		<!-- Center: Traffic condition (optional) -->
+		<LinearLayout
+			android:id="@+id/flockfree_nav_bar_traffic_container"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
-			android:textColor="@color/google_maps_eta_green"
-			android:textSize="22sp"
-			android:textStyle="bold"
-			android:letterSpacing="-0.01"
-			android:text="28 min"
-			tools:ignore="HardcodedText" />
+			android:orientation="horizontal"
+			android:gravity="center_vertical"
+			android:layout_marginStart="4dp"
+			android:layout_marginEnd="8dp"
+			android:visibility="gone">
 
-		<!-- Distance + arrival time (gray, secondary) -->
-		<TextView
-			android:id="@+id/flockfree_nav_bar_secondary"
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:textColor="@color/google_maps_text_secondary"
-			android:textSize="13sp"
-			android:layout_marginTop="1dp"
-			android:text="18 mi · 9:27 AM"
-			tools:ignore="HardcodedText" />
+			<View
+				android:id="@+id/flockfree_nav_bar_traffic_dot"
+				android:layout_width="10dp"
+				android:layout_height="10dp"
+				android:layout_marginEnd="6dp"
+				android:background="@drawable/flockfree_traffic_dot_circle" />
+
+			<TextView
+				android:id="@+id/flockfree_nav_bar_traffic_text"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textColor="@color/google_maps_text_secondary"
+				android:textSize="13sp"
+				android:text="Light traffic"
+				tools:ignore="HardcodedText" />
+
+		</LinearLayout>
+
+		<!-- Right side: Exit navigation button -->
+		<ImageButton
+			android:id="@+id/flockfree_nav_bar_close"
+			android:layout_width="44dp"
+			android:layout_height="44dp"
+			android:layout_marginEnd="4dp"
+			android:background="?attr/selectableItemBackgroundBorderless"
+			android:src="@drawable/ic_action_close"
+			android:contentDescription="@string/flockfree_nav_bar_close"
+			android:tint="@color/google_maps_text_primary" />
 
 	</LinearLayout>
 
-	<!-- Center: Traffic condition (optional) -->
+	<!-- Arrival preview row (shown when < 500m from destination) -->
 	<LinearLayout
-		android:id="@+id/flockfree_nav_bar_traffic_container"
-		android:layout_width="wrap_content"
+		android:id="@+id/flockfree_nav_bar_arrival_row"
+		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
 		android:orientation="horizontal"
 		android:gravity="center_vertical"
-		android:layout_marginStart="4dp"
-		android:layout_marginEnd="8dp"
+		android:paddingStart="16dp"
+		android:paddingEnd="16dp"
+		android:paddingTop="6dp"
+		android:paddingBottom="6dp"
 		android:visibility="gone">
 
-		<View
-			android:id="@+id/flockfree_nav_bar_traffic_dot"
-			android:layout_width="10dp"
-			android:layout_height="10dp"
-			android:layout_marginEnd="6dp"
-			android:background="@drawable/flockfree_traffic_dot_circle" />
+		<!-- Destination icon -->
+		<ImageView
+			android:layout_width="20dp"
+			android:layout_height="20dp"
+			android:layout_marginEnd="8dp"
+			android:src="@drawable/ic_action_flag"
+			android:contentDescription="@null"
+			android:tint="@color/google_maps_text_secondary" />
 
-		<TextView
-			android:id="@+id/flockfree_nav_bar_traffic_text"
-			android:layout_width="wrap_content"
+		<!-- Destination name + side of street -->
+		<LinearLayout
+			android:layout_width="0dp"
 			android:layout_height="wrap_content"
-			android:textColor="@color/google_maps_text_secondary"
-			android:textSize="13sp"
-			android:text="Light traffic"
-			tools:ignore="HardcodedText" />
+			android:layout_weight="1"
+			android:orientation="vertical">
+
+			<TextView
+				android:id="@+id/flockfree_nav_bar_arrival_name"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textColor="@color/google_maps_text_primary"
+				android:textSize="14sp"
+				android:textStyle="bold"
+				android:singleLine="true"
+				android:ellipsize="end"
+				android:text="Destination"
+				tools:ignore="HardcodedText" />
+
+			<TextView
+				android:id="@+id/flockfree_nav_bar_arrival_side"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:textColor="@color/google_maps_text_secondary"
+				android:textSize="12sp"
+				android:layout_marginTop="1dp"
+				android:text="On the right"
+				tools:ignore="HardcodedText" />
+
+		</LinearLayout>
 
 	</LinearLayout>
-
-	<!-- Right side: Exit navigation button -->
-	<ImageButton
-		android:id="@+id/flockfree_nav_bar_close"
-		android:layout_width="44dp"
-		android:layout_height="44dp"
-		android:layout_marginEnd="4dp"
-		android:background="?attr/selectableItemBackgroundBorderless"
-		android:src="@drawable/ic_action_close"
-		android:contentDescription="@string/flockfree_nav_bar_close"
-		android:tint="@color/google_maps_text_primary" />
 
 </LinearLayout>
