@@ -67,6 +67,8 @@ public class FlockFreeNavigationBar implements IRouteInformationListener {
 	private TextView trafficText;
 	@Nullable
 	private ImageButton closeButton;
+	@Nullable
+	private View accentBar;
 
 	private boolean registered;
 	private boolean visible;
@@ -147,6 +149,7 @@ public class FlockFreeNavigationBar implements IRouteInformationListener {
 		trafficDot = barView.findViewById(R.id.flockfree_nav_bar_traffic_dot);
 		trafficText = barView.findViewById(R.id.flockfree_nav_bar_traffic_text);
 		closeButton = barView.findViewById(R.id.flockfree_nav_bar_close);
+		accentBar = barView.findViewById(R.id.flockfree_nav_bar_accent);
 
 		if (closeButton != null) {
 			closeButton.setOnClickListener(v -> {
@@ -310,6 +313,20 @@ public class FlockFreeNavigationBar implements IRouteInformationListener {
 
 		if (trafficText != null) {
 			trafficText.setTextColor(secondaryColor);
+		}
+
+		// Update accent bar color based on traffic condition
+		if (accentBar != null) {
+			int accentColor = etaColor; // default: green
+			FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
+			if (plugin != null && plugin.TRAFFIC_ROUTING_ENABLED.get()) {
+				TrafficRoutingHelper helper = plugin.getTrafficRoutingHelper();
+				String label = helper.getRouteTrafficSummaryLabel();
+				if (!Algorithms.isEmpty(label)) {
+					accentColor = helper.getRouteTrafficSummaryColor();
+				}
+			}
+			accentBar.setBackgroundColor(accentColor);
 		}
 	}
 
