@@ -35,6 +35,7 @@ import net.osmand.plus.helpers.DayNightHelper;
 import net.osmand.plus.settings.enums.DayNightMode;
 import net.osmand.plus.settings.fragments.SettingsScreenType;
 import net.osmand.plus.views.mapwidgets.MapWidgetInfo;
+import net.osmand.plus.views.mapwidgets.WidgetInfoCreator;
 import net.osmand.plus.views.mapwidgets.WidgetType;
 import net.osmand.plus.views.mapwidgets.WidgetsPanel;
 import net.osmand.plus.views.mapwidgets.widgets.MapWidget;
@@ -593,21 +594,19 @@ public class FlockFreePlugin extends OsmandPlugin {
     public void createWidgets(@NonNull MapActivity activity, @NonNull List<MapWidgetInfo> widgetInfos,
                               @NonNull net.osmand.plus.settings.backend.ApplicationMode appMode,
                               @Nullable net.osmand.plus.settings.enums.ScreenLayoutMode layoutMode) {
-        // FlockFree custom widgets (camera proximity, traffic status) are not registered
-        // as on-map side-panel widgets to avoid overlapping the search bar in
-        // portrait mode. Camera alerts and traffic routing still work via
-        // navigation notifications, audio alerts, and the layers sheet.
-        //
-        // Speed limit display: The SpeedometerWidget (registered by OsmAnd core)
-        // includes the speed limit sign as a sub-component. We ensure it is visible
-        // for the car profile by setting SHOW_SPEEDOMETER=true and
-        // SHOW_SPEED_LIMIT_WARNING=ALWAYS in applyFlockFreeVisualDefaults().
-        //
-        // Second-next-turn preview chip: The SECOND_NEXT_TURN widget is registered
-        // by OsmAnd core (MapWidgetsFactory) and we ensure it is visible by default
-        // for CAR mode via WidgetsAvailabilityHelper. The SecondNextTurnWidget class
-        // uses a compact chip layout (flockfree_second_next_turn_chip.xml) when
-        // FlockFreePlugin is active, styled as a Google Maps-style preview chip.
+        WidgetInfoCreator creator = new WidgetInfoCreator(app, appMode, layoutMode);
+
+        // Camera proximity widget — TOP panel to avoid portrait overlap with search bar
+        MapWidget cameraWidget = createMapWidgetForParams(activity, WidgetType.CAMERA_PROXIMITY);
+        if (cameraWidget != null) {
+            widgetInfos.add(creator.createWidgetInfo(cameraWidget));
+        }
+
+        // Traffic status widget — TOP panel
+        MapWidget trafficWidget = createMapWidgetForParams(activity, WidgetType.TRAFFIC_STATUS);
+        if (trafficWidget != null) {
+            widgetInfos.add(creator.createWidgetInfo(trafficWidget));
+        }
     }
 
     @Nullable

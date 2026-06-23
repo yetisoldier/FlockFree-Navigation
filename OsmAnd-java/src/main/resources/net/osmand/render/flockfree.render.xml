@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<renderingStyle name="FlockFree" depends="" defaultColor="#F5F3F3" version="1">
+<renderingStyle name="FlockFree" depends="" defaultColor="#F5F5F0" version="1">
 
 	<!-- DOCUMENTATION: of the rendering syntax:
 		Elements:
@@ -182,9 +182,9 @@
 		<renderingAttribute name="defaultColor">
 			<!-- next line should should make background transparent for underlays to be visible, but this curretnly does not work as desired -->
 			<!-- To change default color completely you should do that also for tag="place" value="island" and tag="natural" value="land" (search this file) -->
-			<case noPolygons="true" attrColorValue="#00F5F3F3"/>
-			<case attrColorValue="#F5F3F3">
-				<apply_if nightMode="true" attrColorValue="#202124"/>
+			<case noPolygons="true" attrColorValue="#00F5F5F0"/>
+			<case attrColorValue="#F5F5F0">
+				<apply_if nightMode="true" attrColorValue="#1A1A1E"/>
 			</case>
 		</renderingAttribute>
 
@@ -1572,8 +1572,9 @@
 		<renderingConstant name="shaderColorNight" value="#1b3638"/>
 		<renderingConstant name="wetlandColorNight" value="#1b3238"/>
 		<renderingAttribute name="grasslandColor">
-			<case moreDetailed="true" attrColorValue="#b8e8ae"/>
-			<case attrColorValue="$woodColor"/>
+			<case nightMode="true" attrColorValue="#243B24"/>
+			<case moreDetailed="true" attrColorValue="#C8E6C9"/>
+			<case attrColorValue="#C8E6C9"/>
 		</renderingAttribute>
 		<renderingAttribute name="lavaColor">
 			<case nightMode="true" attrColorValue="$openNatureColorNight"/>
@@ -1584,8 +1585,8 @@
 			<case attrColorValue="#fff7bf"/>
 		</renderingAttribute>
 		<renderingAttribute name="farmColor">
-			<case nightMode="true" attrColorValue="#26332A"/>
-			<case moreDetailed="true" attrColorValue="#E8F0E3"/>
+			<case nightMode="true" attrColorValue="#243B24"/>
+			<case moreDetailed="true" attrColorValue="#E6EAD8"/>
 			<case attrColorValue="#E6EAD8"/>
 		</renderingAttribute>
 		<renderingAttribute name="farmyardColor">
@@ -1629,13 +1630,13 @@
 			<case attrColorValue="#cfeca8"/>
 		</renderingAttribute>
 		<renderingAttribute name="parkColor">
-			<case nightMode="true" attrColorValue="#1B3A2C"/>
-			<case moreDetailed="true" attrColorValue="#CFE8CF"/>
-			<case attrColorValue="#66CFE8CF"/>
+			<case nightMode="true" attrColorValue="#243B24"/>
+			<case moreDetailed="true" attrColorValue="#C8E6C9"/>
+			<case attrColorValue="#B7E1B7"/>
 		</renderingAttribute>
 		<renderingAttribute name="parkStrokeColor">
-			<case nightMode="true" attrColorValue="#4D070d0b"/>
-			<case attrColorValue="#9db487"/>
+			<case nightMode="true" attrColorValue="#4D243B24"/>
+			<case attrColorValue="#A5D6A7"/>
 		</renderingAttribute>
 
 		<renderingAttribute name="golfCourseColor">
@@ -1821,8 +1822,8 @@
 		</renderingAttribute>
 
 		<renderingAttribute name="waterColor">
-			<case nightMode="true" attrColorValue="#1B3A4B"/>
-			<case attrColorValue="#A8D1F0"/>
+			<case nightMode="true" attrColorValue="#1C3A4A"/>
+			<case attrColorValue="#AECDF0"/>
 		</renderingAttribute>
 		<renderingAttribute name="waterStrokeColorNight">
 			<case attrColorValue="#185499"/>
@@ -1833,7 +1834,7 @@
 			<case nightMode="true" attrColorValue="$defaultColor"/>
 			<case attrColorValue="#e8dcd7"/>
 		</renderingAttribute>
-		<renderingConstant name="builtUpAreasColorNight" value="#3b3b3b"/>
+		<renderingConstant name="builtUpAreasColorNight" value="#2A2A2E"/>
 
 		<renderingAttribute name="parkingColor">
 			<case moreDetailed="true" attrColorValue="#f6eeb7">
@@ -2793,7 +2794,7 @@
 		- openNatureColorNight:          004333 (i.e. non-forest/low vegetation)
 		- shaderColorNight:              334433 (replaces vegetation shaders, and special interest areas like parks, sports areas, etc.)
 		- waterColorNight:               330099
-		- builtUpAreasColorNight:        3b3b3b
+		- builtUpAreasColorNight:        2A2A2E
 		- buldingColorNight:             685454
 		Roads:
 		- road brightness levels aligned with road priority!
