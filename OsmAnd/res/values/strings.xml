@@ -10,6 +10,7 @@
 	- For wording and consistency, please note https://docs.osmand.net/docs/technical/contributions/translating-osmand
 	Thx - Hardy
 -->
+	<string name="flockfree_render_descr">FlockFree map style with lighter Google Maps-inspired colors, reduced POI clutter, cleaner route colors, and camera-aware navigation defaults.</string>
 	<string name="flockfree_search_here">Search here</string>
 	<string name="flockfree_plugin_name">FlockFree - Camera Awareness</string>
 	<string name="flockfree_plugin_description">Displays ALPR camera locations from dontgetflocked.com on the map, tries experimental offline camera-aware rerouting, and allows community reporting of new cameras to OpenStreetMap.</string>

@@ -78,7 +78,7 @@ public class SelectMapStyleBottomSheetDialogFragment extends MenuBottomSheetDial
 			selectedStyle = savedInstanceState.getString(SELECTED_STYLE_KEY);
 		}
 		if (selectedStyle == null) {
-			selectedStyle = RendererRegistry.DEFAULT_RENDER;
+			selectedStyle = RendererRegistry.FLOCKFREE_RENDER;
 		}
 
 		items.add(new TitleItem(getString(R.string.map_widget_renderer)));
@@ -168,6 +168,15 @@ public class SelectMapStyleBottomSheetDialogFragment extends MenuBottomSheetDial
 	private TreeMap<String, String> generateStylesMap(Context context) {
 		Collator collator = OsmAndCollator.primaryCollator();
 		TreeMap<String, String> res = new TreeMap<>((string1, string2) -> {
+			if (string1.equals(string2)) {
+				return 0;
+			}
+			if (string1.equals(RendererRegistry.FLOCKFREE_RENDER)) {
+				return -1;
+			}
+			if (string2.equals(RendererRegistry.FLOCKFREE_RENDER)) {
+				return 1;
+			}
 			if (string1.equals(RendererRegistry.DEFAULT_RENDER)) {
 				return -1;
 			}

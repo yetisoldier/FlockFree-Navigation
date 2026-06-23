@@ -71,8 +71,8 @@ public class MapRendererContext {
 	public static final int TOP_PLACES_POI_SECTION = 1001;
 	public static final int SELECTED_POI_SECTION = 1002;
 	public static final int FAVORITES_SECTION = 1003;
-	// FlockFree carries a patched default.render.xml, so load the packaged style
-	// instead of OsmAndCore's preloaded native copy.
+	// FlockFree carries a packaged custom style, so load packaged styles instead
+	// of letting OsmAndCore's preloaded native copy hide bundled map updates.
 	public static boolean IGNORE_CORE_PRELOADED_STYLES = true;
 
 	private final OsmandApplication app;

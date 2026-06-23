@@ -38,6 +38,7 @@ tasks.register('collectRenderingStylesResources', Sync) {
 	include "*.xml"
 	preserve {
 		include "default.render.xml"
+		include "flockfree.render.xml"
 	}
 }
 

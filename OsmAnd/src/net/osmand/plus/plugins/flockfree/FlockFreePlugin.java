@@ -26,6 +26,7 @@ import net.osmand.plus.quickaction.actions.ShowHideCamerasAction;
 import net.osmand.plus.quickaction.actions.ToggleCameraAvoidanceAction;
 import net.osmand.plus.quickaction.actions.ToggleCameraAlertsAction;
 import net.osmand.plus.quickaction.actions.AddCameraAction;
+import net.osmand.plus.render.RendererRegistry;
 import net.osmand.plus.settings.backend.ApplicationMode;
 import net.osmand.plus.settings.backend.preferences.CommonPreference;
 import net.osmand.plus.settings.backend.preferences.OsmandPreference;
@@ -37,6 +38,7 @@ import net.osmand.plus.views.mapwidgets.WidgetsPanel;
 import net.osmand.plus.views.mapwidgets.widgets.MapWidget;
 import net.osmand.plus.widgets.ctxmenu.ContextMenuAdapter;
 import net.osmand.plus.widgets.ctxmenu.data.ContextMenuItem;
+import net.osmand.util.Algorithms;
 import net.osmand.util.MapUtils;
 
 import java.util.ArrayList;
@@ -62,6 +64,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     public final CommonPreference<String> CAMERA_ALERT_LAST_CHECK_SUMMARY;
     public final CommonPreference<String> CAMERA_REPORT_LAST_DRAFT_SUMMARY;
     public final CommonPreference<String> CAMERA_NEAREST_LAST_CHECK_SUMMARY;
+    private final CommonPreference<Boolean> RENDERER_MIGRATION_DONE;
 
     // Context menu item order
     private static final int CAMERA_DETAILS_ITEM_ORDER = 7800;
@@ -134,8 +137,23 @@ public class FlockFreePlugin extends OsmandPlugin {
         CAMERA_NEAREST_LAST_CHECK_SUMMARY = registerStringPreference(
                 FlockFreePreferences.CAMERA_NEAREST_LAST_CHECK_SUMMARY,
                 FlockFreePreferences.DEFAULT_STATUS_SUMMARY).makeProfile().cache();
+        RENDERER_MIGRATION_DONE = registerBooleanPreference(
+                FlockFreePreferences.RENDERER_MIGRATION_DONE,
+                FlockFreePreferences.DEFAULT_RENDERER_MIGRATION_DONE).makeGlobal().cache();
 
+        migrateDefaultRendererToFlockFree();
         registerDebugAlertReceiver();
+    }
+
+    private void migrateDefaultRendererToFlockFree() {
+        if (Boolean.TRUE.equals(RENDERER_MIGRATION_DONE.get())) {
+            return;
+        }
+        String currentRenderer = app.getSettings().RENDERER.get();
+        if (Algorithms.isEmpty(currentRenderer) || RendererRegistry.DEFAULT_RENDER.equals(currentRenderer)) {
+            app.getSettings().RENDERER.set(RendererRegistry.FLOCKFREE_RENDER);
+        }
+        RENDERER_MIGRATION_DONE.set(true);
     }
 
     private void migrateCydBleEnabledToGlobal(@NonNull CommonPreference<Boolean> preference) {

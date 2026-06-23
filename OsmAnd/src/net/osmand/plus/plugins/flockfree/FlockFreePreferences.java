@@ -27,6 +27,7 @@ public final class FlockFreePreferences {
     public static final String CAMERA_ALERT_LAST_CHECK_SUMMARY = "camera_alert_last_check_summary";
     public static final String CAMERA_REPORT_LAST_DRAFT_SUMMARY = "camera_report_last_draft_summary";
     public static final String CAMERA_NEAREST_LAST_CHECK_SUMMARY = "camera_nearest_last_check_summary";
+    public static final String RENDERER_MIGRATION_DONE = "renderer_migration_done";
 
     // Default values
     public static final boolean DEFAULT_CAMERA_SHOW_LAYER = true;
@@ -39,6 +40,7 @@ public final class FlockFreePreferences {
     public static final long DEFAULT_CAMERA_DATA_LAST_UPDATE = 0L;
     public static final boolean DEFAULT_CYD_BLE_ENABLED = false;
     public static final boolean DEFAULT_WIFI_SCAN_ENABLED = false;
+    public static final boolean DEFAULT_RENDERER_MIGRATION_DONE = false;
     public static final String DEFAULT_STATUS_SUMMARY = "";
 
     // Bounds

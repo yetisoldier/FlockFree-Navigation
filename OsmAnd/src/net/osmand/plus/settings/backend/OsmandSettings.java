@@ -3156,12 +3156,12 @@ public class OsmandSettings {
 		return Algorithms.isEmpty(voiceProvider) || VOICE_PROVIDER_NOT_USE.equals(voiceProvider);
 	}
 
-	public final CommonPreference<String> RENDERER = new StringPreference(this, "renderer", RendererRegistry.DEFAULT_RENDER) {
+	public final CommonPreference<String> RENDERER = new StringPreference(this, "renderer", RendererRegistry.FLOCKFREE_RENDER) {
 
 		@Override
 		protected boolean setValue(Object prefs, String val) {
 			if (val == null) {
-				val = RendererRegistry.DEFAULT_RENDER;
+				val = RendererRegistry.FLOCKFREE_RENDER;
 			}
 			RenderingRulesStorage loaded = ctx.getRendererRegistry().getRenderer(val);
 			if (loaded != null) {
