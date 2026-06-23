@@ -220,7 +220,8 @@ public class FlockFreePlugin extends OsmandPlugin {
     private void applyFlockFreeVisualDefaults() {
         app.getSettings().TEXT_SCALE.setDefaultValue(FLOCKFREE_DEFAULT_TEXT_SCALE);
         app.getSettings().TEXT_SCALE.setModeDefaultValue(ApplicationMode.CAR, FLOCKFREE_DEFAULT_TEXT_SCALE);
-        app.getSettings().DAYNIGHT_MODE.setModeDefaultValue(ApplicationMode.CAR, DayNightMode.AUTO);
+        // Use APP_THEME so the map follows the app/system dark/light setting instead of sun position
+        app.getSettings().DAYNIGHT_MODE.setModeDefaultValue(ApplicationMode.CAR, DayNightMode.APP_THEME);
         app.getSettings().ROUTE_SHOW_TURN_ARROWS.setModeDefaultValue(ApplicationMode.CAR, false);
         // Ensure speed limit sign is always shown during navigation for the car profile
         app.getSettings().SHOW_SPEED_LIMIT_WARNING.setModeDefaultValue(ApplicationMode.CAR,
@@ -235,7 +236,7 @@ public class FlockFreePlugin extends OsmandPlugin {
             app.getSettings().TEXT_SCALE.setModeValue(ApplicationMode.CAR, FLOCKFREE_DEFAULT_TEXT_SCALE);
         }
         if (app.getSettings().DAYNIGHT_MODE.getModeValue(ApplicationMode.CAR) == DayNightMode.NIGHT) {
-            app.getSettings().DAYNIGHT_MODE.setModeValue(ApplicationMode.CAR, DayNightMode.AUTO);
+            app.getSettings().DAYNIGHT_MODE.setModeValue(ApplicationMode.CAR, DayNightMode.APP_THEME);
         }
         if (Boolean.TRUE.equals(app.getSettings().ROUTE_SHOW_TURN_ARROWS.getModeValue(ApplicationMode.CAR))) {
             app.getSettings().ROUTE_SHOW_TURN_ARROWS.setModeValue(ApplicationMode.CAR, false);
