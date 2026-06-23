@@ -62,7 +62,7 @@ public class NextTurnBaseWidget extends TextInfoWidget implements IComplexWidget
 	protected int deviatedPath;
 	protected int nextTurnDistance;
 	private final TextPaint textPaint = new TextPaint();
-	private TurnDrawable turnDrawable;
+	protected TurnDrawable turnDrawable;
 
 	private ImageView topImageView;
 	private TextView topTextView;

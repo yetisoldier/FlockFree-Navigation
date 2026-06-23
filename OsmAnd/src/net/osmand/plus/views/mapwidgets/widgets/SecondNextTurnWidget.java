@@ -63,30 +63,37 @@ public class SecondNextTurnWidget extends NextTurnBaseWidget {
 	protected void updateVerticalWidgetColors(@NonNull TextState textState) {
 		super.updateVerticalWidgetColors(textState);
 		if (isFlockFreeActive()) {
-			// Override with chip-style background and white text
-			int white = ContextCompat.getColor(app, android.R.color.white);
+			// Google Maps-style: white card with dark text (day), dark card with light text (night)
 			LinearLayout bg = getView().findViewById(R.id.widget_bg);
 			if (bg != null) {
 				bg.setBackgroundResource(isNightMode()
 						? R.drawable.bg_flockfree_second_next_turn_chip_night
 						: R.drawable.bg_flockfree_second_next_turn_chip);
 			}
+
+			int primaryTextColor = ContextCompat.getColor(app, isNightMode()
+					? R.color.google_maps_nav_bar_text_night
+					: R.color.google_maps_text_primary);
+			int secondaryTextColor = ContextCompat.getColor(app, isNightMode()
+					? R.color.google_maps_nav_bar_text_secondary_night
+					: R.color.google_maps_text_secondary);
+
 			OutlinedTextContainer distanceView = getView().findViewById(R.id.distance_text);
 			if (distanceView != null) {
-				distanceView.setTextColor(white);
+				distanceView.setTextColor(primaryTextColor);
 				distanceView.setTypeface(Typeface.DEFAULT_BOLD);
 			}
 			OutlinedTextContainer distanceSubView = getView().findViewById(R.id.distance_sub_text);
 			if (distanceSubView != null) {
-				distanceSubView.setTextColor(white);
+				distanceSubView.setTextColor(secondaryTextColor);
 			}
 			OutlinedTextContainer streetView = getView().findViewById(R.id.street_text);
 			if (streetView != null) {
-				streetView.setTextColor(white);
+				streetView.setTextColor(secondaryTextColor);
 			}
 			TextView exitView = getView().findViewById(R.id.map_exit_ref);
 			if (exitView != null) {
-				exitView.setTextColor(white);
+				exitView.setTextColor(ContextCompat.getColor(app, android.R.color.white));
 			}
 		}
 	}

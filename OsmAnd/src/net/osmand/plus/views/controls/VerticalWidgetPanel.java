@@ -21,6 +21,8 @@ import androidx.recyclerview.widget.ListUpdateCallback;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
 import net.osmand.plus.helpers.AndroidUiHelper;
+import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.settings.backend.ApplicationMode;
 import net.osmand.plus.settings.backend.OsmandSettings;
 import net.osmand.plus.settings.enums.ScreenLayoutMode;
@@ -32,6 +34,7 @@ import net.osmand.plus.views.layers.MapInfoLayer.TextState;
 import net.osmand.plus.views.layers.base.OsmandMapLayer.DrawSettings;
 import net.osmand.plus.views.mapwidgets.MapWidgetInfo;
 import net.osmand.plus.views.mapwidgets.MapWidgetRegistry;
+import net.osmand.plus.views.mapwidgets.WidgetType;
 import net.osmand.plus.views.mapwidgets.WidgetsPanel;
 import net.osmand.plus.views.mapwidgets.widgetinterfaces.ISupportMultiRow;
 import net.osmand.plus.views.mapwidgets.widgetinterfaces.ISupportWidgetResizing;
@@ -294,7 +297,34 @@ public class VerticalWidgetPanel extends LinearLayoutEx implements WidgetsContai
 				widgetInfo.widget.detachView(getWidgetsPanel(), new ArrayList<>(allPanelWidget), appMode);
 			}
 		}
-		return new ArrayList<>(rowWidgetMap.values());
+		return applyFlockFreeSecondNextTurnStacking(new ArrayList<>(rowWidgetMap.values()));
+	}
+
+	@NonNull
+	private List<Set<MapWidgetInfo>> applyFlockFreeSecondNextTurnStacking(@NonNull List<Set<MapWidgetInfo>> rows) {
+		if (!topPanel || PluginsHelper.getEnabledPlugin(FlockFreePlugin.class) == null) {
+			return rows;
+		}
+
+		List<Set<MapWidgetInfo>> stackedRows = new ArrayList<>();
+		for (Set<MapWidgetInfo> row : rows) {
+			Set<MapWidgetInfo> secondNextTurnWidgets = new TreeSet<>();
+			Set<MapWidgetInfo> otherWidgets = new TreeSet<>();
+			for (MapWidgetInfo widgetInfo : row) {
+				if (widgetInfo.getWidgetType() == WidgetType.SECOND_NEXT_TURN) {
+					secondNextTurnWidgets.add(widgetInfo);
+				} else {
+					otherWidgets.add(widgetInfo);
+				}
+			}
+			if (!otherWidgets.isEmpty()) {
+				stackedRows.add(otherWidgets);
+			}
+			if (!secondNextTurnWidgets.isEmpty()) {
+				stackedRows.add(secondNextTurnWidgets);
+			}
+		}
+		return stackedRows;
 	}
 
 	private void addWidgetViewToPage(@NonNull Map<Integer, Set<MapWidgetInfo>> mapInfoWidgets,

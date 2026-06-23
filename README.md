@@ -39,6 +39,9 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 ### Map and Navigation Experience
 - **Google Maps-inspired map styling** — Lighter land/water/park colors, reduced POI clutter, subtler road casing, and cleaner route colors.
 - **Modern navigation HUD** — Search bar, layer button, circular map controls, compact ETA/speed presentation, and a simplified blue location puck.
+- **Google Maps-style turn indicators** — Main turn card uses a teal background with a bold white arrow. The second-next-turn preview appears as a compact white chip below the main indicator with a blue arrow, dark distance text, and grey street name — matching Google Maps' layered turn guidance layout.
+- **Automatic 3D tilt** — Map tilts to a perspective view during navigation and resets when stopped.
+- **Navigation workflows** — Route option cards, add-stop chips (gas, coffee, food, parking, EV charging), compact layers sheet, faster-route prompt with undo.
 - **Android Auto navigation** — FlockFree registers OsmAnd's Android Auto navigation service for the FlockFree package. Sideloaded builds may require Android Auto developer settings and Unknown sources before appearing on a head unit.
 - **Local map tools** — Includes local 3D relief/maps, route and terrain coloring, gradient palette editing, advanced widgets, vehicle metrics/OBD widgets, and richer track organization options.
 

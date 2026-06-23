@@ -4,8 +4,27 @@ All notable changes to FlockFree Navigation are documented here.
 
 ## [Unreleased]
 
+## [v1.5.0] — 2026-06-23
+
 ### Added
 - Google Maps-style navigation workflow controls: route option cards, add-stop chips for gas/coffee/food/parking/EV charging, a compact layers sheet, a bottom faster-route prompt with undo, richer navigation notification status, and destination arrival hints
+- Automatic 3D map tilt during navigation — the map tilts to a perspective view when navigation starts and resets when stopped
+- Google Maps-style Add Camera button available during active navigation
+
+### Changed
+- Second-next-turn preview chip restyled to match Google Maps: white card (day) / dark grey card (night) with dark primary text, secondary grey text, and a compact blue arrow
+- Main turn indicator arrow is now bold white on the teal navigation card
+- Second-next-turn chip repositioned to sit below the main turn indicator as a smaller secondary element (via vertical widget panel stacking)
+- Second-next-turn chip arrow shrunk from 30dp to 24dp; distance text increased to 16sp bold; street text increased to 14sp
+- Google Maps-style nav bar polish: accent strip, larger ETA, circular traffic dot, elevation display
+- Google-style bottom navigation bar with traffic color fix
+- Purple route line migration now triggers correctly
+
+### Fixed
+- Speed limit display and incident diagnostics improved
+- TomTom traffic incidents and navigation traffic indicators repaired
+- NetworkOnMainThreadException in incident layer resolved
+- Portrait overlap between FlockFree search bar and right-side widgets fixed
 
 ## [v1.4.0] — 2026-06-22
 

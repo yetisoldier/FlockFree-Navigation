@@ -3,17 +3,24 @@ package net.osmand.plus.views.mapwidgets.widgets;
 import static net.osmand.plus.views.mapwidgets.WidgetType.NEXT_TURN;
 import static net.osmand.plus.views.mapwidgets.WidgetType.SMALL_NEXT_TURN;
 
+import android.graphics.PorterDuff;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 
+import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.auto.TripUtils;
+import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.routing.CurrentStreetName;
 import net.osmand.plus.routing.NextDirectionInfo;
 import net.osmand.plus.views.layers.base.OsmandMapLayer.DrawSettings;
+import net.osmand.plus.views.layers.MapInfoLayer.TextState;
 import net.osmand.plus.views.mapwidgets.WidgetsPanel;
 import net.osmand.router.TurnType;
 import net.osmand.util.Algorithms;
@@ -57,6 +64,21 @@ public class NextTurnWidget extends NextTurnBaseWidget {
 				}
 			}
 		};
+	}
+
+	@Override
+	protected void updateVerticalWidgetColors(@NonNull TextState textState) {
+		super.updateVerticalWidgetColors(textState);
+		// When FlockFree is active, make the turn arrow white and bold on the teal card
+		if (PluginsHelper.getEnabledPlugin(FlockFreePlugin.class) != null && verticalWidget) {
+			ImageView arrowView = getView().findViewById(R.id.arrow_icon);
+			if (arrowView != null) {
+				arrowView.setColorFilter(
+						ContextCompat.getColor(app, android.R.color.white),
+						PorterDuff.Mode.SRC_ATOP);
+				arrowView.invalidate();
+			}
+		}
 	}
 
 	@Override
