@@ -1,0 +1,4 @@
+  mCurrentFocus=Window{59b8044 u0 Application Error: com.yetiwurks.flockfree}
+  mFocusedApp=ActivityRecord{376efed u0 com.motorola.launcher3/com.android.launcher3.CustomizationPanelLauncher t165}
+  mCurrentFocus=Window{358fc4f u0 com.yetiwurks.flockfree/net.osmand.plus.activities.MapActivity}
+  mFocusedApp=ActivityRecord{313cd05 u0 com.yetiwurks.flockfree/net.osmand.plus.activities.MapActivity t246}

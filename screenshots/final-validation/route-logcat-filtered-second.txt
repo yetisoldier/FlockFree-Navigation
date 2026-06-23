@@ -1,0 +1,32 @@
+06-23 10:49:16.207 I/NullBinder( 2744): NullBinder for android.net.action.RECOMMEND_NETWORKS triggering remote TransactionTooLargeException due to Service without Chimera impl, calling uid: 1000, calling pid: 0
+06-23 10:49:18.376 W/AsyncOperation( 2744): OperationException[Status{statusCode=Stale snapshot for com.google.android.libraries.consentverifier#com.google.android.tts(new configuration available), resolution=null}]
+06-23 10:49:19.228 I/NullBinder( 2744): NullBinder for android.net.action.RECOMMEND_NETWORKS triggering remote TransactionTooLargeException due to Service without Chimera impl, calling uid: 1000, calling pid: 0
+06-23 10:49:23.810 I/System.out(17946):  Routing...12 segments, cost 1546.84, 792.54 ms
+06-23 10:49:25.683 I/System.out(17946): Routing 8524.7 ms (ctx 200632543): load/filter points 2922.4 ms, last mile 2876.1 ms, routing 2191.9 ms (queue  - 86.4 ms, 489.7 ms - 68,479 edges), prep result 468.3 ms - Routing Lat 45.1608 Lon -93.2349 -> Lat 44.9778 Lon -93.265 (HC 1, dir 0) (selected Us_minnesota_northamerica.obf car [])
+06-23 10:49:25.980 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-5-thread-1}
+06-23 10:49:26.211 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-5-thread-1}
+06-23 10:49:26.416 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-5-thread-1}
+06-23 10:49:26.635 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-5-thread-1}
+06-23 10:49:26.845 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-5-thread-1}
+06-23 10:49:27.120 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-5-thread-1}
+06-23 10:49:27.437 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-5-thread-1}
+06-23 10:49:27.480 W/net.osmand(17946): TomTomIncidentProvider TomTom incident details request failed with HTTP 403 {pool-23-thread-1}
+06-23 10:49:27.644 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-5-thread-1}
+06-23 10:49:27.900 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-5-thread-1}
+06-23 10:49:28.122 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-5-thread-1}
+06-23 10:49:28.347 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-5-thread-1}
+06-23 10:49:28.554 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-5-thread-1}
+06-23 10:49:28.764 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-29-thread-1}
+06-23 10:49:28.768 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-29-thread-2}
+06-23 10:49:28.768 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-29-thread-3}
+06-23 10:49:28.963 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-29-thread-2}
+06-23 10:49:28.971 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-29-thread-3}
+06-23 10:49:28.976 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-29-thread-1}
+06-23 10:49:29.159 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-29-thread-2}
+06-23 10:49:29.174 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-29-thread-3}
+06-23 10:49:29.177 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-29-thread-1}
+06-23 10:49:29.353 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-29-thread-2}
+06-23 10:49:29.363 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-29-thread-1}
+06-23 10:49:29.368 W/net.osmand(17946): TomTomTrafficProvider TomTom traffic flow request failed with HTTP 403 {pool-29-thread-3}
+06-23 10:49:33.407 I/net.osmand(17946): RoutingHelper Recalculate route, because correlation  : 2647.9767972380623 {main}
+06-23 10:49:36.889 I/System.out(17946):  Routing...13 segments, cost 1768.27, 283.35 ms
