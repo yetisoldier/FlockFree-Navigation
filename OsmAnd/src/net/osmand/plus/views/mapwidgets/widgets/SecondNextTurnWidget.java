@@ -10,6 +10,8 @@ import androidx.annotation.Nullable;
 
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.auto.TripUtils;
+import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.routing.CurrentStreetName;
 import net.osmand.plus.routing.NextDirectionInfo;
 import net.osmand.plus.views.layers.base.OsmandMapLayer.DrawSettings;
@@ -23,6 +25,11 @@ public class SecondNextTurnWidget extends NextTurnBaseWidget {
 
 	public SecondNextTurnWidget(@NonNull MapActivity mapActivity, @Nullable String customId, @Nullable WidgetsPanel panel) {
 		super(mapActivity, customId, SECOND_NEXT_TURN, panel, true);
+	}
+
+	@Override
+	protected boolean shouldHide() {
+		return PluginsHelper.getEnabledPlugin(FlockFreePlugin.class) != null || super.shouldHide();
 	}
 
 	/**
@@ -56,6 +63,12 @@ public class SecondNextTurnWidget extends NextTurnBaseWidget {
 
 	@Override
 	public void updateNavigationInfo(@Nullable DrawSettings drawSettings) {
+		if (PluginsHelper.getEnabledPlugin(FlockFreePlugin.class) != null) {
+			setStreetName(null);
+			setTurnType(null);
+			setTurnDistance(0);
+			return;
+		}
 		boolean followingMode = routingHelper.isFollowingMode() || locationProvider.getLocationSimulation().isRouteAnimating();
 		StreetNameWidget.StreetNameWidgetParams params = new StreetNameWidget.StreetNameWidgetParams(mapActivity, true);
 		CurrentStreetName streetName = params.streetName;

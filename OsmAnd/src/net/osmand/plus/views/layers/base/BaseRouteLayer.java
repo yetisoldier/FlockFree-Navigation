@@ -205,6 +205,9 @@ public abstract class BaseRouteLayer extends OsmandMapLayer {
 	}
 
 	public boolean shouldShowDirectionArrows() {
+		if (PluginsHelper.getEnabledPlugin(FlockFreePlugin.class) != null) {
+			return false;
+		}
 		return shouldShowDirectionArrows != null ? shouldShowDirectionArrows :
 				previewRouteLineInfo == null || previewRouteLineInfo.shouldShowDirectionArrows();
 	}

@@ -30,6 +30,7 @@ import net.osmand.plus.render.RendererRegistry;
 import net.osmand.plus.settings.backend.ApplicationMode;
 import net.osmand.plus.settings.backend.preferences.CommonPreference;
 import net.osmand.plus.settings.backend.preferences.OsmandPreference;
+import net.osmand.plus.settings.enums.DayNightMode;
 import net.osmand.plus.settings.fragments.SettingsScreenType;
 import net.osmand.plus.views.mapwidgets.MapWidgetInfo;
 import net.osmand.plus.views.mapwidgets.WidgetInfoCreator;
@@ -68,6 +69,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     public final CommonPreference<String> CAMERA_REPORT_LAST_DRAFT_SUMMARY;
     public final CommonPreference<String> CAMERA_NEAREST_LAST_CHECK_SUMMARY;
     private final CommonPreference<Boolean> RENDERER_MIGRATION_DONE;
+    private final CommonPreference<Boolean> VISUAL_DEFAULTS_MIGRATION_DONE;
 
     // Context menu item order
     private static final int CAMERA_DETAILS_ITEM_ORDER = 7800;
@@ -78,6 +80,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     private static final long SAME_CAMERA_ALERT_COOLDOWN_MS = 10 * 60_000L;
     private static final float MOVING_ALERT_SPEED_MPS = 2.0f;
     private static final float FLOCKFREE_DEFAULT_TEXT_SCALE = 1.2f;
+    private static final float FLOCKFREE_MAX_LEGACY_TEXT_SCALE = 1.3f;
     private static final int MAP_CENTER_CAMERA_SEARCH_RADIUS_METERS = 5_000;
 
     private FlockFreeLayer cameraLayer;
@@ -155,9 +158,12 @@ public class FlockFreePlugin extends OsmandPlugin {
         RENDERER_MIGRATION_DONE = registerBooleanPreference(
                 FlockFreePreferences.RENDERER_MIGRATION_DONE,
                 FlockFreePreferences.DEFAULT_RENDERER_MIGRATION_DONE).makeGlobal().cache();
+        VISUAL_DEFAULTS_MIGRATION_DONE = registerBooleanPreference(
+                FlockFreePreferences.VISUAL_DEFAULTS_MIGRATION_DONE,
+                FlockFreePreferences.DEFAULT_VISUAL_DEFAULTS_MIGRATION_DONE).makeGlobal().cache();
 
         migrateDefaultRendererToFlockFree();
-        applyFlockFreeTextScaleDefaults();
+        applyFlockFreeVisualDefaults();
         registerDebugAlertReceiver();
         incidentProvider = new TomTomIncidentProvider();
     }
@@ -173,9 +179,25 @@ public class FlockFreePlugin extends OsmandPlugin {
         RENDERER_MIGRATION_DONE.set(true);
     }
 
-    private void applyFlockFreeTextScaleDefaults() {
+    private void applyFlockFreeVisualDefaults() {
         app.getSettings().TEXT_SCALE.setDefaultValue(FLOCKFREE_DEFAULT_TEXT_SCALE);
         app.getSettings().TEXT_SCALE.setModeDefaultValue(ApplicationMode.CAR, FLOCKFREE_DEFAULT_TEXT_SCALE);
+        app.getSettings().DAYNIGHT_MODE.setModeDefaultValue(ApplicationMode.CAR, DayNightMode.AUTO);
+        app.getSettings().ROUTE_SHOW_TURN_ARROWS.setModeDefaultValue(ApplicationMode.CAR, false);
+
+        if (Boolean.TRUE.equals(VISUAL_DEFAULTS_MIGRATION_DONE.get())) {
+            return;
+        }
+        if (app.getSettings().TEXT_SCALE.getModeValue(ApplicationMode.CAR) > FLOCKFREE_MAX_LEGACY_TEXT_SCALE) {
+            app.getSettings().TEXT_SCALE.setModeValue(ApplicationMode.CAR, FLOCKFREE_DEFAULT_TEXT_SCALE);
+        }
+        if (app.getSettings().DAYNIGHT_MODE.getModeValue(ApplicationMode.CAR) == DayNightMode.NIGHT) {
+            app.getSettings().DAYNIGHT_MODE.setModeValue(ApplicationMode.CAR, DayNightMode.AUTO);
+        }
+        if (Boolean.TRUE.equals(app.getSettings().ROUTE_SHOW_TURN_ARROWS.getModeValue(ApplicationMode.CAR))) {
+            app.getSettings().ROUTE_SHOW_TURN_ARROWS.setModeValue(ApplicationMode.CAR, false);
+        }
+        VISUAL_DEFAULTS_MIGRATION_DONE.set(true);
     }
 
     private void migrateCydBleEnabledToGlobal(@NonNull CommonPreference<Boolean> preference) {

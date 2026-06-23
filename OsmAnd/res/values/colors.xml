@@ -262,6 +262,7 @@
 	<color name="map_widget_blue_pressed">#3367D6</color>
 	<color name="google_maps_blue">#4285F4</color>
 	<color name="google_maps_blue_night">#5C8DFF</color>
+	<color name="google_maps_navigation_teal">#00796B</color>
 	<color name="google_maps_text_primary">#202124</color>
 	<color name="google_maps_text_secondary">#5F6368</color>
 	<color name="map_window_outer_color">#99000000</color>

@@ -1308,10 +1308,7 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 		AndroidUiHelper.updateVisibility(flockFreeNavigationActions, showNavigationActions);
 		View trafficLegend = findViewById(R.id.flockfree_traffic_legend);
 		if (trafficLegend != null) {
-			FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
-			boolean showLegend = visible && navigationUiActive
-					&& plugin != null && plugin.TRAFFIC_ROUTING_ENABLED.get();
-			AndroidUiHelper.updateVisibility(trafficLegend, showLegend);
+			AndroidUiHelper.updateVisibility(trafficLegend, false);
 		}
 		AndroidUiHelper.updateVisibility(findViewById(R.id.map_search_button), false);
 		AndroidUiHelper.updateVisibility(findViewById(R.id.map_layers_button), false);
