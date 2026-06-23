@@ -66,8 +66,8 @@ public class TomTomTrafficProvider {
 	// Traffic colors (ARGB)
 	public static final int COLOR_ROAD_CLOSED = 0xFF8B0000;
 	public static final int COLOR_FREE_FLOW = 0xFF00A854;
-	public static final int COLOR_SLOW = 0xFFFFC107;
-	public static final int COLOR_CONGESTED = 0xFFE53935;
+	public static final int COLOR_SLOW = 0xFFF9AB00;
+	public static final int COLOR_CONGESTED = 0xFFEA4335;
 	public static final int COLOR_NO_DATA = 0xFF4285F4;
 
 	/**

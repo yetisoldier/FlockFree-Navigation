@@ -178,7 +178,10 @@ public class RouteGeometryWay extends
 
 	@ColorInt
 	private int normalizeTrafficColor(@Nullable Integer color) {
-		return color != null && color != 0 ? color : TomTomTrafficProvider.COLOR_NO_DATA;
+		if (color == null || color == 0 || color == TomTomTrafficProvider.COLOR_FREE_FLOW) {
+			return TomTomTrafficProvider.COLOR_NO_DATA;
+		}
+		return color;
 	}
 
 	public boolean updateRoute(@NonNull RotatedTileBox tb, @NonNull RouteCalculationResult route) {
