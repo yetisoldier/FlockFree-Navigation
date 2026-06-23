@@ -736,7 +736,7 @@ public class FlockFreePlugin extends OsmandPlugin {
         // Initialize Google Maps-style bottom navigation bar
         net.osmand.plus.plugins.flockfree.widgets.FlockFreeNavigationBar.ensureInitialized(app);
         // Initialize Google Maps-style floating report button
-        net.osmand.plus.plugins.flockfree.widgets.NavigationReportButton.ensureInitialized(app);
+        net.osmand.plus.plugins.flockfree.widgets.NavigationReportButton.ensureInitialized(app, activity);
         // Initialize 3D navigation tilt controller
         ensureNavigationTiltController();
     }

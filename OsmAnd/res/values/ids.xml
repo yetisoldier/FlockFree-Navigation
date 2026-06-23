@@ -36,4 +36,7 @@
     <item name="initial_padding_bottom" type="id"/>
     <item name="widget_panel_view_pager_left" type="id" />
     <item name="widget_panel_view_pager_right" type="id" />
+
+    <!-- FlockFree report FAB -->
+    <item name="flockfree_report_fab" type="id" />
 </resources>

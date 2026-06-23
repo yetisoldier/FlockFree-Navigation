@@ -2,6 +2,7 @@ package net.osmand.plus.plugins.flockfree.widgets;
 
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -71,6 +72,7 @@ public class NavigationTiltController implements IRouteInformationListener, Elev
 	 * Safe to call multiple times — duplicate registration is guarded.
 	 */
 	public void register() {
+		Log.d("NavTilt", "register: registered=" + registered);
 		if (!registered) {
 			routingHelper.addListener(this);
 			registered = true;
@@ -115,6 +117,7 @@ public class NavigationTiltController implements IRouteInformationListener, Elev
 
 	@Override
 	public void newRouteIsCalculated(boolean newRoute, ValueHolder<Boolean> showToast) {
+		Log.d("NavTilt", "newRouteIsCalculated: newRoute=" + newRoute + " tiltEnabled=" + isTiltEnabled() + " following=" + routingHelper.isFollowingMode());
 		if (!isTiltEnabled()) {
 			return;
 		}
@@ -128,12 +131,14 @@ public class NavigationTiltController implements IRouteInformationListener, Elev
 
 	@Override
 	public void routeWasCancelled() {
+		Log.d("NavTilt", "routeWasCancelled");
 		restoreFlat();
 		userOverrodeTilt = false;
 	}
 
 	@Override
 	public void routeWasFinished() {
+		Log.d("NavTilt", "routeWasFinished");
 		restoreFlat();
 		userOverrodeTilt = false;
 	}
@@ -174,24 +179,29 @@ public class NavigationTiltController implements IRouteInformationListener, Elev
 	public void applyTilt() {
 		ensureMapViewAttached();
 		if (mapView == null || !isTiltEnabled()) {
+			Log.d("NavTilt", "applyTilt: SKIPPED mapView=" + (mapView != null) + " tiltEnabled=" + isTiltEnabled());
 			return;
 		}
 		if (userOverrodeTilt) {
-			// User explicitly changed tilt during this nav session — respect it.
+			Log.d("NavTilt", "applyTilt: SKIPPED userOverrodeTilt=true");
 			return;
 		}
 		int zoom = mapView.getZoom();
 		if (zoom < MIN_ZOOM_FOR_TILT) {
+			Log.d("NavTilt", "applyTilt: SKIPPED zoom=" + zoom + " < MIN_ZOOM=" + MIN_ZOOM_FOR_TILT);
 			return;
 		}
 		float targetAngle = getDesiredTiltAngle();
 		float currentAngle = mapView.getElevationAngle();
+		Log.d("NavTilt", "applyTilt: zoom=" + zoom + " currentAngle=" + currentAngle + " targetAngle=" + targetAngle);
 		if (Math.abs(currentAngle - targetAngle) < 0.5f) {
+			Log.d("NavTilt", "applyTilt: already at target, tiltApplied=true");
 			tiltApplied = true;
 			return;
 		}
 		animateTilt(targetAngle);
 		tiltApplied = true;
+		Log.d("NavTilt", "applyTilt: animation started, tiltApplied=true");
 	}
 
 	/**
@@ -200,9 +210,11 @@ public class NavigationTiltController implements IRouteInformationListener, Elev
 	public void restoreFlat() {
 		ensureMapViewAttached();
 		if (mapView == null) {
+			Log.d("NavTilt", "restoreFlat: mapView=null, skipping");
 			return;
 		}
 		float currentAngle = mapView.getElevationAngle();
+		Log.d("NavTilt", "restoreFlat: currentAngle=" + currentAngle + " tiltApplied=" + tiltApplied + " userOverrodeTilt=" + userOverrodeTilt);
 		if (Math.abs(currentAngle - FLAT_ELEVATION_ANGLE) < 0.5f) {
 			tiltApplied = false;
 			return;
