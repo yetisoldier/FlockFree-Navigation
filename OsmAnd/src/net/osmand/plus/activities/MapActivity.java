@@ -178,8 +178,6 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 	private MapScrollHelper mapScrollHelper;
 	private RestoreNavigationHelper restoreNavigationHelper;
 	@Nullable
-	private View flockFreeSearchBar;
-	@Nullable
 	private View flockFreeLayersButton;
 	@Nullable
 	private View flockFreeNavigationActions;
@@ -1237,14 +1235,6 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 	}
 
 	private void setupFlockFreeHudControls() {
-		flockFreeSearchBar = findViewById(R.id.flockfree_search_bar);
-		if (flockFreeSearchBar != null) {
-			flockFreeSearchBar.setOnClickListener(v -> {
-				fragmentsHelper.dismissCardDialog();
-				fragmentsHelper.showQuickSearch(NEW_IF_EXPIRED, false);
-			});
-		}
-
 		flockFreeLayersButton = findViewById(R.id.flockfree_layers_button);
 		if (flockFreeLayersButton != null) {
 			flockFreeLayersButton.setOnClickListener(v -> {
@@ -1290,9 +1280,6 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 	}
 
 	public void updateFlockFreeHudControls(boolean visible) {
-		if (flockFreeSearchBar == null) {
-			flockFreeSearchBar = findViewById(R.id.flockfree_search_bar);
-		}
 		if (flockFreeLayersButton == null) {
 			flockFreeLayersButton = findViewById(R.id.flockfree_layers_button);
 		}
@@ -1302,10 +1289,8 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 		boolean navigationUiActive = isFlockFreeNavigationUiActive();
 		boolean showFlockFreeControls = visible && !navigationUiActive;
 		boolean showNavigationActions = visible && navigationUiActive;
-		AndroidUiHelper.updateVisibility(flockFreeSearchBar, showFlockFreeControls);
 		AndroidUiHelper.updateVisibility(flockFreeLayersButton, showFlockFreeControls);
 		AndroidUiHelper.updateVisibility(flockFreeNavigationActions, showNavigationActions);
-		AndroidUiHelper.updateVisibility(findViewById(R.id.map_search_button), false);
 		AndroidUiHelper.updateVisibility(findViewById(R.id.map_layers_button), false);
 	}
 
