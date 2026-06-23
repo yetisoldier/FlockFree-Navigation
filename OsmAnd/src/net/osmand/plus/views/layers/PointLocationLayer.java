@@ -668,7 +668,7 @@ public class PointLocationLayer extends OsmandMapLayer
 
 	private void drawLocationHeading(@NonNull Canvas canvas, int locationX, int locationY) {
 		Float heading = locationProvider.getHeading();
-		if (heading != null) {
+		if (heading != null && headingIcon != null) {
 			canvas.save();
 			canvas.rotate(heading - 180, locationX, locationY);
 			canvas.drawBitmap(headingIcon, locationX - headingIcon.getWidth() / 2f,
