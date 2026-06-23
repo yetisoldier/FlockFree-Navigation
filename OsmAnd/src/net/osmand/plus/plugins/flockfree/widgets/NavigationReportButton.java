@@ -15,20 +15,17 @@ import androidx.annotation.Nullable;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
-import net.osmand.plus.helpers.DayNightHelper;
-import net.osmand.plus.plugins.PluginsHelper;
-import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.routing.IRouteInformationListener;
 import net.osmand.plus.routing.RoutingHelper;
 import net.osmand.plus.settings.enums.ThemeUsageContext;
 import net.osmand.plus.views.OsmandMapTileView;
 
 /**
- * Manages a floating "Add Camera" button (FAB) that appears on the
+ * Manages a floating report button (FAB) that appears on the
  * right side of the screen during active navigation only.
  *
- * Tapping the FAB opens the existing CameraReporter dialog directly,
- * letting users quickly add a new ALPR camera at the current map center.
+ * Tapping the FAB opens a quick report sheet for cameras, hazards, and
+ * traffic incidents.
  * The FAB is injected programmatically into the map's root view so it
  * does not require layout XML changes. It shows when navigation is in
  * following mode with a calculated route, and hides otherwise.
@@ -37,6 +34,10 @@ public class NavigationReportButton implements IRouteInformationListener {
 
 	private static final long UPDATE_INTERVAL_MS = 1000L;
 	private static final long REATTACH_INTERVAL_MS = 2000L;
+	private static final int FAB_SIZE_DP = 48;
+	private static final int FAB_SIDE_MARGIN_DP = 16;
+	private static final int FAB_NAV_BAR_GAP_DP = 16;
+	private static final int FAB_FALLBACK_BOTTOM_MARGIN_DP = 112;
 
 	@Nullable
 	private static NavigationReportButton instance;
@@ -133,24 +134,19 @@ public class NavigationReportButton implements IRouteInformationListener {
 		fabView = new ImageView(app);
 		fabView.setId(R.id.flockfree_report_fab);
 		fabView.setImageResource(R.drawable.ic_action_device_camera);
+		fabView.setContentDescription(app.getString(R.string.flockfree_report_sheet_title));
 		fabView.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-		int fabSize = (int) TypedValue.applyDimension(
-				TypedValue.COMPLEX_UNIT_DIP, 48, app.getResources().getDisplayMetrics());
-		int margin16 = (int) TypedValue.applyDimension(
-				TypedValue.COMPLEX_UNIT_DIP, 16, app.getResources().getDisplayMetrics());
+		int fabSize = dp(FAB_SIZE_DP);
 		FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(fabSize, fabSize);
 		lp.gravity = Gravity.END | Gravity.BOTTOM;
-		lp.setMargins(0, 0, margin16, margin16 * 4); // 64dp from bottom (above nav bar)
+		lp.setMargins(0, 0, dp(FAB_SIDE_MARGIN_DP), dp(FAB_FALLBACK_BOTTOM_MARGIN_DP));
 
 		fabView.setLayoutParams(lp);
 		fabView.setElevation(6f);
 		fabView.setVisibility(View.GONE);
 		fabView.setOnClickListener(v -> {
 			if (mapActivity != null && !mapActivity.isDestroyed()) {
-				FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
-				if (plugin != null) {
-					plugin.getCameraReporter().showAddCameraDialogAtMapCenter(mapActivity);
-				}
+				ReportBottomSheet.showInstance(mapActivity);
 			}
 		});
 
@@ -178,6 +174,7 @@ public class NavigationReportButton implements IRouteInformationListener {
 
 	private void show() {
 		visible = true;
+		updatePosition();
 		updateColors();
 		if (fabView != null) {
 			fabView.setVisibility(View.VISIBLE);
@@ -203,14 +200,37 @@ public class NavigationReportButton implements IRouteInformationListener {
 				: R.drawable.flockfree_report_fab_bg;
 		fabView.setBackgroundResource(bgRes);
 
-		// Tint the icon white
-		fabView.setColorFilter(
-				app.getResources().getColor(R.color.google_maps_text_primary),
-				android.graphics.PorterDuff.Mode.SRC_ATOP);
-		// In night mode the icon should still be white for contrast
-		if (nightMode) {
-			fabView.setColorFilter(0xFFFFFFFF, android.graphics.PorterDuff.Mode.SRC_ATOP);
+		fabView.setColorFilter(0xFFFFFFFF, android.graphics.PorterDuff.Mode.SRC_ATOP);
+	}
+
+	private void updatePosition() {
+		if (fabView == null || mapActivity == null) {
+			return;
 		}
+		View root = mapActivity.findViewById(android.R.id.content);
+		View navBar = mapActivity.findViewById(R.id.flockfree_nav_bar);
+		int bottomMargin = dp(FAB_FALLBACK_BOTTOM_MARGIN_DP);
+		if (root != null && navBar != null && navBar.getVisibility() == View.VISIBLE) {
+			int[] rootLocation = new int[2];
+			int[] navBarLocation = new int[2];
+			root.getLocationOnScreen(rootLocation);
+			navBar.getLocationOnScreen(navBarLocation);
+			int navBarTop = navBarLocation[1] - rootLocation[1];
+			if (root.getHeight() > 0 && navBarTop > 0 && navBarTop < root.getHeight()) {
+				bottomMargin = root.getHeight() - navBarTop + dp(FAB_NAV_BAR_GAP_DP);
+			}
+		}
+		ViewGroup.LayoutParams params = fabView.getLayoutParams();
+		if (params instanceof FrameLayout.LayoutParams) {
+			FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) params;
+			lp.setMargins(0, 0, dp(FAB_SIDE_MARGIN_DP), bottomMargin);
+			fabView.setLayoutParams(lp);
+		}
+	}
+
+	private int dp(float value) {
+		return (int) TypedValue.applyDimension(
+				TypedValue.COMPLEX_UNIT_DIP, value, app.getResources().getDisplayMetrics());
 	}
 
 	// --- IRouteInformationListener ---
