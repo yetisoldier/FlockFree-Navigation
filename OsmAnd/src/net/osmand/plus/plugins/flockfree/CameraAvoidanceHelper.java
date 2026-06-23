@@ -1,6 +1,7 @@
 package net.osmand.plus.plugins.flockfree;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import net.osmand.Location;
 import net.osmand.PlatformUtil;
@@ -32,6 +33,7 @@ import java.util.Collections;
 public class CameraAvoidanceHelper {
 
     private static final Log LOG = PlatformUtil.getLog(CameraAvoidanceHelper.class);
+    private static final int UNKNOWN_ROUTE_TIME_SECONDS = -1;
 
     public enum AvoidanceStatus {
         NONE,
@@ -62,6 +64,8 @@ public class CameraAvoidanceHelper {
     private final FlockFreePlugin plugin;
     private AvoidanceStatus lastAvoidanceStatus = AvoidanceStatus.NONE;
     private int lastAvoidanceRoadCount;
+    private int lastAvoidanceCameraCount;
+    private int lastAvoidanceOriginalTimeSeconds = UNKNOWN_ROUTE_TIME_SECONDS;
     private int lastPartialBlockedRoadCount;
     private int lastPartialTotalCameraRoadCount;
     private int lastPartialRemainingCameraCount;
@@ -80,18 +84,41 @@ public class CameraAvoidanceHelper {
     }
 
     public synchronized void recordAvoidanceApplied(int roadCount) {
+        recordAvoidanceApplied(roadCount, 0, UNKNOWN_ROUTE_TIME_SECONDS);
+    }
+
+    public synchronized void recordAvoidanceApplied(int roadCount, int cameraCount) {
+        recordAvoidanceApplied(roadCount, cameraCount, UNKNOWN_ROUTE_TIME_SECONDS);
+    }
+
+    public synchronized void recordAvoidanceApplied(int roadCount, int cameraCount, int originalRouteTimeSeconds) {
         lastAvoidanceStatus = AvoidanceStatus.APPLIED;
         lastAvoidanceRoadCount = roadCount;
+        lastAvoidanceCameraCount = Math.max(0, cameraCount);
+        lastAvoidanceOriginalTimeSeconds = originalRouteTimeSeconds;
+        lastPartialBlockedRoadCount = 0;
+        lastPartialTotalCameraRoadCount = 0;
+        lastPartialRemainingCameraCount = 0;
     }
 
     public synchronized void recordAvoidanceFallback(int roadCount) {
         lastAvoidanceStatus = AvoidanceStatus.FALLBACK;
         lastAvoidanceRoadCount = roadCount;
+        lastAvoidanceCameraCount = 0;
+        lastAvoidanceOriginalTimeSeconds = UNKNOWN_ROUTE_TIME_SECONDS;
+        lastPartialBlockedRoadCount = 0;
+        lastPartialTotalCameraRoadCount = 0;
+        lastPartialRemainingCameraCount = 0;
     }
 
     public synchronized void recordAvoidanceSkipped(@NonNull AvoidanceStatus status) {
         lastAvoidanceStatus = status;
         lastAvoidanceRoadCount = 0;
+        lastAvoidanceCameraCount = 0;
+        lastAvoidanceOriginalTimeSeconds = UNKNOWN_ROUTE_TIME_SECONDS;
+        lastPartialBlockedRoadCount = 0;
+        lastPartialTotalCameraRoadCount = 0;
+        lastPartialRemainingCameraCount = 0;
     }
 
     /**
@@ -102,8 +129,17 @@ public class CameraAvoidanceHelper {
      * @param remainingCameraCount  Number of cameras still on/near the route after partial avoidance
      */
     public synchronized void recordAvoidancePartial(int blockedRoadCount, int totalCameraRoadCount, int remainingCameraCount) {
+        recordAvoidancePartial(blockedRoadCount, totalCameraRoadCount, remainingCameraCount,
+                0, UNKNOWN_ROUTE_TIME_SECONDS);
+    }
+
+    public synchronized void recordAvoidancePartial(int blockedRoadCount, int totalCameraRoadCount,
+                                                    int remainingCameraCount, int avoidedCameraCount,
+                                                    int originalRouteTimeSeconds) {
         lastAvoidanceStatus = AvoidanceStatus.PARTIAL_APPLIED;
         lastAvoidanceRoadCount = blockedRoadCount;
+        lastAvoidanceCameraCount = Math.max(0, avoidedCameraCount);
+        lastAvoidanceOriginalTimeSeconds = originalRouteTimeSeconds;
         lastPartialBlockedRoadCount = blockedRoadCount;
         lastPartialTotalCameraRoadCount = totalCameraRoadCount;
         lastPartialRemainingCameraCount = remainingCameraCount;
@@ -139,10 +175,31 @@ public class CameraAvoidanceHelper {
         }
         lastAvoidanceStatus = AvoidanceStatus.NONE;
         lastAvoidanceRoadCount = 0;
+        lastAvoidanceCameraCount = 0;
+        lastAvoidanceOriginalTimeSeconds = UNKNOWN_ROUTE_TIME_SECONDS;
         lastPartialBlockedRoadCount = 0;
         lastPartialTotalCameraRoadCount = 0;
         lastPartialRemainingCameraCount = 0;
         return summary;
+    }
+
+    /**
+     * Returns a concise tradeoff string like "Avoids 5 cameras" if avoidance was applied,
+     * or null if no avoidance was applied or the camera count is zero.
+     */
+    @Nullable
+    public synchronized String getAvoidanceTradeoffSummary() {
+        if ((lastAvoidanceStatus == AvoidanceStatus.APPLIED
+                || lastAvoidanceStatus == AvoidanceStatus.PARTIAL_APPLIED)
+                && lastAvoidanceCameraCount > 0) {
+            return app.getResources().getQuantityString(R.plurals.flockfree_route_tradeoff_avoids_cameras,
+                    lastAvoidanceCameraCount, lastAvoidanceCameraCount);
+        }
+        return null;
+    }
+
+    public synchronized int getLastAvoidanceOriginalTimeSeconds() {
+        return lastAvoidanceOriginalTimeSeconds;
     }
 
     /**

@@ -34,6 +34,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 	private static final String CAMERA_NEAREST_MAP_CENTER_KEY = "flockfree_camera_nearest_map_center";
 	private static final String CAMERA_NEAREST_LAST_CHECK_KEY = "flockfree_camera_nearest_last_check";
 	private static final String ROUTE_LAST_CHECK_KEY = "flockfree_route_last_check";
+	private static final String ROUTE_TRADEOFF_SUMMARY_KEY = "flockfree_route_tradeoff_summary";
 	private static final String TRAFFIC_ROUTE_LAST_CHECK_KEY = "flockfree_traffic_last_check";
 	private static final String TOMTOM_API_KEY = "tomtom_api_key";
 	private static final String ALERT_LAST_CHECK_KEY = "flockfree_alert_last_check";
@@ -80,6 +81,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		setupDistancePreference(plugin.CAMERA_AVOIDANCE_RADIUS.getId(), AVOIDANCE_RADIUS_VALUES,
 				R.string.flockfree_avoidance_radius_description);
 		setupRouteLastCheckPreference();
+		setupRouteTradeoffSummaryPreference();
 		setupSwitchPreference(plugin.TRAFFIC_ROUTING_ENABLED.getId(),
 				R.string.flockfree_traffic_routing_enabled_description);
 		setupSwitchPreference(plugin.INCIDENTS_ALERTS_ENABLED.getId(),
@@ -142,6 +144,13 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		Preference preference = findPreference(ROUTE_LAST_CHECK_KEY);
 		if (preference != null) {
 			preference.setSummary(plugin.getLastRouteCheckSummary());
+		}
+	}
+
+	private void setupRouteTradeoffSummaryPreference() {
+		Preference preference = findPreference(ROUTE_TRADEOFF_SUMMARY_KEY);
+		if (preference != null) {
+			preference.setSummary(plugin.getLastRouteTradeoffSummary());
 		}
 	}
 
@@ -466,6 +475,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		setupCameraDataStatusPreference();
 		setupNearestCameraLastCheckPreference();
 		setupRouteLastCheckPreference();
+		setupRouteTradeoffSummaryPreference();
 		setupTomTomApiKeyPreference();
 		setupTrafficRouteLastCheckPreference();
 		setupAlertLastCheckPreference();

@@ -23,6 +23,7 @@ public final class FlockFreePreferences {
     public static final String CYD_BLE_ENABLED = "cyd_ble_enabled";
     public static final String WIFI_SCAN_ENABLED = "wifi_scan_enabled";
     public static final String CAMERA_ROUTE_LAST_CHECK_SUMMARY = "camera_route_last_check_summary";
+    public static final String ROUTE_TRADEOFF_SUMMARY = "route_tradeoff_summary";
     public static final String TRAFFIC_ROUTE_LAST_CHECK_SUMMARY = "traffic_route_last_check_summary";
     public static final String CAMERA_ALERT_LAST_CHECK_SUMMARY = "camera_alert_last_check_summary";
     public static final String CAMERA_REPORT_LAST_DRAFT_SUMMARY = "camera_report_last_draft_summary";

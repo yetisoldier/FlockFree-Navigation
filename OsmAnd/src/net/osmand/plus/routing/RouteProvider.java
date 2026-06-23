@@ -252,10 +252,13 @@ public class RouteProvider {
 
 		// Build the full blocked set from all camera-adjacent roads
 		Set<Long> blockedIds = new LinkedHashSet<>();
+		int totalCameraCount = 0;
 		for (CameraAvoidanceHelper.RoadWithCameraCount rwc : roadsWithCameras) {
 			blockedIds.add(rwc.roadId);
+			totalCameraCount += rwc.cameraCount;
 		}
 		int totalCameraRoadCount = roadsWithCameras.size();
+		int originalRouteTimeSeconds = initial.getLeftTime(null);
 
 		MissingMapsCalculationResult originalMissingMaps = params.calculationProgress != null
 				? params.calculationProgress.missingMapsCalculationResult : null;
@@ -267,7 +270,8 @@ public class RouteProvider {
 			if (avoided.isCalculated()) {
 				log.info("FlockFree recalculated route with " + blockedIds.size()
 						+ " temporary avoid road ids (full avoidance)");
-				avoidanceHelper.recordAvoidanceApplied(blockedIds.size());
+				avoidanceHelper.recordAvoidanceApplied(blockedIds.size(),
+						totalCameraCount, originalRouteTimeSeconds);
 				return new FlockFreeRouteVariant(avoided, avoidedParams.temporaryImpassableRoadIds);
 			}
 		} catch (IOException e) {
@@ -305,7 +309,8 @@ public class RouteProvider {
 							+ " of " + totalCameraRoadCount + " camera roads"
 							+ ", remaining cameras on unblocked roads=" + remainingCameraCount);
 					avoidanceHelper.recordAvoidancePartial(blockedIds.size(),
-							totalCameraRoadCount, remainingCameraCount);
+							totalCameraRoadCount, remainingCameraCount,
+							totalCameraCount - remainingCameraCount, originalRouteTimeSeconds);
 					return new FlockFreeRouteVariant(avoided, avoidedParams.temporaryImpassableRoadIds);
 				}
 			} catch (IOException e) {

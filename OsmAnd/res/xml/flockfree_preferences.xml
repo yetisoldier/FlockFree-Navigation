@@ -62,6 +62,12 @@
 		android:persistent="false"
 		android:title="@string/flockfree_route_last_check" />
 
+	<Preference
+		android:key="flockfree_route_tradeoff_summary"
+		android:layout="@layout/preference_with_descr"
+		android:persistent="false"
+		android:title="@string/flockfree_route_tradeoff_summary" />
+
 	<net.osmand.plus.settings.preferences.SwitchPreferenceEx
 		android:key="traffic_routing_enabled"
 		android:layout="@layout/preference_with_descr_dialog_and_switch"

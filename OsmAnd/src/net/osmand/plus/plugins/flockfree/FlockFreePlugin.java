@@ -65,6 +65,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     public final CommonPreference<Boolean> CYD_BLE_ENABLED;
     public final CommonPreference<Boolean> WIFI_SCAN_ENABLED;
     public final CommonPreference<String> CAMERA_ROUTE_LAST_CHECK_SUMMARY;
+    public final CommonPreference<String> ROUTE_TRADEOFF_SUMMARY;
     public final CommonPreference<String> TRAFFIC_ROUTE_LAST_CHECK_SUMMARY;
     public final CommonPreference<String> CAMERA_ALERT_LAST_CHECK_SUMMARY;
     public final CommonPreference<String> CAMERA_REPORT_LAST_DRAFT_SUMMARY;
@@ -151,6 +152,9 @@ public class FlockFreePlugin extends OsmandPlugin {
         WIFI_SCAN_ENABLED = wifiScanEnabled;
         CAMERA_ROUTE_LAST_CHECK_SUMMARY = registerStringPreference(
                 FlockFreePreferences.CAMERA_ROUTE_LAST_CHECK_SUMMARY,
+                FlockFreePreferences.DEFAULT_STATUS_SUMMARY).makeProfile().cache();
+        ROUTE_TRADEOFF_SUMMARY = registerStringPreference(
+                FlockFreePreferences.ROUTE_TRADEOFF_SUMMARY,
                 FlockFreePreferences.DEFAULT_STATUS_SUMMARY).makeProfile().cache();
         TRAFFIC_ROUTE_LAST_CHECK_SUMMARY = registerStringPreference(
                 FlockFreePreferences.TRAFFIC_ROUTE_LAST_CHECK_SUMMARY,
@@ -399,6 +403,18 @@ public class FlockFreePlugin extends OsmandPlugin {
 
     private synchronized void setLastRouteCheckSummary(@NonNull String summary) {
         CAMERA_ROUTE_LAST_CHECK_SUMMARY.set(summary);
+    }
+
+    @NonNull
+    public synchronized String getLastRouteTradeoffSummary() {
+        String summary = ROUTE_TRADEOFF_SUMMARY.get();
+        return summary != null && summary.length() > 0
+                ? summary
+                : app.getString(R.string.flockfree_route_tradeoff_none);
+    }
+
+    private synchronized void setLastRouteTradeoffSummary(@Nullable String summary) {
+        ROUTE_TRADEOFF_SUMMARY.set(summary != null ? summary : "");
     }
 
     @NonNull
@@ -973,28 +989,39 @@ public class FlockFreePlugin extends OsmandPlugin {
         if (cameraAvoidanceEnabled && !getCameraData().isDataLoaded()) {
             String loadingSummary = app.getString(R.string.flockfree_route_camera_data_loading);
             setLastRouteCheckSummary(loadingSummary);
+            setLastRouteTradeoffSummary(null);
             app.showShortToastMessage(loadingSummary);
             return;
         }
         RouteCalculationResult route = app.getRoutingHelper().getRoute();
         if (route == null || !route.isCalculated()) {
             setLastRouteCheckSummary(app.getString(R.string.flockfree_route_last_check_no_route));
+            setLastRouteTradeoffSummary(null);
             return;
         }
         List<Location> routeLocations = route.getImmutableAllLocations();
         if (routeLocations == null || routeLocations.isEmpty()) {
             setLastRouteCheckSummary(app.getString(R.string.flockfree_route_last_check_no_route));
+            setLastRouteTradeoffSummary(null);
             return;
         }
         String routeSummary = "";
+        String routeTradeoffSummary = null;
         if (cameraAvoidanceEnabled) {
             CameraAvoidanceHelper helper = getAvoidanceHelper();
             routeSummary = helper.getRouteCameraSummaryFromLocations(routeLocations);
+            String tradeoffSummary = helper.getAvoidanceTradeoffSummary();
+            if (!Algorithms.isEmpty(tradeoffSummary)) {
+                routeTradeoffSummary = formatAvoidanceTradeoffSummary(tradeoffSummary,
+                        helper.getLastAvoidanceOriginalTimeSeconds(), route.getLeftTime(null));
+                routeSummary = routeSummary + "\n" + routeTradeoffSummary;
+            }
             String avoidanceSummary = helper.consumeLastAvoidanceStatusSummary();
             if (!avoidanceSummary.isEmpty()) {
                 routeSummary = routeSummary + "\n" + avoidanceSummary;
             }
         }
+        setLastRouteTradeoffSummary(routeTradeoffSummary);
         TrafficRoutingHelper trafficHelper = getTrafficRoutingHelper();
         if (TRAFFIC_ROUTING_ENABLED.get() && route.getOriginalRoute() != null && !route.getOriginalRoute().isEmpty()) {
             trafficHelper.getTrafficColorsForRoute(route.getOriginalRoute());
@@ -1010,6 +1037,22 @@ public class FlockFreePlugin extends OsmandPlugin {
         }
         setLastRouteCheckSummary(routeSummary);
         app.showToastMessage(routeSummary);
+    }
+
+    @NonNull
+    private String formatAvoidanceTradeoffSummary(@NonNull String tradeoffSummary,
+                                                  int originalRouteTimeSeconds,
+                                                  int avoidedRouteTimeSeconds) {
+        if (originalRouteTimeSeconds > 0 && avoidedRouteTimeSeconds > 0) {
+            int delaySeconds = avoidedRouteTimeSeconds - originalRouteTimeSeconds;
+            if (delaySeconds > 0) {
+                int delayMinutes = Math.max(1, (delaySeconds + 59) / 60);
+                return app.getString(R.string.flockfree_route_tradeoff_delay_minutes,
+                        tradeoffSummary, delayMinutes);
+            }
+            return app.getString(R.string.flockfree_route_tradeoff_no_delay, tradeoffSummary);
+        }
+        return tradeoffSummary;
     }
 
     /**

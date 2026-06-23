@@ -10,6 +10,14 @@
 	- For wording and consistency, please note https://docs.osmand.net/docs/technical/contributions/translating-osmand
 	Thx - Hardy
 -->
+	<plurals name="flockfree_route_tradeoff_avoids_cameras">
+		<item quantity="one">Avoids %1$d camera</item>
+		<item quantity="other">Avoids %1$d cameras</item>
+	</plurals>
+	<string name="flockfree_route_tradeoff_delay_minutes">%1$s &#183; +%2$d min</string>
+	<string name="flockfree_route_tradeoff_no_delay">%1$s &#183; no delay</string>
+	<string name="flockfree_route_tradeoff_none">No camera-avoidance tradeoff recorded yet.</string>
+	<string name="flockfree_route_tradeoff_summary">Last avoidance tradeoff</string>
 	<string name="flockfree_render_descr">FlockFree map style with lighter Google Maps-inspired colors, reduced POI clutter, cleaner route colors, and camera-aware navigation defaults.</string>
 	<string name="flockfree_route_preview_traffic_condition">Traffic: %1$s</string>
 	<string name="flockfree_traffic_condition_light">Light</string>
