@@ -178,7 +178,7 @@ public class RouteGeometryWay extends
 
 	@ColorInt
 	private int normalizeTrafficColor(@Nullable Integer color) {
-		if (color == null || color == 0 || color == TomTomTrafficProvider.COLOR_FREE_FLOW) {
+		if (color == null || color == 0) {
 			return TomTomTrafficProvider.COLOR_NO_DATA;
 		}
 		return color;

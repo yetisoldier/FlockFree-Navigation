@@ -22,6 +22,7 @@ import static net.osmand.plus.settings.enums.ApproximationType.APPROX_GEO_CPP;
 import static net.osmand.plus.settings.enums.LocationSource.ANDROID_API;
 import static net.osmand.plus.settings.enums.LocationSource.GOOGLE_PLAY_SERVICES;
 import static net.osmand.plus.settings.enums.RoutingType.HH_CPP;
+import static net.osmand.plus.settings.enums.SpeedLimitWarningState.ALWAYS;
 import static net.osmand.plus.settings.enums.SpeedLimitWarningState.WHEN_EXCEEDED;
 import static net.osmand.plus.settings.enums.WidgetSize.MEDIUM;
 import static net.osmand.plus.settings.enums.WidgetSize.SMALL;
@@ -962,6 +963,13 @@ public class OsmandSettings {
 	public final OsmandPreference<Boolean> SHOW_DISTANCE_RULER = new BooleanPreference(this, "show_distance_ruler", false).makeProfile();
 
 	public final CommonPreference<SpeedLimitWarningState> SHOW_SPEED_LIMIT_WARNING = new EnumStringPreference<>(this, "show_speed_limit_warning", WHEN_EXCEEDED, SpeedLimitWarningState.values()).makeProfile();
+
+	{
+		SHOW_SPEED_LIMIT_WARNING.setModeDefaultValue(ApplicationMode.CAR, ALWAYS);
+		SHOW_SPEED_LIMIT_WARNING.setModeDefaultValue(ApplicationMode.TRUCK, ALWAYS);
+		SHOW_SPEED_LIMIT_WARNING.setModeDefaultValue(ApplicationMode.MOTORCYCLE, ALWAYS);
+		SHOW_SPEED_LIMIT_WARNING.setModeDefaultValue(ApplicationMode.MOPED, ALWAYS);
+	}
 
 	public final CommonPreference<Boolean> SHOW_LINES_TO_FIRST_MARKERS = new BooleanPreference(this, "show_lines_to_first_markers", false).makeProfile();
 	public final CommonPreference<Boolean> SHOW_ARROWS_TO_FIRST_MARKERS = new BooleanPreference(this, "show_arrows_to_first_markers", false).makeProfile();

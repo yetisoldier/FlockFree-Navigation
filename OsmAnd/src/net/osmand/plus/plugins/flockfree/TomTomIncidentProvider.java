@@ -44,7 +44,7 @@ public class TomTomIncidentProvider {
     private static final int CONNECT_TIMEOUT_MS = 8_000;
     private static final int READ_TIMEOUT_MS = 8_000;
     private static final long CACHE_TTL_MS = 60_000L;
-    private static final String FIELDS_PARAM = "{incidents{type,geometry{type,coordinates},properties{iconCategory,description{default},startTime{from},endTime{to}}}}";
+    private static final String FIELDS_PARAM = "{incidents{type,geometry{type,coordinates},properties{id,iconCategory,events{description,code,iconCategory},startTime,endTime,from,to,length,delay,roadNumbers}}}";
 
     private final ConcurrentHashMap<String, CachedIncidents> incidentCache = new ConcurrentHashMap<>();
     private final ExecutorService fetchExecutor = Executors.newSingleThreadExecutor();
@@ -197,13 +197,10 @@ public class TomTomIncidentProvider {
                 .appendPath("services")
                 .appendPath("5")
                 .appendPath("incidentDetails")
-                .appendPath("key")
-                .appendPath("json")
                 .appendQueryParameter("key", apiKey)
                 .appendQueryParameter("bbox", bbox)
                 .appendQueryParameter("fields", FIELDS_PARAM)
                 .appendQueryParameter("language", "en-US")
-                .appendQueryParameter("t", "1111")
                 .appendQueryParameter("timeValidityFilter", "present")
                 .build()
                 .toString();
@@ -229,17 +226,20 @@ public class TomTomIncidentProvider {
     @NonNull
     private List<TrafficIncident> parseIncidents(@NonNull String body) throws JSONException {
         JSONObject root = new JSONObject(body);
-        JSONArray features = root.optJSONArray("features");
-        if (features == null || features.length() == 0) {
+        JSONArray incidentsArray = root.optJSONArray("incidents");
+        if (incidentsArray == null) {
+            incidentsArray = root.optJSONArray("features");
+        }
+        if (incidentsArray == null || incidentsArray.length() == 0) {
             return Collections.emptyList();
         }
-        List<TrafficIncident> incidents = new ArrayList<>(features.length());
-        for (int i = 0; i < features.length(); i++) {
-            JSONObject feature = features.optJSONObject(i);
-            if (feature == null) {
+        List<TrafficIncident> incidents = new ArrayList<>(incidentsArray.length());
+        for (int i = 0; i < incidentsArray.length(); i++) {
+            JSONObject incidentJson = incidentsArray.optJSONObject(i);
+            if (incidentJson == null) {
                 continue;
             }
-            TrafficIncident incident = parseFeature(feature);
+            TrafficIncident incident = parseFeature(incidentJson);
             if (incident != null) {
                 incidents.add(incident);
             }
@@ -249,7 +249,6 @@ public class TomTomIncidentProvider {
 
     @Nullable
     private TrafficIncident parseFeature(@NonNull JSONObject feature) {
-        String id = feature.optString("id", null);
         JSONObject geometry = feature.optJSONObject("geometry");
         if (geometry == null) {
             return null;
@@ -284,24 +283,48 @@ public class TomTomIncidentProvider {
         String description = null;
         long startTimeMs = 0;
         long endTimeMs = 0;
+        String id = feature.optString("id", null);
         if (properties != null) {
+            id = properties.optString("id", id);
             iconCategory = properties.optInt("iconCategory", 0);
-            JSONObject descObj = properties.optJSONObject("description");
-            if (descObj != null) {
-                description = descObj.optString("default", null);
-            }
-            JSONObject startTime = properties.optJSONObject("startTime");
-            if (startTime != null) {
-                startTimeMs = startTime.optLong("from", 0);
-            }
-            JSONObject endTime = properties.optJSONObject("endTime");
-            if (endTime != null) {
-                endTimeMs = endTime.optLong("to", 0);
-            }
+            description = getIncidentDescription(properties);
+            startTimeMs = parseTomTomTime(properties.optString("startTime", null));
+            endTimeMs = parseTomTomTime(properties.optString("endTime", null));
         }
         boolean roadClosed = iconCategory == 8;
         return new TrafficIncident(lat, lon, iconCategory, description,
                 startTimeMs, endTimeMs, roadClosed, id);
+    }
+
+    @Nullable
+    private String getIncidentDescription(@NonNull JSONObject properties) {
+        JSONArray events = properties.optJSONArray("events");
+        if (events != null && events.length() > 0) {
+            JSONObject event = events.optJSONObject(0);
+            if (event != null) {
+                String description = event.optString("description", null);
+                if (!Algorithms.isEmpty(description)) {
+                    return description;
+                }
+            }
+        }
+        String from = properties.optString("from", null);
+        String to = properties.optString("to", null);
+        if (!Algorithms.isEmpty(from) && !Algorithms.isEmpty(to)) {
+            return from + " to " + to;
+        }
+        return null;
+    }
+
+    private long parseTomTomTime(@Nullable String value) {
+        if (Algorithms.isEmpty(value)) {
+            return 0L;
+        }
+        try {
+            return java.time.Instant.parse(value).toEpochMilli();
+        } catch (RuntimeException e) {
+            return 0L;
+        }
     }
 
     @NonNull
