@@ -58,6 +58,12 @@
 	<string name="flockfree_incident_wind">Wind</string>
 	<string name="flockfree_incident_dangerous">Dangerous conditions</string>
 	<string name="flockfree_incident_broken_down">Broken down vehicle</string>
+	<string name="flockfree_force_night_map">Force Night Map</string>
+	<string name="flockfree_force_night_map_desc">Force the map to use dark/night rendering regardless of the day/night mode setting. Useful for testing or for drivers who prefer a dark map at all times.</string>
+	<string name="flockfree_force_night_map_title">Force Night Map</string>
+	<string name="flockfree_force_night_map_summary">Override day/night calculation and always render the map in night mode</string>
+	<string name="flockfree_speed_limit_widget">Speed Limit</string>
+	<string name="flockfree_speed_limit_widget_desc">Displays the current road speed limit sign during navigation</string>
 	<string name="flockfree_incident_unknown">Unknown incident</string>
 	<string name="flockfree_incident_alert_ahead">Traffic</string>
 	<string name="flockfree_incident_type_label">Type</string>

@@ -30,10 +30,10 @@ import net.osmand.plus.render.RendererRegistry;
 import net.osmand.plus.settings.backend.ApplicationMode;
 import net.osmand.plus.settings.backend.preferences.CommonPreference;
 import net.osmand.plus.settings.backend.preferences.OsmandPreference;
+import net.osmand.plus.helpers.DayNightHelper;
 import net.osmand.plus.settings.enums.DayNightMode;
 import net.osmand.plus.settings.fragments.SettingsScreenType;
 import net.osmand.plus.views.mapwidgets.MapWidgetInfo;
-import net.osmand.plus.views.mapwidgets.WidgetInfoCreator;
 import net.osmand.plus.views.mapwidgets.WidgetType;
 import net.osmand.plus.views.mapwidgets.WidgetsPanel;
 import net.osmand.plus.views.mapwidgets.widgets.MapWidget;
@@ -70,6 +70,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     public final CommonPreference<String> CAMERA_NEAREST_LAST_CHECK_SUMMARY;
     private final CommonPreference<Boolean> RENDERER_MIGRATION_DONE;
     private final CommonPreference<Boolean> VISUAL_DEFAULTS_MIGRATION_DONE;
+    public final OsmandPreference<Boolean> FORCE_NIGHT_MAP;
 
     // Context menu item order
     private static final int CAMERA_DETAILS_ITEM_ORDER = 7800;
@@ -162,10 +163,33 @@ public class FlockFreePlugin extends OsmandPlugin {
                 FlockFreePreferences.VISUAL_DEFAULTS_MIGRATION_DONE,
                 FlockFreePreferences.DEFAULT_VISUAL_DEFAULTS_MIGRATION_DONE).makeGlobal().cache();
 
+        FORCE_NIGHT_MAP = registerBooleanPreference(
+                FlockFreePreferences.FORCE_NIGHT_MAP,
+                FlockFreePreferences.DEFAULT_FORCE_NIGHT_MAP).makeProfile().cache();
+
         migrateDefaultRendererToFlockFree();
         applyFlockFreeVisualDefaults();
+        registerForceNightMapThemeProvider();
         registerDebugAlertReceiver();
         incidentProvider = new TomTomIncidentProvider();
+    }
+
+    /**
+     * Registers a {@link DayNightHelper.MapThemeProvider} that forces the map into
+     * night rendering when the FlockFree "Force Night Map" preference is enabled.
+     * When the preference is false (default), the theme provider returns null so
+     * OsmAnd's normal day/night calculation (AUTO, SYSTEM, SENSOR, etc.) is used.
+     */
+    private void registerForceNightMapThemeProvider() {
+        app.getDaynightHelper().setExternalMapThemeProvider(new DayNightHelper.MapThemeProvider() {
+            @Override
+            public DayNightMode getMapTheme() {
+                if (FORCE_NIGHT_MAP.get()) {
+                    return DayNightMode.NIGHT;
+                }
+                return null;
+            }
+        });
     }
 
     private void migrateDefaultRendererToFlockFree() {
@@ -184,6 +208,11 @@ public class FlockFreePlugin extends OsmandPlugin {
         app.getSettings().TEXT_SCALE.setModeDefaultValue(ApplicationMode.CAR, FLOCKFREE_DEFAULT_TEXT_SCALE);
         app.getSettings().DAYNIGHT_MODE.setModeDefaultValue(ApplicationMode.CAR, DayNightMode.AUTO);
         app.getSettings().ROUTE_SHOW_TURN_ARROWS.setModeDefaultValue(ApplicationMode.CAR, false);
+        // Ensure speed limit sign is always shown during navigation for the car profile
+        app.getSettings().SHOW_SPEED_LIMIT_WARNING.setModeDefaultValue(ApplicationMode.CAR,
+                net.osmand.plus.settings.enums.SpeedLimitWarningState.ALWAYS);
+        // Ensure speedometer widget is visible for the car profile
+        app.getSettings().SHOW_SPEEDOMETER.setModeDefaultValue(ApplicationMode.CAR, true);
 
         if (Boolean.TRUE.equals(VISUAL_DEFAULTS_MIGRATION_DONE.get())) {
             return;
@@ -196,6 +225,14 @@ public class FlockFreePlugin extends OsmandPlugin {
         }
         if (Boolean.TRUE.equals(app.getSettings().ROUTE_SHOW_TURN_ARROWS.getModeValue(ApplicationMode.CAR))) {
             app.getSettings().ROUTE_SHOW_TURN_ARROWS.setModeValue(ApplicationMode.CAR, false);
+        }
+        // Ensure speed limit warning is ALWAYS for existing CAR users
+        if (app.getSettings().SHOW_SPEED_LIMIT_WARNING.getModeValue(ApplicationMode.CAR) != net.osmand.plus.settings.enums.SpeedLimitWarningState.ALWAYS) {
+            app.getSettings().SHOW_SPEED_LIMIT_WARNING.setModeValue(ApplicationMode.CAR, net.osmand.plus.settings.enums.SpeedLimitWarningState.ALWAYS);
+        }
+        // Ensure speedometer is enabled for existing CAR users
+        if (!app.getSettings().SHOW_SPEEDOMETER.getModeValue(ApplicationMode.CAR)) {
+            app.getSettings().SHOW_SPEEDOMETER.setModeValue(ApplicationMode.CAR, true);
         }
         VISUAL_DEFAULTS_MIGRATION_DONE.set(true);
     }
@@ -513,10 +550,15 @@ public class FlockFreePlugin extends OsmandPlugin {
     public void createWidgets(@NonNull MapActivity activity, @NonNull List<MapWidgetInfo> widgetInfos,
                               @NonNull net.osmand.plus.settings.backend.ApplicationMode appMode,
                               @Nullable net.osmand.plus.settings.enums.ScreenLayoutMode layoutMode) {
-        // FlockFree widgets (camera proximity, traffic status) are not registered
+        // FlockFree custom widgets (camera proximity, traffic status) are not registered
         // as on-map side-panel widgets to avoid overlapping the search bar in
         // portrait mode. Camera alerts and traffic routing still work via
         // navigation notifications, audio alerts, and the layers sheet.
+        //
+        // Speed limit display: The SpeedometerWidget (registered by OsmAnd core)
+        // includes the speed limit sign as a sub-component. We ensure it is visible
+        // for the car profile by setting SHOW_SPEEDOMETER=true and
+        // SHOW_SPEED_LIMIT_WARNING=ALWAYS in applyFlockFreeVisualDefaults().
     }
 
     @Nullable
@@ -671,6 +713,8 @@ public class FlockFreePlugin extends OsmandPlugin {
     @Override
     public void disable(@NonNull OsmandApplication app) {
         super.disable(app);
+        // Remove the FlockFree night mode override so normal day/night calculation is restored
+        app.getDaynightHelper().setExternalMapThemeProvider(null);
         CydBleService.stop(app);
         if (cydHardwareManager != null) {
             cydHardwareManager.close();

@@ -110,6 +110,13 @@
 		android:summaryOn="@string/shared_string_enabled"
 		android:title="@string/flockfree_incidents_show_layer" />
 
+	<net.osmand.plus.settings.preferences.SwitchPreferenceEx
+		android:key="force_night_map"
+		android:layout="@layout/preference_with_descr_dialog_and_switch"
+		android:summaryOff="@string/shared_string_disabled"
+		android:summaryOn="@string/shared_string_enabled"
+		android:title="@string/flockfree_force_night_map" />
+
 	<Preference
 		android:key="flockfree_camera_data_status"
 		android:layout="@layout/preference_with_descr"
