@@ -69,7 +69,8 @@ public class CameraProximityWidget extends SimpleWidget {
 		cachedLat = lat;
 		cachedLon = lon;
 
-		List<CameraData.CameraPoint> cameras = cameraData.getCamerasNear(lat, lon, SEARCH_RADIUS_METERS);
+		int searchRadiusMeters = Math.max(SEARCH_RADIUS_METERS, plugin.CAMERA_ALERT_DISTANCE.get());
+		List<CameraData.CameraPoint> cameras = cameraData.getCamerasNear(lat, lon, searchRadiusMeters);
 		if (cameras.isEmpty()) {
 			cachedCameraCount = 0;
 			cachedNearestDistance = -1;

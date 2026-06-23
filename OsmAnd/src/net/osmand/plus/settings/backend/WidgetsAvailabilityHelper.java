@@ -16,6 +16,7 @@ import static net.osmand.plus.views.mapwidgets.WidgetType.ALTITUDE_MAP_CENTER;
 import static net.osmand.plus.views.mapwidgets.WidgetType.ALTITUDE_MY_LOCATION;
 import static net.osmand.plus.views.mapwidgets.WidgetType.AVERAGE_SPEED;
 import static net.osmand.plus.views.mapwidgets.WidgetType.BATTERY;
+import static net.osmand.plus.views.mapwidgets.WidgetType.CAMERA_PROXIMITY;
 import static net.osmand.plus.views.mapwidgets.WidgetType.CURRENT_SPEED;
 import static net.osmand.plus.views.mapwidgets.WidgetType.CURRENT_TIME;
 import static net.osmand.plus.views.mapwidgets.WidgetType.DISTANCE_TO_DESTINATION;
@@ -41,6 +42,7 @@ import static net.osmand.plus.views.mapwidgets.WidgetType.SUNSET;
 import static net.osmand.plus.views.mapwidgets.WidgetType.SUN_POSITION;
 import static net.osmand.plus.views.mapwidgets.WidgetType.TIME_TO_DESTINATION;
 import static net.osmand.plus.views.mapwidgets.WidgetType.TIME_TO_INTERMEDIATE;
+import static net.osmand.plus.views.mapwidgets.WidgetType.TRAFFIC_STATUS;
 import static net.osmand.plus.views.mapwidgets.WidgetType.TRUE_BEARING;
 
 import androidx.annotation.NonNull;
@@ -89,6 +91,7 @@ public class WidgetsAvailabilityHelper {
 		ApplicationMode[] nextTurnSet = {CAR, BICYCLE, BOAT, SKI, TRUCK, MOTORCYCLE, HORSE, MOPED};
 		ApplicationMode[] smallNextTurnSet = {PEDESTRIAN, PUBLIC_TRANSPORT, AIRCRAFT, TRAIN};
 		ApplicationMode[] secondNextTurnSet = {CAR, BICYCLE, PEDESTRIAN, BOAT, SKI, TRUCK, MOTORCYCLE, HORSE, MOPED};
+		ApplicationMode[] flockFreeNavigationSet = {CAR, TRUCK, MOTORCYCLE, MOPED};
 
 		boolean enableWidgetsV2 = Version.getInstallTime(app) >= ROUTE_WIDGETS_V2_INTRO_TIME_MS;
 		if (enableWidgetsV2) {
@@ -98,10 +101,14 @@ public class WidgetsAvailabilityHelper {
 		regWidgetVisibility(NEXT_TURN, nextTurnSet);
 		regWidgetVisibility(SMALL_NEXT_TURN, smallNextTurnSet);
 		regWidgetVisibility(SECOND_NEXT_TURN, secondNextTurnSet);
+		regWidgetVisibility(CAMERA_PROXIMITY, flockFreeNavigationSet);
+		regWidgetVisibility(TRAFFIC_STATUS, flockFreeNavigationSet);
 		
 		regWidgetAvailability(NEXT_TURN, exceptDefault);
 		regWidgetAvailability(SMALL_NEXT_TURN, exceptDefault);
 		regWidgetAvailability(SECOND_NEXT_TURN, exceptDefault);
+		regWidgetAvailability(CAMERA_PROXIMITY, all);
+		regWidgetAvailability(TRAFFIC_STATUS, all);
 
 		if (!enableWidgetsV2) {
 			regWidgetVisibility(INTERMEDIATE_DESTINATION, all);

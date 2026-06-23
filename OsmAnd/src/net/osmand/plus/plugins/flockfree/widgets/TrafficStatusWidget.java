@@ -44,10 +44,14 @@ public class TrafficStatusWidget extends SimpleWidget {
 		TrafficRoutingHelper helper = plugin.getTrafficRoutingHelper();
 		long refreshMs = helper.getLastTrafficColorRefreshMs();
 		String primary = app.getString(R.string.flockfree_widget_traffic_status);
+		if (app.getRoutingHelper().isRouteBeingCalculated()) {
+			setText(primary, app.getString(R.string.flockfree_traffic_widget_routing));
+			return;
+		}
 		String summary = helper.getTrafficColorLegendSummary();
 		if (refreshMs > 0 && !helper.isTrafficColorRefreshRunning()) {
 			String time = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(new Date(refreshMs));
-			setText(primary, app.getString(R.string.flockfree_traffic_widget_updated, time, summary));
+			setText(primary, time);
 		} else {
 			setText(primary, summary);
 		}

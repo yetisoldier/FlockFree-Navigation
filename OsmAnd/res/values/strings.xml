@@ -6813,7 +6813,7 @@ Download tile maps directly, or copy them as SQLite database files to OsmAnd\'s 
     <string name="flockfree_avoidance_enabled">Camera Avoidance</string>
     <string name="flockfree_settings">FlockFree Settings</string>
     <string name="flockfree_widget_camera_proximity">Camera proximity</string>
-    <string name="flockfree_widget_camera_proximity_desc">Shows the count of known ALPR cameras within 1 km and the distance to the nearest one.</string>
+    <string name="flockfree_widget_camera_proximity_desc">Shows the count of known ALPR cameras in the active alert/search radius and the distance to the nearest one.</string>
     <string name="flockfree_widget_no_cameras">No cameras nearby</string>
     <string name="flockfree_widget_nearest">Nearest: %1$s</string>
     <string name="flockfree_widget_traffic_status">Traffic</string>
@@ -6821,6 +6821,7 @@ Download tile maps directly, or copy them as SQLite database files to OsmAnd\'s 
     <string name="flockfree_traffic_widget_off">Traffic off</string>
     <string name="flockfree_traffic_widget_no_provider">No traffic provider</string>
     <string name="flockfree_traffic_widget_waiting">Waiting for route</string>
+    <string name="flockfree_traffic_widget_routing">Routing</string>
     <string name="flockfree_traffic_widget_refreshing">Refreshing traffic</string>
     <string name="flockfree_traffic_widget_summary">%1$d live, %2$d no data, %3$d samples</string>
     <string name="flockfree_traffic_widget_updated">%1$s | %2$s</string>
