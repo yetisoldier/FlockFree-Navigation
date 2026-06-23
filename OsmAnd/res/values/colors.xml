@@ -273,6 +273,14 @@
 	<color name="navigation_card_text_secondary_night">#80CBC4</color>
 	<color name="google_maps_text_primary">#202124</color>
 	<color name="google_maps_text_secondary">#5F6368</color>
+	<color name="google_maps_eta_green">#00A854</color>
+	<color name="google_maps_eta_green_night">#00C853</color>
+	<color name="google_maps_eta_red">#D93025</color>
+	<color name="google_maps_eta_red_night">#EF5350</color>
+	<color name="google_maps_nav_bar_bg">#FFFFFF</color>
+	<color name="google_maps_nav_bar_bg_night">#2A2A2E</color>
+	<color name="google_maps_nav_bar_text_night">#E8EAED</color>
+	<color name="google_maps_nav_bar_text_secondary_night">#9AA0A6</color>
 	<color name="map_window_outer_color">#99000000</color>
 	<color name="map_window_stroke_dark">#3F3F3F</color>
 	<color name="map_alert_stroke_light">#66000000</color>

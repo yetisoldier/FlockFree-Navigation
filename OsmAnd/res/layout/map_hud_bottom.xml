@@ -52,6 +52,12 @@
 		</LinearLayout>
 
 		<include
+			layout="@layout/flockfree_navigation_bottom_bar"
+			android:layout_width="match_parent"
+			android:layout_height="64dp"
+			android:layout_gravity="bottom|center_horizontal" />
+
+		<include
 			layout="@layout/flockfree_navigation_actions"
 			android:layout_width="match_parent"
 			android:layout_height="56dp"

@@ -24,6 +24,9 @@ import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.plugins.flockfree.TrafficRoutingHelper;
 import net.osmand.plus.plugins.flockfree.TomTomTrafficProvider;
+
+import org.apache.commons.logging.Log;
+import net.osmand.PlatformUtil;
 import net.osmand.plus.utils.ColorUtilities;
 import net.osmand.plus.utils.NativeUtilities;
 import net.osmand.plus.views.layers.RouteActionPoint;
@@ -44,6 +47,8 @@ import gnu.trove.list.array.TByteArrayList;
 
 public class RouteGeometryWay extends
 		MultiColoringGeometryWay<RouteGeometryWayContext, MultiColoringGeometryWayDrawer<RouteGeometryWayContext>> {
+
+	private static final Log log = PlatformUtil.getLog(RouteGeometryWay.class);
 
 	public static final int MIN_COLOR_SQUARE_DISTANCE = 15_000;
 
@@ -142,8 +147,24 @@ public class RouteGeometryWay extends
 		}
 		List<Integer> segmentColors = helper.getTrafficColorsForRoute(routeSegments);
 		if (Algorithms.isEmpty(segmentColors)) {
+			log.warn("getTrafficColors: traffic coloring available but segmentColors is empty, segments=" + routeSegments.size());
 			return Collections.emptyList();
 		}
+
+		// Log traffic color status for debugging
+		int noDataCount = 0;
+		int coloredCount = 0;
+		for (Integer c : segmentColors) {
+			if (c == null || c == 0 || c == TomTomTrafficProvider.COLOR_NO_DATA) {
+				noDataCount++;
+			} else {
+				coloredCount++;
+			}
+		}
+		log.info("getTrafficColors: segments=" + routeSegments.size() + " segmentColors=" + segmentColors.size()
+				+ " colored=" + coloredCount + " noData=" + noDataCount
+				+ " generation=" + helper.getTrafficColorGeneration()
+				+ " refreshRunning=" + helper.isTrafficColorRefreshRunning());
 
 		// Map segment colors to route-location indices using the same shape as
 		// MultiColoringGeometryWay.getRouteInfoAttributesColors(). The renderer

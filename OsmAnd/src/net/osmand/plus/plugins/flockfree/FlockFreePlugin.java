@@ -701,6 +701,8 @@ public class FlockFreePlugin extends OsmandPlugin {
     public void mapActivityCreate(@NonNull MapActivity activity) {
         // Pre-load camera data on map activity create
         getCameraData().ensureDataLoaded();
+        // Initialize Google Maps-style bottom navigation bar
+        net.osmand.plus.plugins.flockfree.widgets.FlockFreeNavigationBar.ensureInitialized(app);
     }
 
     @Override

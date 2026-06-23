@@ -117,13 +117,15 @@ public abstract class BaseRouteLayer extends OsmandMapLayer {
 	}
 
 	protected void updateRouteColors(boolean night) {
-		// Lazy FlockFree route-colour migration: set purple defaults + custom coloring type
+		// Lazy FlockFree route-colour migration: set purple defaults + custom coloring type.
+		// The migration runs here so that updateRouteColoringType() — which is called
+		// before this method in onPrepareBufferImage — picks up the migrated values.
+		// We do NOT re-read routeColoringType from settings here, because
+		// updateRouteColoringType() may have auto-switched it to ATTRIBUTE for
+		// traffic coloring, and re-reading would clobber that switch.
 		FlockFreePlugin flockFreePlugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
 		if (flockFreePlugin != null && previewRouteLineInfo == null) {
 			FlockFreeRouteColors.apply(view.getApplication());
-			// Re-read coloring type after migration may have changed it
-			ApplicationMode mode = view.getApplication().getRoutingHelper().getAppMode();
-			routeColoringType = view.getSettings().ROUTE_COLORING_TYPE.getModeValue(mode);
 		}
 		if (routeColoringType.isCustomColor()) {
 			updateCustomColor(night);
@@ -153,6 +155,12 @@ public abstract class BaseRouteLayer extends OsmandMapLayer {
 	}
 
 	protected void updateRouteColoringType() {
+		// Lazy FlockFree route-colour migration must run before reading settings
+		// so that the migrated CUSTOM_COLOR value is picked up.
+		FlockFreePlugin flockFreePlugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
+		if (flockFreePlugin != null && previewRouteLineInfo == null) {
+			FlockFreeRouteColors.apply(view.getApplication());
+		}
 		if (previewRouteLineInfo != null) {
 			routeColoringType = previewRouteLineInfo.getRouteColoringType();
 			routeInfoAttribute = previewRouteLineInfo.getRouteInfoAttribute();
@@ -167,7 +175,6 @@ public abstract class BaseRouteLayer extends OsmandMapLayer {
 
 		// Auto-switch to traffic coloring when traffic routing is enabled
 		// and the user hasn't explicitly set a custom coloring type
-		FlockFreePlugin flockFreePlugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
 		if (flockFreePlugin != null) {
 			TrafficRoutingHelper trafficHelper = flockFreePlugin.getTrafficRoutingHelper();
 			if (trafficHelper.isTrafficColoringAvailable()) {

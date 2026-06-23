@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/flockfree_nav_bar"
+	android:layout_width="match_parent"
+	android:layout_height="64dp"
+	android:orientation="horizontal"
+	android:gravity="center_vertical"
+	android:background="@color/google_maps_nav_bar_bg"
+	android:elevation="6dp"
+	android:paddingStart="16dp"
+	android:paddingEnd="8dp"
+	android:visibility="gone">
+
+	<!-- Left side: ETA + distance/arrival -->
+	<LinearLayout
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_weight="1"
+		android:orientation="vertical">
+
+		<!-- ETA time (green, bold) -->
+		<TextView
+			android:id="@+id/flockfree_nav_bar_eta"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:textColor="@color/google_maps_eta_green"
+			android:textSize="20sp"
+			android:textStyle="bold"
+			android:text="28 min"
+			tools:ignore="HardcodedText" />
+
+		<!-- Distance + arrival time (gray, secondary) -->
+		<TextView
+			android:id="@+id/flockfree_nav_bar_secondary"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:textColor="@color/google_maps_text_secondary"
+			android:textSize="14sp"
+			android:text="18 mi · 9:27 AM"
+			tools:ignore="HardcodedText" />
+
+	</LinearLayout>
+
+	<!-- Center: Traffic condition (optional) -->
+	<LinearLayout
+		android:id="@+id/flockfree_nav_bar_traffic_container"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		android:gravity="center_vertical"
+		android:layout_marginStart="12dp"
+		android:layout_marginEnd="12dp"
+		android:visibility="gone">
+
+		<View
+			android:id="@+id/flockfree_nav_bar_traffic_dot"
+			android:layout_width="8dp"
+			android:layout_height="8dp"
+			android:layout_marginEnd="6dp"
+			android:background="@color/google_maps_eta_green" />
+
+		<TextView
+			android:id="@+id/flockfree_nav_bar_traffic_text"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:textColor="@color/google_maps_text_secondary"
+			android:textSize="13sp"
+			android:text="Light traffic"
+			tools:ignore="HardcodedText" />
+
+	</LinearLayout>
+
+	<!-- Right side: Close button -->
+	<ImageButton
+		android:id="@+id/flockfree_nav_bar_close"
+		android:layout_width="48dp"
+		android:layout_height="48dp"
+		android:background="?attr/selectableItemBackgroundBorderless"
+		android:src="@drawable/ic_action_close"
+		android:contentDescription="@string/flockfree_nav_bar_close"
+		android:tint="@color/google_maps_text_primary" />
+
+</LinearLayout>
