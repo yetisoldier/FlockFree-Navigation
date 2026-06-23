@@ -20,6 +20,7 @@ import net.osmand.plus.plugins.flockfree.cyd.CydHardwareManager;
 import net.osmand.plus.plugins.flockfree.wifi.WifiScannerManager;
 import net.osmand.plus.routing.RouteCalculationResult;
 import net.osmand.plus.plugins.flockfree.widgets.CameraProximityWidget;
+import net.osmand.plus.plugins.flockfree.widgets.NavigationTiltController;
 import net.osmand.plus.plugins.flockfree.widgets.TrafficStatusWidget;
 import net.osmand.plus.quickaction.QuickActionType;
 import net.osmand.plus.quickaction.actions.ShowHideCamerasAction;
@@ -72,6 +73,12 @@ public class FlockFreePlugin extends OsmandPlugin {
     private final CommonPreference<Boolean> VISUAL_DEFAULTS_MIGRATION_DONE;
     public final OsmandPreference<Boolean> FORCE_NIGHT_MAP;
 
+    // Navigation 3D tilt preferences
+    public final OsmandPreference<Boolean> NAVIGATION_TILT_ENABLED;
+    public final CommonPreference<Float> NAVIGATION_TILT_ANGLE;
+    public static final float NAVIGATION_TILT_MIN = FlockFreePreferences.MIN_NAVIGATION_TILT_ANGLE;
+    public static final float NAVIGATION_TILT_MAX = FlockFreePreferences.MAX_NAVIGATION_TILT_ANGLE;
+
     // Context menu item order
     private static final int CAMERA_DETAILS_ITEM_ORDER = 7800;
     private static final int CYD_REVIEW_ITEM_ORDER = 7850;
@@ -93,6 +100,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     private CameraReporter cameraReporter;
     private CydHardwareManager cydHardwareManager;
     private WifiScannerManager wifiScannerManager;
+    private NavigationTiltController navigationTiltController;
     private long lastCameraAlertTimeMs;
     private String lastCameraAlertKey;
     private BroadcastReceiver debugAlertReceiver;
@@ -166,6 +174,12 @@ public class FlockFreePlugin extends OsmandPlugin {
         FORCE_NIGHT_MAP = registerBooleanPreference(
                 FlockFreePreferences.FORCE_NIGHT_MAP,
                 FlockFreePreferences.DEFAULT_FORCE_NIGHT_MAP).makeProfile().cache();
+        NAVIGATION_TILT_ENABLED = registerBooleanPreference(
+                FlockFreePreferences.NAVIGATION_TILT_ENABLED,
+                FlockFreePreferences.DEFAULT_NAVIGATION_TILT_ENABLED).makeProfile().cache();
+        NAVIGATION_TILT_ANGLE = registerFloatPreference(
+                FlockFreePreferences.NAVIGATION_TILT_ANGLE,
+                FlockFreePreferences.DEFAULT_NAVIGATION_TILT_ANGLE).makeProfile().cache();
 
         migrateDefaultRendererToFlockFree();
         applyFlockFreeVisualDefaults();
@@ -360,6 +374,18 @@ public class FlockFreePlugin extends OsmandPlugin {
             });
         }
         return wifiScannerManager;
+    }
+
+    private void ensureNavigationTiltController() {
+        if (navigationTiltController == null) {
+            navigationTiltController = new NavigationTiltController(app, this);
+        }
+        navigationTiltController.register();
+    }
+
+    @androidx.annotation.Nullable
+    public NavigationTiltController getNavigationTiltController() {
+        return navigationTiltController;
     }
 
     @NonNull
@@ -559,6 +585,12 @@ public class FlockFreePlugin extends OsmandPlugin {
         // includes the speed limit sign as a sub-component. We ensure it is visible
         // for the car profile by setting SHOW_SPEEDOMETER=true and
         // SHOW_SPEED_LIMIT_WARNING=ALWAYS in applyFlockFreeVisualDefaults().
+        //
+        // Second-next-turn preview chip: The SECOND_NEXT_TURN widget is registered
+        // by OsmAnd core (MapWidgetsFactory) and we ensure it is visible by default
+        // for CAR mode via WidgetsAvailabilityHelper. The SecondNextTurnWidget class
+        // uses a compact chip layout (flockfree_second_next_turn_chip.xml) when
+        // FlockFreePlugin is active, styled as a Google Maps-style preview chip.
     }
 
     @Nullable
@@ -703,6 +735,10 @@ public class FlockFreePlugin extends OsmandPlugin {
         getCameraData().ensureDataLoaded();
         // Initialize Google Maps-style bottom navigation bar
         net.osmand.plus.plugins.flockfree.widgets.FlockFreeNavigationBar.ensureInitialized(app);
+        // Initialize Google Maps-style floating report button
+        net.osmand.plus.plugins.flockfree.widgets.NavigationReportButton.ensureInitialized(app);
+        // Initialize 3D navigation tilt controller
+        ensureNavigationTiltController();
     }
 
     @Override
@@ -710,6 +746,7 @@ public class FlockFreePlugin extends OsmandPlugin {
         getCameraData().ensureDataLoaded();
         ensureCydScanIfEnabled(activity);
         ensureWifiScanIfEnabled();
+        ensureNavigationTiltController();
     }
 
     @Override
@@ -731,6 +768,10 @@ public class FlockFreePlugin extends OsmandPlugin {
         }
         if (incidentProvider != null) {
             incidentProvider.clearCache();
+        }
+        if (navigationTiltController != null) {
+            navigationTiltController.unregister();
+            navigationTiltController = null;
         }
     }
 

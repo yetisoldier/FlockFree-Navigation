@@ -117,6 +117,18 @@
 		android:summaryOn="@string/shared_string_enabled"
 		android:title="@string/flockfree_force_night_map" />
 
+	<net.osmand.plus.settings.preferences.SwitchPreferenceEx
+		android:key="navigation_tilt_enabled"
+		android:layout="@layout/preference_with_descr_dialog_and_switch"
+		android:summaryOff="@string/shared_string_disabled"
+		android:summaryOn="@string/shared_string_enabled"
+		android:title="@string/flockfree_navigation_tilt_enabled" />
+
+	<net.osmand.plus.settings.preferences.EditTextPreferenceEx
+		android:key="navigation_tilt_angle"
+		android:layout="@layout/preference_with_descr"
+		android:title="@string/flockfree_navigation_tilt_angle" />
+
 	<Preference
 		android:key="flockfree_camera_data_status"
 		android:layout="@layout/preference_with_descr"

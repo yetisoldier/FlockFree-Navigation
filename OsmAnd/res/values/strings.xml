@@ -62,6 +62,11 @@
 	<string name="flockfree_force_night_map_desc">Force the map to use dark/night rendering regardless of the day/night mode setting. Useful for testing or for drivers who prefer a dark map at all times.</string>
 	<string name="flockfree_force_night_map_title">Force Night Map</string>
 	<string name="flockfree_force_night_map_summary">Override day/night calculation and always render the map in night mode</string>
+	<string name="flockfree_navigation_tilt_enabled">3D Map Tilt During Navigation</string>
+	<string name="flockfree_navigation_tilt_enabled_desc">Automatically tilt the map to a 3D perspective during active turn-by-turn navigation, similar to Google Maps. The map returns to flat when navigation ends.</string>
+	<string name="flockfree_navigation_tilt_angle">Navigation Tilt Angle</string>
+	<string name="flockfree_navigation_tilt_angle_desc">Map tilt angle (in degrees) during active navigation. Lower values show more of the road ahead. Range: 30–80°.</string>
+	<string name="flockfree_navigation_tilt_angle_summary">%1$.0f°</string>
 	<string name="flockfree_speed_limit_widget">Speed Limit</string>
 	<string name="flockfree_speed_limit_widget_desc">Displays the current road speed limit sign during navigation</string>
 	<string name="flockfree_incident_unknown">Unknown incident</string>
@@ -284,6 +289,12 @@
 	<string name="flockfree_nav_bar_moderate_traffic">Moderate traffic</string>
 	<string name="flockfree_nav_bar_heavy_traffic">Heavy traffic</string>
 	<string name="flockfree_nav_bar_no_traffic_data">No traffic data</string>
+
+	<!-- FlockFree navigation report button -->
+	<string name="flockfree_report_sheet_title">Report</string>
+	<string name="flockfree_report_camera">Report Camera</string>
+	<string name="flockfree_report_hazard">Report Hazard</string>
+	<string name="flockfree_report_traffic">Report Traffic</string>
 
 	<string name="show_discount_bottom_sheet">Show Discount bottom sheet</string>
 	<string name="show_discount_bottom_sheet_description">Display the discount bottom sheet with a custom development response.</string>

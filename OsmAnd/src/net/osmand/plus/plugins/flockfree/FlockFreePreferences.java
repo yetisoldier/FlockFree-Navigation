@@ -33,6 +33,8 @@ public final class FlockFreePreferences {
     public static final String INCIDENTS_ALERTS_ENABLED = "incidents_alerts_enabled";
     public static final String ROUTE_COLOR_MIGRATION_DONE = "route_color_migration_done";
     public static final String FORCE_NIGHT_MAP = "force_night_map";
+    public static final String NAVIGATION_TILT_ENABLED = "navigation_tilt_enabled";
+    public static final String NAVIGATION_TILT_ANGLE = "navigation_tilt_angle";
 
     // Default values
     public static final boolean DEFAULT_CAMERA_SHOW_LAYER = true;
@@ -51,6 +53,10 @@ public final class FlockFreePreferences {
     public static final boolean DEFAULT_VISUAL_DEFAULTS_MIGRATION_DONE = false;
     public static final boolean DEFAULT_ROUTE_COLOR_MIGRATION_DONE = false;
     public static final boolean DEFAULT_FORCE_NIGHT_MAP = false;
+    public static final boolean DEFAULT_NAVIGATION_TILT_ENABLED = true;
+    public static final float DEFAULT_NAVIGATION_TILT_ANGLE = 55f;
+    public static final float MIN_NAVIGATION_TILT_ANGLE = 30f;
+    public static final float MAX_NAVIGATION_TILT_ANGLE = 80f;
     public static final String DEFAULT_STATUS_SUMMARY = "";
 
     // Bounds

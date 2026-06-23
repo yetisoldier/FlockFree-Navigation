@@ -15,6 +15,7 @@ import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.plugins.flockfree.cyd.CydBleService;
 import net.osmand.plus.plugins.flockfree.cyd.CydDetectionCandidate;
 import net.osmand.plus.plugins.flockfree.cyd.CydHardwareManager;
+import net.osmand.plus.plugins.flockfree.widgets.NavigationTiltController;
 import net.osmand.plus.plugins.flockfree.wifi.WifiScannerManager;
 import net.osmand.plus.settings.fragments.BaseSettingsFragment;
 import net.osmand.plus.settings.preferences.EditTextPreferenceEx;
@@ -48,6 +49,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 	private static final String WIFI_SCAN_CLEAR_KEY = "flockfree_wifi_scan_clear";
 	private static final Integer[] AVOIDANCE_RADIUS_VALUES = {50, 75, 100, 150, 200, 300, 500};
 	private static final Integer[] ALERT_DISTANCE_VALUES = {100, 200, 300, 500, 750, 1000};
+	private static final Float[] TILT_ANGLE_VALUES = {30f, 35f, 40f, 45f, 50f, 55f, 60f, 65f, 70f, 75f, 80f};
 
 	private final FlockFreePlugin plugin = PluginsHelper.requirePlugin(FlockFreePlugin.class);
 	private final Handler statusRefreshHandler = new Handler(Looper.getMainLooper());
@@ -94,6 +96,8 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 				R.string.flockfree_cyd_ble_description);
 		setupSwitchPreference(plugin.WIFI_SCAN_ENABLED.getId(),
 				R.string.flockfree_wifi_scan_description);
+		setupNavigationTiltEnabledPreference();
+		setupNavigationTiltAnglePreference();
 		setupWifiScanStatusPreference();
 		setupCydStatusPreference();
 	}
@@ -224,6 +228,22 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		return entries;
 	}
 
+	private void setupNavigationTiltEnabledPreference() {
+		SwitchPreferenceEx preference = findPreference(plugin.NAVIGATION_TILT_ENABLED.getId());
+		if (preference != null) {
+			preference.setDescription(R.string.flockfree_navigation_tilt_enabled_desc);
+		}
+	}
+
+	private void setupNavigationTiltAnglePreference() {
+		EditTextPreferenceEx preference = findPreference(plugin.NAVIGATION_TILT_ANGLE.getId());
+		if (preference != null) {
+			preference.setDescription(R.string.flockfree_navigation_tilt_angle_desc);
+			float angle = plugin.NAVIGATION_TILT_ANGLE.get();
+			preference.setSummary(getString(R.string.flockfree_navigation_tilt_angle_summary, angle));
+		}
+	}
+
 	@Override
 	public boolean onPreferenceChange(Preference preference, Object newValue) {
 		if (plugin.CYD_BLE_ENABLED.getId().equals(preference.getKey())) {
@@ -290,6 +310,29 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 			}
 			return accepted;
 		}
+		if (plugin.NAVIGATION_TILT_ANGLE.getId().equals(preference.getKey())) {
+			float angle;
+			try {
+				angle = Float.parseFloat(newValue != null ? newValue.toString().trim() : "55");
+			} catch (NumberFormatException e) {
+				angle = 55f;
+			}
+			angle = Math.max(FlockFreePlugin.NAVIGATION_TILT_MIN,
+					Math.min(angle, FlockFreePlugin.NAVIGATION_TILT_MAX));
+			boolean accepted = super.onPreferenceChange(preference, angle);
+			if (accepted) {
+				setupNavigationTiltAnglePreference();
+				notifyTiltAngleChanged();
+			}
+			return accepted;
+		}
+		if (plugin.NAVIGATION_TILT_ENABLED.getId().equals(preference.getKey())) {
+			boolean accepted = super.onPreferenceChange(preference, newValue);
+			if (accepted) {
+				notifyTiltEnabledChanged(Boolean.TRUE.equals(newValue));
+			}
+			return accepted;
+		}
 		boolean accepted = super.onPreferenceChange(preference, newValue);
 		if (!accepted) {
 			return false;
@@ -303,6 +346,24 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 			}
 		}
 		return true;
+	}
+
+	private void notifyTiltAngleChanged() {
+		NavigationTiltController controller = plugin.getNavigationTiltController();
+		if (controller != null) {
+			controller.onTiltAnglePreferenceChanged();
+		}
+	}
+
+	private void notifyTiltEnabledChanged(boolean enabled) {
+		NavigationTiltController controller = plugin.getNavigationTiltController();
+		if (controller != null) {
+			if (enabled) {
+				controller.applyTilt();
+			} else {
+				controller.restoreFlat();
+			}
+		}
 	}
 
 	private boolean ensureWifiScanLocationReady(@NonNull MapActivity mapActivity) {
@@ -410,6 +471,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		setupAlertLastCheckPreference();
 		setupReportLastDraftPreference();
 		setupCydStatusPreference();
+		setupNavigationTiltAnglePreference();
 		setupWifiScanStatusPreference();
 	}
 
