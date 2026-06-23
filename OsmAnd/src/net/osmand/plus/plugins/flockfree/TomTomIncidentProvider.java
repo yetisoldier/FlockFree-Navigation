@@ -77,13 +77,36 @@ public class TomTomIncidentProvider {
     }
 
     /**
-     * Synchronously fetches traffic incidents for the given bounding box.
-     * Results are cached for CACHE_TTL_MS. Returns an empty list on error.
+     * Returns cached traffic incidents for the given bounding box.
+     * This method NEVER performs network I/O and is safe to call from the main thread.
+     * Use {@link #prefetchIncidentsAsync} to populate the cache from a background thread.
+     * Returns an empty list if the cache is cold or stale.
      */
     @NonNull
     public List<TrafficIncident> fetchIncidents(double minLat, double minLon,
                                                   double maxLat, double maxLon,
                                                   @NonNull String apiKey) {
+        if (Algorithms.isEmpty(apiKey)) {
+            return Collections.emptyList();
+        }
+        String cacheKey = formatBboxKey(minLat, minLon, maxLat, maxLon);
+        long now = System.currentTimeMillis();
+        CachedIncidents cached = incidentCache.get(cacheKey);
+        if (cached != null && now - cached.createdAtMs <= CACHE_TTL_MS) {
+            return cached.incidents;
+        }
+        // Cache cold or stale — return empty; prefetchIncidentsAsync will populate it
+        return Collections.emptyList();
+    }
+
+    /**
+     * Synchronously fetches incidents from the network. Must be called from a background thread.
+     * Results are cached for CACHE_TTL_MS. Returns an empty list on error.
+     */
+    @NonNull
+    public List<TrafficIncident> fetchIncidentsBlocking(double minLat, double minLon,
+                                                         double maxLat, double maxLon,
+                                                         @NonNull String apiKey) {
         if (Algorithms.isEmpty(apiKey)) {
             return Collections.emptyList();
         }
@@ -108,7 +131,7 @@ public class TomTomIncidentProvider {
                                         @Nullable Runnable onComplete) {
         fetchExecutor.execute(() -> {
             try {
-                fetchIncidents(minLat, minLon, maxLat, maxLon, apiKey);
+                fetchIncidentsBlocking(minLat, minLon, maxLat, maxLon, apiKey);
             } catch (Exception e) {
                 LOG.warn("Async incident prefetch failed", e);
             }
