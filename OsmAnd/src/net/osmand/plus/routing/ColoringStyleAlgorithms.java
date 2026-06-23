@@ -91,7 +91,7 @@ public class ColoringStyleAlgorithms {
 	                                                boolean useForRoute) {
 		ColoringType coloringType = coloringStyle.getType();
 		if (coloringType.isRouteInfoAttribute() && useForRoute) {
-			// FlockFree traffic attribute is free — no subscription required
+			// FlockFree traffic is computed by this plugin when a traffic provider is configured.
 			if (TrafficRoutingHelper.TRAFFIC_ROUTE_INFO_ATTRIBUTE.equals(coloringStyle.getRouteInfoAttribute())) {
 				return true;
 			}

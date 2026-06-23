@@ -2,6 +2,22 @@
 
 All notable changes to FlockFree Navigation are documented here.
 
+## [v1.4.0] — 2026-06-22
+
+### Added
+- Google Maps-inspired map and navigation UI pass with lighter map colors, reduced POI clutter, subtler road casing, circular map controls, search bar, layer button, compact ETA/speed treatment, and a simplified blue location puck
+- Android Auto availability for the FlockFree package through OsmAnd's navigation car app service
+- Optional TomTom traffic setup documentation for users who want to provide their own API key
+- Local map/navigation capabilities including 3D relief/maps, advanced widgets, vehicle metrics/OBD widgets, route and terrain coloring, gradient palette editing, and richer track organization options
+
+### Changed
+- Route and navigation visuals now use a cleaner Google Maps-style palette, including traffic-aware route coloring when a TomTom key is configured
+- Weather forecast layers remain off by default because they rely on OsmAnd-managed forecast tile downloads rather than a user-provided provider key
+
+### Fixed
+- Hardened FlockFree puck assets as vectors so the map layer renderer can load them consistently
+- Guarded heading-icon drawing to avoid a stale resource/null bitmap crash
+
 ## [v1.3.0] — 2026-06-22
 
 ### Added

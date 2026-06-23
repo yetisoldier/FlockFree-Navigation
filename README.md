@@ -1,6 +1,6 @@
 # FlockFree Navigation
 
-FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR camera awareness, optional CYD companion hardware integration, and community reporting.
+FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR camera awareness, optional CYD companion hardware integration, traffic-aware routing with user-provided TomTom keys, Android Auto support, and community reporting.
 
 ![FlockFree Splash](docs/screenshots/ff-splash-branding.png)
 
@@ -29,6 +29,18 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 - **Iterative relaxation avoidance** — Identifies camera-adjacent roads, blocks them, and recalculates. If full avoidance fails, progressively unblocks the least-camera-impactful roads (up to 4 iterations) until a viable route is found.
 - **Partial avoidance reporting** — When full avoidance isn't possible, reports how many camera roads were blocked and how many cameras remain on the route.
 - **Status persistence** — Route check results persist across app restarts
+
+### Traffic-Aware Routing (Optional)
+- **Bring your own TomTom key** — FlockFree does not ship with a shared traffic key. Create an account at the [TomTom Developer Portal](https://developer.tomtom.com/), follow TomTom's [API key guide](https://developer.tomtom.com/platform/documentation/my-tomtom/how-to-get-a-tomtom-api-key), and review current usage limits on the [TomTom pricing page](https://developer.tomtom.com/pricing).
+- **Device-local key storage** — The TomTom API key is stored only on your device. Leave it blank to disable traffic routing.
+- **Soft traffic cost** — Live traffic can influence route weighting while camera avoidance remains the higher priority.
+- **Traffic route colors and widget** — Optional route-line coloring and the Traffic widget show live-data coverage, stale/no-data status, and refresh state.
+
+### Map and Navigation Experience
+- **Google Maps-inspired map styling** — Lighter land/water/park colors, reduced POI clutter, subtler road casing, and cleaner route colors.
+- **Modern navigation HUD** — Search bar, layer button, circular map controls, compact ETA/speed presentation, and a simplified blue location puck.
+- **Android Auto navigation** — FlockFree registers OsmAnd's Android Auto navigation service for the FlockFree package. Sideloaded builds may require Android Auto developer settings and Unknown sources before appearing on a head unit.
+- **Local map tools** — Includes local 3D relief/maps, route and terrain coloring, gradient palette editing, advanced widgets, vehicle metrics/OBD widgets, and richer track organization options.
 
 ### Reporting
 - **OSM POI editor integration** — Opens OsmAnd's native editor with ALPR/surveillance tags prefilled
@@ -126,6 +138,7 @@ This builds, signs, installs over Wi-Fi ADB, launches FlockFree, and runs a read
 2. **Grant permissions** — Allow location when prompted. Bluetooth is only needed if you use the optional CYD companion hardware. Nearby location is needed for WiFi Flock scanning.
 3. **Download offline maps** (optional but recommended) — Go to Menu → Maps & Resources → Download maps → choose your region. Route avoidance requires offline vector maps.
 4. **Camera data loads automatically** — The bundled seed (104,902 cameras) is available immediately. A network refresh updates from `data.dontgetflocked.com` weekly.
+5. **Optional traffic setup** — Create your own TomTom API key, then open Menu → FlockFree → **TomTom API key**. Leave the key blank if you do not want live traffic routing.
 
 ![Navigation Drawer](docs/screenshots/ff-drawer.png)
 
@@ -157,6 +170,17 @@ adb shell am broadcast -a net.osmand.flockfree.TEST_ALERT
 
 Note: Route avoidance works with offline vector maps only.
 
+### Optional Live Traffic
+
+1. Create a TomTom developer account at the [TomTom Developer Portal](https://developer.tomtom.com/)
+2. Follow TomTom's [API key guide](https://developer.tomtom.com/platform/documentation/my-tomtom/how-to-get-a-tomtom-api-key) and copy your key from MyTomTom
+3. Review TomTom's [current pricing and usage limits](https://developer.tomtom.com/pricing)
+4. In FlockFree, open Menu → FlockFree → **TomTom API key** and paste your key
+5. Enable **Live traffic routing (experimental)**
+6. Optional: add the **Traffic** widget to monitor traffic refresh and route color coverage
+
+FlockFree uses TomTom Traffic Flow Segment Data only when a key is configured. The key is not bundled, shared, or sent anywhere except TomTom's traffic API.
+
 ![Plugins List](docs/screenshots/ff-plugins.png)
 
 ### Reporting a New Camera
@@ -179,6 +203,9 @@ Nothing uploads automatically. You always review and confirm before submitting.
 | Nearest camera at map center | Find the closest camera within 1km |
 | Avoid cameras on routes | Enable experimental route avoidance |
 | Route corridor radius | Distance from route to check for cameras |
+| Live traffic routing (experimental) | Use TomTom traffic as a soft route cost when a key is configured |
+| TomTom API key | Device-local traffic API key; blank disables TomTom traffic routing |
+| Last traffic routing check | Shows the last traffic-routing result or skip reason |
 | Nearby camera alerts | Enable proximity toast + vibration alerts |
 | Alert distance | Radius for proximity alerts |
 | WiFi Flock scan | Enable WiFi beacon scanning for Flock Safety cameras |
@@ -188,6 +215,7 @@ Nothing uploads automatically. You always review and confirm before submitting.
 | Simulate CYD detection | Create a test detection marker |
 | Request CYD status | Query CYD for telemetry |
 | Camera proximity widget | Add to map screen for at-a-glance camera awareness |
+| Traffic widget | Add to map screen for live traffic refresh and route color status |
 | Quick actions | Toggle cameras, avoidance, alerts, or add a camera from the quick action menu |
 
 ## Verification Scripts
@@ -218,6 +246,9 @@ For developers and field testers:
 - Optional CYD detection to camera submission is a manual review flow (no auto-upload)
 - Reporting flow opens the editor but does not verify end-to-end OSM upload
 - No live RF drive test completed yet (WiFi detection and bench simulation verified only)
+- Live traffic routing requires a user-provided TomTom API key and is subject to TomTom's account terms, quotas, and pricing
+- Weather forecast layers are not enabled by FlockFree by default because they rely on OsmAnd-managed forecast tile downloads rather than a user-provided provider key
+- Android Auto for sideloaded builds may require Android Auto developer settings and Unknown sources on the phone before FlockFree appears on the car screen
 
 ## Credits
 
