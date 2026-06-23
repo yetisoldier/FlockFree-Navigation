@@ -34,6 +34,7 @@ public class Version {
 	public static final String FULL_VERSION_NAME = "net.osmand.plus";
 	private static final String FREE_VERSION_NAME = "net.osmand";
 	private static final String FREE_DEV_VERSION_NAME = "net.osmand.dev";
+	private static final String FLOCKFREE_VERSION_NAME_PREFIX = "com.yetiwurks.flockfree";
 	private static final String UTM_REF = "&referrer=utm_source%3Dosmand";
 
 	private final String appName;
@@ -156,6 +157,10 @@ public class Version {
 
 	public static boolean isFullVersion(@NonNull OsmandApplication app) {
 		return app.getPackageName().equals(FULL_VERSION_NAME);
+	}
+
+	public static boolean isFlockFreeVersion(@NonNull OsmandApplication app) {
+		return app.getPackageName().startsWith(FLOCKFREE_VERSION_NAME_PREFIX);
 	}
 
 	public static boolean isPaidVersion(@NonNull OsmandApplication app) {

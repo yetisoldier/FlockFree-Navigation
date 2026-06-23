@@ -166,6 +166,9 @@ public class InAppPurchaseUtils {
 	}
 
 	public static boolean isAndroidAutoAvailable(@NonNull OsmandApplication app) {
+		if (Version.isFlockFreeVersion(app)) {
+			return true;
+		}
 		long time = System.currentTimeMillis();
 		long installTime = Math.max(Version.getUpdateTime(app), Version.getInstallTime(app));
 		if (time >= installTime + ANDROID_AUTO_START_DATE_MS) {
