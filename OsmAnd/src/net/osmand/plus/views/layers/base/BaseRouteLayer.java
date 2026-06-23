@@ -31,6 +31,7 @@ import net.osmand.shared.palette.domain.PaletteConstants;
 import net.osmand.shared.routing.ColoringType;
 import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
+import net.osmand.plus.plugins.flockfree.FlockFreeRouteColors;
 import net.osmand.plus.plugins.flockfree.TrafficRoutingHelper;
 import net.osmand.util.Algorithms;
 
@@ -127,6 +128,12 @@ public abstract class BaseRouteLayer extends OsmandMapLayer {
 	}
 
 	private void updateCustomColor(boolean night) {
+		// Lazy FlockFree route-colour migration: set purple defaults on first render
+		FlockFreePlugin flockFreePlugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
+		if (flockFreePlugin != null && previewRouteLineInfo == null) {
+			FlockFreeRouteColors.apply(view.getApplication());
+		}
+
 		int customColor;
 		if (previewRouteLineInfo != null) {
 			customColor = previewRouteLineInfo.getCustomColor(night);

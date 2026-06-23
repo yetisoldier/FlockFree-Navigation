@@ -263,6 +263,14 @@
 	<color name="google_maps_blue">#4285F4</color>
 	<color name="google_maps_blue_night">#5C8DFF</color>
 	<color name="google_maps_navigation_teal">#00796B</color>
+	<color name="google_maps_nav_purple">#9C4DCC</color>
+	<color name="google_maps_nav_purple_outline">#6A1B9A</color>
+	<color name="google_maps_nav_purple_night">#B39DDB</color>
+	<color name="google_maps_navigation_teal_night">#004D40</color>
+	<color name="navigation_card_text_primary">#FFFFFF</color>
+	<color name="navigation_card_text_secondary">#B2DFDB</color>
+	<color name="navigation_card_text_primary_night">#FFFFFF</color>
+	<color name="navigation_card_text_secondary_night">#80CBC4</color>
 	<color name="google_maps_text_primary">#202124</color>
 	<color name="google_maps_text_secondary">#5F6368</color>
 	<color name="map_window_outer_color">#99000000</color>

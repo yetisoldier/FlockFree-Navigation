@@ -422,29 +422,29 @@ public class NextTurnBaseWidget extends TextInfoWidget implements IComplexWidget
 
 		nightMode = textState.night;
 		int primaryTextColor = ContextCompat.getColor(app, isNightMode()
-				? R.color.text_color_primary_dark
-				: R.color.google_maps_text_primary);
+				? R.color.navigation_card_text_primary_night
+				: R.color.navigation_card_text_primary);
 		exitView.setTextColor(primaryTextColor);
 
 		int streetNameColor = ColorUtilities.getColor(app, nightMode
-				? R.color.text_color_tertiary_light
-				: R.color.google_maps_text_primary);
+				? R.color.navigation_card_text_secondary_night
+				: R.color.navigation_card_text_secondary);
 		streetView.setTextColor(streetNameColor);
 
 		distanceView.setTextColor(ContextCompat.getColor(app, isNightMode()
-				? R.color.google_maps_blue_night
-				: R.color.google_maps_blue));
+				? R.color.navigation_card_text_primary_night
+				: R.color.navigation_card_text_primary));
 		distanceSubView.setTextColor(isNightMode()
-				? ColorUtilities.getSecondaryTextColor(mapActivity, true)
-				: ContextCompat.getColor(app, R.color.google_maps_text_secondary));
+				? ContextCompat.getColor(app, R.color.navigation_card_text_secondary_night)
+				: ContextCompat.getColor(app, R.color.navigation_card_text_secondary));
 
 		distanceView.setTypeface(Typeface.DEFAULT, typefaceStyle);
 		distanceSubView.setTypeface(Typeface.DEFAULT, typefaceStyle);
 
 		turnDrawable.updateColors(isNightMode());
 		bg.setBackgroundResource(isNightMode()
-				? textState.widgetBackgroundId
-				: R.drawable.bg_white_rounded_card);
+				? R.drawable.bg_flockfree_navigation_card_night
+				: R.drawable.bg_flockfree_navigation_card);
 
 		updateTextOutline(distanceView, textState);
 		updateTextOutline(distanceSubView, textState);
