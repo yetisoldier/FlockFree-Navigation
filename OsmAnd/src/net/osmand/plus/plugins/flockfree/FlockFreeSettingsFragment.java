@@ -69,6 +69,8 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 	protected void setupPreferences() {
 		setupSwitchPreference(plugin.CAMERA_SHOW_LAYER.getId(),
 				R.string.flockfree_show_cameras_on_map_description);
+		setupSwitchPreference(plugin.INCIDENTS_SHOW_LAYER.getId(),
+				R.string.flockfree_incidents_show_layer_description);
 		setupCameraDataStatusPreference();
 		setupNearestCameraLastCheckPreference();
 		setupSwitchPreference(plugin.CAMERA_AVOIDANCE_ENABLED.getId(),
@@ -78,6 +80,8 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		setupRouteLastCheckPreference();
 		setupSwitchPreference(plugin.TRAFFIC_ROUTING_ENABLED.getId(),
 				R.string.flockfree_traffic_routing_enabled_description);
+		setupSwitchPreference(plugin.INCIDENTS_ALERTS_ENABLED.getId(),
+				R.string.flockfree_incidents_alerts_enabled_description);
 		setupTomTomApiKeyPreference();
 		setupTrafficRouteLastCheckPreference();
 		setupSwitchPreference(plugin.CAMERA_ALERTS_ENABLED.getId(),
@@ -290,7 +294,8 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		if (!accepted) {
 			return false;
 		}
-		if (plugin.CAMERA_SHOW_LAYER.getId().equals(preference.getKey())) {
+		if (plugin.CAMERA_SHOW_LAYER.getId().equals(preference.getKey())
+				|| plugin.INCIDENTS_SHOW_LAYER.getId().equals(preference.getKey())) {
 			MapActivity mapActivity = getMapActivity();
 			if (mapActivity != null) {
 				plugin.updateLayers(mapActivity, mapActivity);

@@ -69,6 +69,13 @@
 		android:summaryOn="@string/shared_string_enabled"
 		android:title="@string/flockfree_traffic_routing_enabled" />
 
+	<net.osmand.plus.settings.preferences.SwitchPreferenceEx
+		android:key="incidents_alerts_enabled"
+		android:layout="@layout/preference_with_descr_dialog_and_switch"
+		android:summaryOff="@string/shared_string_disabled"
+		android:summaryOn="@string/shared_string_enabled"
+		android:title="@string/flockfree_incidents_alerts_enabled" />
+
 	<net.osmand.plus.settings.preferences.EditTextPreferenceEx
 		android:key="tomtom_api_key"
 		android:layout="@layout/preference_with_descr"
@@ -95,6 +102,13 @@
 		android:summaryOff="@string/shared_string_disabled"
 		android:summaryOn="@string/shared_string_enabled"
 		android:title="@string/flockfree_show_cameras_on_map" />
+
+	<net.osmand.plus.settings.preferences.SwitchPreferenceEx
+		android:key="incidents_show_layer"
+		android:layout="@layout/preference_with_descr_dialog_and_switch"
+		android:summaryOff="@string/shared_string_disabled"
+		android:summaryOn="@string/shared_string_enabled"
+		android:title="@string/flockfree_incidents_show_layer" />
 
 	<Preference
 		android:key="flockfree_camera_data_status"

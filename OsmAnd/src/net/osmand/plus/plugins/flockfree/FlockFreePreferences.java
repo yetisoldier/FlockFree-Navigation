@@ -28,9 +28,13 @@ public final class FlockFreePreferences {
     public static final String CAMERA_REPORT_LAST_DRAFT_SUMMARY = "camera_report_last_draft_summary";
     public static final String CAMERA_NEAREST_LAST_CHECK_SUMMARY = "camera_nearest_last_check_summary";
     public static final String RENDERER_MIGRATION_DONE = "renderer_migration_done";
+    public static final String INCIDENTS_SHOW_LAYER = "incidents_show_layer";
+    public static final String INCIDENTS_ALERTS_ENABLED = "incidents_alerts_enabled";
 
     // Default values
     public static final boolean DEFAULT_CAMERA_SHOW_LAYER = true;
+    public static final boolean DEFAULT_INCIDENTS_SHOW_LAYER = true;
+    public static final boolean DEFAULT_INCIDENTS_ALERTS_ENABLED = true;
     public static final boolean DEFAULT_CAMERA_AVOIDANCE_ENABLED = false;
     public static final boolean DEFAULT_CAMERA_ALERTS_ENABLED = true;
     public static final boolean DEFAULT_TRAFFIC_ROUTING_ENABLED = false;

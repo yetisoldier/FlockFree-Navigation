@@ -74,6 +74,7 @@ public final class FlockFreeNavigationAssistant {
 		String[] labels = new String[] {
 				app.getString(R.string.flockfree_layer_traffic),
 				app.getString(R.string.flockfree_layer_cameras),
+				app.getString(R.string.flockfree_layer_incidents),
 				app.getString(R.string.flockfree_layer_3d_buildings),
 				app.getString(R.string.flockfree_layer_terrain),
 				app.getString(R.string.flockfree_layer_poi_icons),
@@ -82,6 +83,7 @@ public final class FlockFreeNavigationAssistant {
 		boolean[] checked = new boolean[] {
 				plugin != null && plugin.TRAFFIC_ROUTING_ENABLED.get(),
 				plugin != null && plugin.CAMERA_SHOW_LAYER.get(),
+				plugin != null && plugin.INCIDENTS_SHOW_LAYER.get(),
 				srtmPlugin != null && srtmPlugin.ENABLE_3D_MAP_OBJECTS.get(),
 				srtmPlugin != null && srtmPlugin.TERRAIN.get(),
 				!settings.getCustomRenderBooleanProperty("hideIcons").get(),
@@ -125,21 +127,27 @@ public final class FlockFreeNavigationAssistant {
 				}
 				break;
 			case 2:
-				if (srtmPlugin != null) {
-					srtmPlugin.ENABLE_3D_MAP_OBJECTS.set(isChecked);
+				if (plugin != null) {
+					plugin.INCIDENTS_SHOW_LAYER.set(isChecked);
 					return true;
 				}
 				break;
 			case 3:
 				if (srtmPlugin != null) {
-					srtmPlugin.setTerrainLayerEnabled(isChecked);
+					srtmPlugin.ENABLE_3D_MAP_OBJECTS.set(isChecked);
 					return true;
 				}
 				break;
 			case 4:
+				if (srtmPlugin != null) {
+					srtmPlugin.setTerrainLayerEnabled(isChecked);
+					return true;
+				}
+				break;
+			case 5:
 				app.getSettings().getCustomRenderBooleanProperty("hideIcons").set(!isChecked);
 				return true;
-			case 5:
+			case 6:
 				app.getSettings().getCustomRenderBooleanProperty("hidePOILabels").set(!isChecked);
 				return true;
 			default:

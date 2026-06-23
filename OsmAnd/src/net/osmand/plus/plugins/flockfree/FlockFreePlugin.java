@@ -43,6 +43,7 @@ import net.osmand.util.MapUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class FlockFreePlugin extends OsmandPlugin {
 
@@ -55,6 +56,8 @@ public class FlockFreePlugin extends OsmandPlugin {
     public final CommonPreference<Boolean> CAMERA_ALERTS_ENABLED;
     public final CommonPreference<Integer> CAMERA_ALERT_DISTANCE;
     public final CommonPreference<Boolean> TRAFFIC_ROUTING_ENABLED;
+    public final OsmandPreference<Boolean> INCIDENTS_SHOW_LAYER;
+    public final OsmandPreference<Boolean> INCIDENTS_ALERTS_ENABLED;
     public final CommonPreference<String> TOMTOM_API_KEY;
     public final CommonPreference<Long> CAMERA_DATA_LAST_UPDATE;
     public final CommonPreference<Boolean> CYD_BLE_ENABLED;
@@ -77,6 +80,8 @@ public class FlockFreePlugin extends OsmandPlugin {
     private static final int MAP_CENTER_CAMERA_SEARCH_RADIUS_METERS = 5_000;
 
     private FlockFreeLayer cameraLayer;
+    private FlockFreeIncidentLayer incidentLayer;
+    private TomTomIncidentProvider incidentProvider;
     private CameraData cameraData;
     private CameraAvoidanceHelper avoidanceHelper;
     private TrafficRoutingHelper trafficRoutingHelper;
@@ -86,6 +91,9 @@ public class FlockFreePlugin extends OsmandPlugin {
     private long lastCameraAlertTimeMs;
     private String lastCameraAlertKey;
     private BroadcastReceiver debugAlertReceiver;
+    private final Map<String, Long> alertedIncidentIds = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long INCIDENT_ALERT_COOLDOWN_MS = 60_000L;
+    private static final double INCIDENT_ALERT_RADIUS_METERS = 2000.0;
     public FlockFreePlugin(OsmandApplication app) {
         super(app);
 
@@ -107,6 +115,12 @@ public class FlockFreePlugin extends OsmandPlugin {
         TRAFFIC_ROUTING_ENABLED = registerBooleanPreference(
                 FlockFreePreferences.TRAFFIC_ROUTING_ENABLED,
                 FlockFreePreferences.DEFAULT_TRAFFIC_ROUTING_ENABLED).makeProfile().cache();
+        INCIDENTS_SHOW_LAYER = registerBooleanPreference(
+                FlockFreePreferences.INCIDENTS_SHOW_LAYER,
+                FlockFreePreferences.DEFAULT_INCIDENTS_SHOW_LAYER).makeProfile().cache();
+        INCIDENTS_ALERTS_ENABLED = registerBooleanPreference(
+                FlockFreePreferences.INCIDENTS_ALERTS_ENABLED,
+                FlockFreePreferences.DEFAULT_INCIDENTS_ALERTS_ENABLED).makeProfile().cache();
         TOMTOM_API_KEY = registerStringPreference(
                 FlockFreePreferences.TOMTOM_API_KEY,
                 FlockFreePreferences.DEFAULT_TOMTOM_API_KEY).makeGlobal().cache();
@@ -143,6 +157,7 @@ public class FlockFreePlugin extends OsmandPlugin {
 
         migrateDefaultRendererToFlockFree();
         registerDebugAlertReceiver();
+        incidentProvider = new TomTomIncidentProvider();
     }
 
     private void migrateDefaultRendererToFlockFree() {
@@ -410,6 +425,10 @@ public class FlockFreePlugin extends OsmandPlugin {
             app.getOsmandMap().getMapView().removeLayer(cameraLayer);
         }
         cameraLayer = new FlockFreeLayer(context, this);
+        if (incidentLayer != null) {
+            app.getOsmandMap().getMapView().removeLayer(incidentLayer);
+        }
+        incidentLayer = new FlockFreeIncidentLayer(context, this, incidentProvider);
     }
 
     @Override
@@ -427,15 +446,38 @@ public class FlockFreePlugin extends OsmandPlugin {
                     app.getOsmandMap().getMapView().removeLayer(cameraLayer);
                 }
             }
+            boolean showIncidents = INCIDENTS_SHOW_LAYER.get();
+            boolean hasIncidentLayer = incidentLayer != null
+                    && app.getOsmandMap().getMapView().getLayers().contains(incidentLayer);
+            if (showIncidents != hasIncidentLayer) {
+                if (showIncidents && incidentLayer != null) {
+                    app.getOsmandMap().getMapView().addLayer(incidentLayer, 3.5f);
+                } else if (incidentLayer != null) {
+                    app.getOsmandMap().getMapView().removeLayer(incidentLayer);
+                }
+            }
         } else {
             if (cameraLayer != null) {
                 app.getOsmandMap().getMapView().removeLayer(cameraLayer);
+            }
+            if (incidentLayer != null) {
+                app.getOsmandMap().getMapView().removeLayer(incidentLayer);
             }
         }
     }
 
     public FlockFreeLayer getCameraLayer() {
         return cameraLayer;
+    }
+
+    @NonNull
+    public TomTomIncidentProvider getIncidentProvider() {
+        return incidentProvider;
+    }
+
+    @Nullable
+    public FlockFreeIncidentLayer getIncidentLayer() {
+        return incidentLayer;
     }
 
     @Override
@@ -612,6 +654,9 @@ public class FlockFreePlugin extends OsmandPlugin {
         if (wifiScannerManager != null) {
             wifiScannerManager.stop();
         }
+        if (incidentProvider != null) {
+            incidentProvider.clearCache();
+        }
     }
 
     @Override
@@ -623,6 +668,13 @@ public class FlockFreePlugin extends OsmandPlugin {
         Float accuracy = location.hasAccuracy() ? location.getAccuracy() : null;
         boolean moving = location.hasSpeed() && location.getSpeed() >= MOVING_ALERT_SPEED_MPS;
         checkCameraAlertAt(location.getLatitude(), location.getLongitude(), accuracy, true, moving, false);
+        // Check for traffic incidents near current location on route
+        List<Location> routeLocations = null;
+        RouteCalculationResult route = app.getRoutingHelper().getRoute();
+        if (route != null && route.isCalculated()) {
+            routeLocations = route.getImmutableAllLocations();
+        }
+        checkIncidentAlerts(location, routeLocations);
     }
 
     private void checkCameraAlertAt(double latitude, double longitude, @Nullable Float accuracy,
@@ -841,5 +893,134 @@ public class FlockFreePlugin extends OsmandPlugin {
         }
         setLastRouteCheckSummary(routeSummary);
         app.showToastMessage(routeSummary);
+    }
+
+    /**
+     * Checks for traffic incidents near the current location and speaks a TTS alert
+     * if a new incident is found on the route. Uses the same TTS pattern as camera alerts.
+     *
+     * @param currentLocation  Current GPS location
+     * @param routeLocations   Route locations (may be null if no active route)
+     */
+    public void checkIncidentAlerts(@Nullable Location currentLocation,
+                                     @Nullable List<Location> routeLocations) {
+        if (currentLocation == null) {
+            return;
+        }
+        if (!INCIDENTS_ALERTS_ENABLED.get()) {
+            return;
+        }
+        String apiKey = TOMTOM_API_KEY.get();
+        if (Algorithms.isEmpty(apiKey)) {
+            return;
+        }
+        if (!app.getRoutingHelper().isFollowingMode()) {
+            return;
+        }
+        double lat = currentLocation.getLatitude();
+        double lon = currentLocation.getLongitude();
+        double alertRadius = INCIDENT_ALERT_RADIUS_METERS;
+        double minLat = lat - (alertRadius / 111000.0);
+        double maxLat = lat + (alertRadius / 111000.0);
+        double minLon = lon - (alertRadius / (111000.0 * Math.cos(Math.toRadians(lat))));
+        double maxLon = lon + (alertRadius / (111000.0 * Math.cos(Math.toRadians(lat))));
+
+        List<TomTomIncidentProvider.TrafficIncident> incidents =
+                incidentProvider.fetchIncidents(minLat, minLon, maxLat, maxLon, apiKey);
+        if (incidents.isEmpty()) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        for (TomTomIncidentProvider.TrafficIncident incident : incidents) {
+            if (incident.id == null) {
+                continue;
+            }
+            Long lastAlerted = alertedIncidentIds.get(incident.id);
+            if (lastAlerted != null && now - lastAlerted < INCIDENT_ALERT_COOLDOWN_MS) {
+                continue;
+            }
+            double distance = MapUtils.getDistance(lat, lon, incident.lat, incident.lon);
+            if (distance > INCIDENT_ALERT_RADIUS_METERS) {
+                continue;
+            }
+            // Check if incident is on the route (within 500m of any route point)
+            if (routeLocations != null && !routeLocations.isEmpty() && !isIncidentOnRoute(incident, routeLocations)) {
+                continue;
+            }
+            alertedIncidentIds.put(incident.id, now);
+            speakIncidentAlert(incident);
+        }
+        // Clean up old alert IDs to prevent memory growth
+        alertedIncidentIds.entrySet().removeIf(entry -> now - entry.getValue() > 10 * INCIDENT_ALERT_COOLDOWN_MS);
+    }
+
+    private boolean isIncidentOnRoute(@NonNull TomTomIncidentProvider.TrafficIncident incident,
+                                       @NonNull List<Location> routeLocations) {
+        double maxRouteDistance = 500.0; // 500m from route line
+        for (Location routePoint : routeLocations) {
+            double dist = MapUtils.getDistance(incident.lat, incident.lon,
+                    routePoint.getLatitude(), routePoint.getLongitude());
+            if (dist <= maxRouteDistance) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void speakIncidentAlert(@NonNull TomTomIncidentProvider.TrafficIncident incident) {
+        String alertText = getIncidentAlertText(incident);
+        if (alertText == null) {
+            return;
+        }
+        // Show toast
+        app.showToastMessage(alertText);
+        // Speak via TTS using the command player directly
+        try {
+            net.osmand.plus.routing.VoiceRouter voiceRouter = app.getRoutingHelper().getVoiceRouter();
+            if (voiceRouter != null) {
+                net.osmand.plus.voice.CommandPlayer player = voiceRouter.getPlayer();
+                if (player != null) {
+                    net.osmand.plus.voice.CommandBuilder builder = player.newCommandBuilder();
+                    builder.attention(alertText);
+                    player.playCommands(builder);
+                }
+            }
+        } catch (Exception e) {
+            // TTS not available — toast is still shown
+        }
+        vibrateForCameraAlert();
+    }
+
+    @Nullable
+    private String getIncidentAlertText(@NonNull TomTomIncidentProvider.TrafficIncident incident) {
+        String prefix = app.getString(R.string.flockfree_incident_alert_ahead);
+        switch (incident.iconCategory) {
+            case 1:
+                return prefix + " " + app.getString(R.string.flockfree_incident_accident);
+            case 6:
+                return prefix + " " + app.getString(R.string.flockfree_incident_jam);
+            case 8:
+                return prefix + " " + app.getString(R.string.flockfree_incident_road_closed);
+            case 9:
+                return prefix + " " + app.getString(R.string.flockfree_incident_roadworks);
+            case 7:
+                return prefix + " " + app.getString(R.string.flockfree_incident_lane_closed);
+            case 11:
+                return prefix + " " + app.getString(R.string.flockfree_incident_flooding);
+            case 3:
+                return prefix + " " + app.getString(R.string.flockfree_incident_dangerous);
+            case 2:
+                return prefix + " " + app.getString(R.string.flockfree_incident_fog);
+            case 4:
+                return prefix + " " + app.getString(R.string.flockfree_incident_rain);
+            case 5:
+                return prefix + " " + app.getString(R.string.flockfree_incident_ice);
+            case 10:
+                return prefix + " " + app.getString(R.string.flockfree_incident_wind);
+            case 14:
+                return prefix + " " + app.getString(R.string.flockfree_incident_broken_down);
+            default:
+                return null;
+        }
     }
 }
