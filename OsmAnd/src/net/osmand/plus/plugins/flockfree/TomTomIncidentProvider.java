@@ -168,15 +168,17 @@ public class TomTomIncidentProvider {
             connection.setRequestMethod("GET");
             connection.setRequestProperty("Accept", "application/json");
             int responseCode = connection.getResponseCode();
-            if (responseCode < 200 || responseCode >= 300) {
-                LOG.warn("TomTom incident details request failed with HTTP " + responseCode);
-                return Collections.emptyList();
-            }
-            return parseIncidents(readResponse(connection));
-        } catch (IOException | JSONException e) {
-            LOG.warn("TomTom incident details request failed", e);
-            return Collections.emptyList();
-        } finally {
+			if (responseCode < 200 || responseCode >= 300) {
+				LOG.warn("TomTom incident details request failed with HTTP " + responseCode);
+				return Collections.emptyList();
+			}
+			List<TrafficIncident> incidents = parseIncidents(readResponse(connection));
+			LOG.info("TomTom incident details returned " + incidents.size() + " incidents");
+			return incidents;
+		} catch (IOException | JSONException e) {
+			LOG.warn("TomTom incident details request failed", e);
+			return Collections.emptyList();
+		} finally {
             if (connection != null) {
                 connection.disconnect();
             }
