@@ -130,46 +130,40 @@ public class RouteGeometryWay extends
 			return Collections.emptyList();
 		}
 
-		// Map segment colors to location indices, replicating the logic from
-		// MultiColoringGeometryWay.getRouteInfoAttributesColors()
+		// Map segment colors to route-location indices using the same shape as
+		// MultiColoringGeometryWay.getRouteInfoAttributesColors(). The renderer
+		// expects a dense color list with no null or transparent gaps.
 		int firstSegmentLocationIdx = getIdxOfFirstSegmentLocation(locations, routeSegments);
-		int defaultColor = TomTomTrafficProvider.COLOR_NO_DATA;
 		List<Integer> colors = new ArrayList<>(locations.size());
-		// Pre-fill with default color to ensure no null gaps
-		for (int i = 0; i < locations.size(); i++) {
-			colors.add(defaultColor);
-		}
+		int lastColor = TomTomTrafficProvider.COLOR_NO_DATA;
 		for (int i = 0; i < routeSegments.size(); i++) {
-			int color = i < segmentColors.size() ? segmentColors.get(i) : defaultColor;
-			if (color == 0) {
-				color = defaultColor;
-			}
+			int color = normalizeTrafficColor(i < segmentColors.size() ? segmentColors.get(i) : null);
+			lastColor = color;
 
 			if (i == 0) {
-				for (int j = 0; j < firstSegmentLocationIdx && j < colors.size(); j++) {
-					colors.set(j, color);
+				for (int j = 0; j < firstSegmentLocationIdx && colors.size() < locations.size(); j++) {
+					colors.add(color);
 				}
 			}
 
-			int pointsSize = Math.abs(routeSegments.get(i).getStartPointIndex() - routeSegments.get(i).getEndPointIndex());
-			int offset = firstSegmentLocationIdx;
-			for (int j = 0; j < i; j++) {
-				offset += Math.abs(routeSegments.get(j).getStartPointIndex() - routeSegments.get(j).getEndPointIndex());
-			}
-			for (int j = 0; j < pointsSize; j++) {
-				int idx = offset + j;
-				if (idx < colors.size()) {
-					colors.set(idx, color);
-				}
-			}
-
-			if (i == routeSegments.size() - 1) {
-				for (int j = colors.size() - 1; j >= 0 && j < locations.size(); j++) {
-					colors.set(j, color);
-				}
+			RouteSegmentResult segment = routeSegments.get(i);
+			int pointsSize = Math.abs(segment.getStartPointIndex() - segment.getEndPointIndex());
+			for (int j = 0; j < pointsSize && colors.size() < locations.size(); j++) {
+				colors.add(color);
 			}
 		}
+		while (colors.size() < locations.size()) {
+			colors.add(lastColor);
+		}
+		if (colors.size() > locations.size()) {
+			return new ArrayList<>(colors.subList(0, locations.size()));
+		}
 		return colors;
+	}
+
+	@ColorInt
+	private int normalizeTrafficColor(@Nullable Integer color) {
+		return color != null && color != 0 ? color : TomTomTrafficProvider.COLOR_NO_DATA;
 	}
 
 	public boolean updateRoute(@NonNull RotatedTileBox tb, @NonNull RouteCalculationResult route) {

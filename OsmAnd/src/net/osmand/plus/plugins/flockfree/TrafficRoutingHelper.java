@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
 
 /**
  * Owns FlockFree live-traffic routing state.
@@ -146,27 +147,74 @@ public class TrafficRoutingHelper {
 			}
 			return defaults;
 		}
-		List<double[]> midpoints = new ArrayList<>(segments.size());
-		for (RouteSegmentResult segment : segments) {
-			LatLon mid = getSegmentMidpoint(segment);
+		List<Integer> sampleIndexes = getTrafficColorSampleIndexes(segments.size());
+		List<double[]> sampleMidpoints = new ArrayList<>(sampleIndexes.size());
+		for (Integer index : sampleIndexes) {
+			LatLon mid = getSegmentMidpoint(segments.get(index));
 			if (mid != null) {
-				midpoints.add(new double[]{mid.getLatitude(), mid.getLongitude()});
+				sampleMidpoints.add(new double[]{mid.getLatitude(), mid.getLongitude()});
 			} else {
-				midpoints.add(null);
+				sampleMidpoints.add(null);
 			}
 		}
-		Map<String, Integer> colorMap = tomTomTrafficProvider.prefetchTrafficColors(midpoints, tomTomApiKey.trim());
+		Map<String, Integer> colorMap = tomTomTrafficProvider.prefetchTrafficColors(sampleMidpoints, tomTomApiKey.trim());
+		List<Integer> sampleColors = new ArrayList<>(sampleMidpoints.size());
+		for (double[] midpoint : sampleMidpoints) {
+			sampleColors.add(getTrafficColorForMidpoint(colorMap, midpoint));
+		}
+
 		List<Integer> colors = new ArrayList<>(segments.size());
-		for (double[] midpoint : midpoints) {
-			if (midpoint == null || midpoint.length < 2) {
-				colors.add(TomTomTrafficProvider.COLOR_NO_DATA);
-				continue;
-			}
-			String key = String.format(java.util.Locale.US, "%.4f,%.4f", midpoint[0], midpoint[1]);
-			Integer color = colorMap.get(key);
-			colors.add(color != null ? color : TomTomTrafficProvider.COLOR_NO_DATA);
+		for (int i = 0; i < segments.size(); i++) {
+			colors.add(getNearestSampleColor(i, sampleIndexes, sampleColors));
 		}
 		return colors;
+	}
+
+	@NonNull
+	private List<Integer> getTrafficColorSampleIndexes(int segmentCount) {
+		List<Integer> indexes = new ArrayList<>();
+		if (segmentCount <= 0) {
+			return indexes;
+		}
+		int maxSamples = Math.min(segmentCount, 12);
+		if (maxSamples == 1) {
+			indexes.add(0);
+			return indexes;
+		}
+		for (int i = 0; i < maxSamples; i++) {
+			int index = Math.round((segmentCount - 1) * (i / (float) (maxSamples - 1)));
+			if (indexes.isEmpty() || indexes.get(indexes.size() - 1) != index) {
+				indexes.add(index);
+			}
+		}
+		return indexes;
+	}
+
+	private int getTrafficColorForMidpoint(@NonNull Map<String, Integer> colorMap, @Nullable double[] midpoint) {
+		if (midpoint == null || midpoint.length < 2) {
+			return TomTomTrafficProvider.COLOR_NO_DATA;
+		}
+		String key = String.format(Locale.US, "%.4f,%.4f", midpoint[0], midpoint[1]);
+		Integer color = colorMap.get(key);
+		return color != null && color != 0 ? color : TomTomTrafficProvider.COLOR_NO_DATA;
+	}
+
+	private int getNearestSampleColor(int segmentIndex, @NonNull List<Integer> sampleIndexes,
+	                                  @NonNull List<Integer> sampleColors) {
+		if (sampleIndexes.isEmpty() || sampleColors.isEmpty()) {
+			return TomTomTrafficProvider.COLOR_NO_DATA;
+		}
+		int bestColor = TomTomTrafficProvider.COLOR_NO_DATA;
+		int bestDistance = Integer.MAX_VALUE;
+		for (int i = 0; i < sampleIndexes.size() && i < sampleColors.size(); i++) {
+			int distance = Math.abs(segmentIndex - sampleIndexes.get(i));
+			if (distance < bestDistance) {
+				bestDistance = distance;
+				Integer color = sampleColors.get(i);
+				bestColor = color != null && color != 0 ? color : TomTomTrafficProvider.COLOR_NO_DATA;
+			}
+		}
+		return bestColor;
 	}
 
 	/**
