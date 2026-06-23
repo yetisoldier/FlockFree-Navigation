@@ -442,15 +442,10 @@ public class FlockFreePlugin extends OsmandPlugin {
     public void createWidgets(@NonNull MapActivity activity, @NonNull List<MapWidgetInfo> widgetInfos,
                               @NonNull net.osmand.plus.settings.backend.ApplicationMode appMode,
                               @Nullable net.osmand.plus.settings.enums.ScreenLayoutMode layoutMode) {
-        WidgetInfoCreator creator = new WidgetInfoCreator(app, appMode, layoutMode);
-        MapWidget cameraWidget = createMapWidgetForParams(activity, WidgetType.CAMERA_PROXIMITY);
-        if (cameraWidget != null) {
-            widgetInfos.add(creator.createWidgetInfo(cameraWidget));
-        }
-        MapWidget trafficWidget = createMapWidgetForParams(activity, WidgetType.TRAFFIC_STATUS);
-        if (trafficWidget != null) {
-            widgetInfos.add(creator.createWidgetInfo(trafficWidget));
-        }
+        // FlockFree widgets (camera proximity, traffic status) are not registered
+        // as on-map side-panel widgets to avoid overlapping the search bar in
+        // portrait mode. Camera alerts and traffic routing still work via
+        // navigation notifications, audio alerts, and the layers sheet.
     }
 
     @Nullable
