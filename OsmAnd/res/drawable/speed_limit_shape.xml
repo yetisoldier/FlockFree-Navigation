@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
 	<item android:id="@+id/background">
-		<shape android:shape="rectangle">
-			<solid android:color="@color/widget_background_color_light" />
-			<corners android:radius="6dp" />
+		<shape android:shape="oval">
+			<solid android:color="@android:color/white" />
 			<stroke
 				android:width="5dp"
 				android:color="@color/map_widget_red" />

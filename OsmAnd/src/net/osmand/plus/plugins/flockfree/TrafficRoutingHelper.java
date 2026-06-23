@@ -1,5 +1,6 @@
 package net.osmand.plus.plugins.flockfree;
 
+import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -37,6 +38,13 @@ public class TrafficRoutingHelper {
 		SKIPPED_NO_DATA,
 		APPLIED,
 		FALLBACK
+	}
+
+	private enum RouteTrafficSummaryState {
+		NO_DATA,
+		LIGHT,
+		MODERATE,
+		HEAVY
 	}
 
 	public static final String TRAFFIC_ROUTE_INFO_ATTRIBUTE = "routeInfo_traffic";
@@ -258,6 +266,57 @@ public class TrafficRoutingHelper {
 			int coloredCount = lastTrafficFreeFlowCount + lastTrafficSlowCount + lastTrafficCongestedCount;
 			return app.getString(R.string.flockfree_traffic_widget_summary,
 					coloredCount, lastTrafficNoDataCount, lastTrafficColorSampleCount);
+		}
+	}
+
+	@NonNull
+	public String getRouteTrafficSummaryLabel() {
+		switch (getRouteTrafficSummaryState()) {
+			case LIGHT:
+				return app.getString(R.string.flockfree_traffic_condition_light);
+			case MODERATE:
+				return app.getString(R.string.flockfree_traffic_condition_moderate);
+			case HEAVY:
+				return app.getString(R.string.flockfree_traffic_condition_heavy);
+			case NO_DATA:
+			default:
+				return app.getString(R.string.flockfree_traffic_condition_no_data);
+		}
+	}
+
+	@ColorInt
+	public int getRouteTrafficSummaryColor() {
+		switch (getRouteTrafficSummaryState()) {
+			case LIGHT:
+				return TomTomTrafficProvider.COLOR_FREE_FLOW;
+			case MODERATE:
+				return TomTomTrafficProvider.COLOR_SLOW;
+			case HEAVY:
+				return TomTomTrafficProvider.COLOR_CONGESTED;
+			case NO_DATA:
+			default:
+				return TomTomTrafficProvider.COLOR_NO_DATA;
+		}
+	}
+
+	private RouteTrafficSummaryState getRouteTrafficSummaryState() {
+		if (!isTrafficRoutingEnabled() || Algorithms.isEmpty(plugin.TOMTOM_API_KEY.get())) {
+			return RouteTrafficSummaryState.NO_DATA;
+		}
+		synchronized (trafficColorLock) {
+			if (lastTrafficColorRefreshMs == 0) {
+				return RouteTrafficSummaryState.NO_DATA;
+			}
+			if (lastTrafficCongestedCount > 0) {
+				return RouteTrafficSummaryState.HEAVY;
+			}
+			if (lastTrafficSlowCount > 0) {
+				return RouteTrafficSummaryState.MODERATE;
+			}
+			if (lastTrafficFreeFlowCount > 0) {
+				return RouteTrafficSummaryState.LIGHT;
+			}
+			return RouteTrafficSummaryState.NO_DATA;
 		}
 	}
 

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="wrap_content"
+	android:layout_height="wrap_content"
+	android:background="@drawable/bg_flockfree_chip"
+	android:elevation="4dp"
+	android:gravity="center_vertical"
+	android:orientation="horizontal"
+	android:padding="6dp">
+
+	<View
+		android:layout_width="10dp"
+		android:layout_height="10dp"
+		android:background="#FF00A854" />
+
+	<TextView
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="4dp"
+		android:layout_marginEnd="8dp"
+		android:text="@string/flockfree_traffic_condition_light"
+		android:textColor="#5F6368"
+		android:textSize="10sp" />
+
+	<View
+		android:layout_width="10dp"
+		android:layout_height="10dp"
+		android:background="#FFF9AB00" />
+
+	<TextView
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="4dp"
+		android:layout_marginEnd="8dp"
+		android:text="@string/flockfree_traffic_condition_moderate"
+		android:textColor="#5F6368"
+		android:textSize="10sp" />
+
+	<View
+		android:layout_width="10dp"
+		android:layout_height="10dp"
+		android:background="#FFEA4335" />
+
+	<TextView
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="4dp"
+		android:text="@string/flockfree_traffic_condition_heavy"
+		android:textColor="#5F6368"
+		android:textSize="10sp" />
+
+</LinearLayout>

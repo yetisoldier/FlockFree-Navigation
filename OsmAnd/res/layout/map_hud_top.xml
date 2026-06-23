@@ -25,6 +25,16 @@
 		android:layout_marginTop="68dp"
 		android:layout_marginEnd="@dimen/content_padding_small" />
 
+	<include
+		android:id="@+id/flockfree_traffic_legend"
+		layout="@layout/flockfree_traffic_legend"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_gravity="top|end"
+		android:layout_marginTop="120dp"
+		android:layout_marginEnd="@dimen/content_padding_small"
+		android:visibility="gone" />
+
 	<net.osmand.plus.views.controls.VerticalWidgetPanel
 		android:id="@+id/top_widgets_panel"
 		android:layout_width="match_parent"

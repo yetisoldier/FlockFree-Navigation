@@ -814,7 +814,7 @@
 				<apply_if additional="tunnel=yes" attrColorValue="#F2F2F2"/>
 				<apply_if additional="covered=yes" attrColorValue="#F2F2F2"/>
 				<apply_if additional="construction=yes" attrColorValue="#D6CF2A"/>
-				<apply_if nightMode="true" attrColorValue="#37555c">
+				<apply_if nightMode="true" attrColorValue="#3A6068">
 					<apply_if additional="tunnel=yes" attrColorValue="#2E474D"/>
 					<apply_if additional="covered=yes" attrColorValue="#2E474D"/>
 				</apply_if>
@@ -823,7 +823,7 @@
 		</renderingAttribute>
 		<renderingAttribute name="tertiaryRoadRouteDetailsColor">
 			<case attrColorValue="#FED086">
-				<apply_if nightMode="true" attrColorValue="#37555c"/>
+				<apply_if nightMode="true" attrColorValue="#3A6068"/>
 			</case>
 		</renderingAttribute>
 
@@ -1567,7 +1567,7 @@
 
 		<!-- Open nature -->
 		<renderingAttribute name="openNatureColorNight">
-			<case attrColorValue="$woodColor"/>
+			<case attrColorValue="#1B3A2C"/>
 		</renderingAttribute>
 		<renderingConstant name="shaderColorNight" value="#1b3638"/>
 		<renderingConstant name="wetlandColorNight" value="#1b3238"/>
@@ -1629,9 +1629,8 @@
 			<case attrColorValue="#cfeca8"/>
 		</renderingAttribute>
 		<renderingAttribute name="parkColor">
-			<case nightMode="true" attrColorValue="$woodColor"/>
+			<case nightMode="true" attrColorValue="#1B3A2C"/>
 			<case moreDetailed="true" attrColorValue="#CFE8CF"/>
-			<case nightMode="true" attrColorValue="#e000171d"/>
 			<case attrColorValue="#66CFE8CF"/>
 		</renderingAttribute>
 		<renderingAttribute name="parkStrokeColor">
@@ -1822,7 +1821,7 @@
 		</renderingAttribute>
 
 		<renderingAttribute name="waterColor">
-			<case nightMode="true" attrColorValue="#103866"/>
+			<case nightMode="true" attrColorValue="#1B3A4B"/>
 			<case attrColorValue="#A8D1F0"/>
 		</renderingAttribute>
 		<renderingAttribute name="waterStrokeColorNight">
@@ -9087,7 +9086,9 @@
 					<apply color_2="#7479ec" strokeWidth_2="1.3:0"/>
 				</switch>
 				<case minzoom="10" tag="waterway" value="dock" color_2="#aa8387d5" strokeWidth_2="3"/>
-				<apply color="$waterColor" color_0="$waterColor"/>
+				<apply color="$waterColor" color_0="$waterColor">
+					<apply_if nightMode="true" color="#1B3A4B" color_0="#1B3A4B"/>
+				</apply>
 			</switch>
 			<apply_if additional="intermittent=yes" shader="water_intermittent">
 				<apply_if nightMode="true" shader="water_intermittent_night"/>
@@ -9214,7 +9215,9 @@
 			</switch>
 
 			<case minzoom="11" tag="leisure" value="park">
-				<apply color="$parkColor" color_2="$parkStrokeColor" strokeWidth_2=":1"/>
+				<apply color="$parkColor" color_2="$parkStrokeColor" strokeWidth_2=":1">
+					<apply_if nightMode="true" color="#1B3A2C"/>
+				</apply>
 			</case>
 
 			<switch>

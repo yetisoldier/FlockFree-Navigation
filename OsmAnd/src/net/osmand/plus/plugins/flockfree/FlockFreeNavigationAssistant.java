@@ -1,6 +1,10 @@
 package net.osmand.plus.plugins.flockfree;
 
 import android.app.AlertDialog;
+import android.text.SpannableString;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -45,12 +49,16 @@ public final class FlockFreeNavigationAssistant {
 			cameraSummary = formatCameraSummary(app, plugin, route);
 			trafficSummary = plugin.getLastTrafficRouteCheckSummary();
 		}
+		CharSequence trafficPreviewSummary = formatTrafficPreviewSummary(app, plugin, route, trafficSummary);
+		SpannableStringBuilder trafficAwareItem = new SpannableStringBuilder()
+				.append(app.getString(R.string.flockfree_route_preview_traffic_aware))
+				.append("\n")
+				.append(trafficPreviewSummary);
 
 		CharSequence[] items = new CharSequence[] {
 				app.getString(R.string.flockfree_route_preview_fastest) + "\n" + baseSummary,
 				app.getString(R.string.flockfree_route_preview_flock_safe) + "\n" + cameraSummary,
-				app.getString(R.string.flockfree_route_preview_traffic_aware) + "\n"
-						+ app.getString(R.string.flockfree_route_preview_traffic_summary, trafficSummary)
+				trafficAwareItem
 		};
 
 		new AlertDialog.Builder(mapActivity)
@@ -178,6 +186,30 @@ public final class FlockFreeNavigationAssistant {
 		int cameraCount = plugin.getAvoidanceHelper()
 				.findCamerasNearRouteLocations(locations, radius).size();
 		return app.getString(R.string.flockfree_route_preview_camera_summary, cameraCount);
+	}
+
+	@NonNull
+	private static CharSequence formatTrafficPreviewSummary(@NonNull OsmandApplication app,
+	                                                        @Nullable FlockFreePlugin plugin,
+	                                                        @NonNull RouteCalculationResult route,
+	                                                        @NonNull String trafficSummary) {
+		String condition = app.getString(R.string.flockfree_traffic_condition_no_data);
+		int conditionColor = TomTomTrafficProvider.COLOR_NO_DATA;
+		if (plugin != null) {
+			TrafficRoutingHelper helper = plugin.getTrafficRoutingHelper();
+			if (plugin.TRAFFIC_ROUTING_ENABLED.get()
+					&& route.getOriginalRoute() != null && !route.getOriginalRoute().isEmpty()) {
+				helper.getTrafficColorsForRoute(route.getOriginalRoute());
+			}
+			condition = helper.getRouteTrafficSummaryLabel();
+			conditionColor = helper.getRouteTrafficSummaryColor();
+		}
+
+		String text = "\u25CF " + app.getString(R.string.flockfree_route_preview_traffic_condition, condition)
+				+ "\n" + app.getString(R.string.flockfree_route_preview_traffic_summary, trafficSummary);
+		SpannableString spannable = new SpannableString(text);
+		spannable.setSpan(new ForegroundColorSpan(conditionColor), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+		return spannable;
 	}
 
 	@Nullable

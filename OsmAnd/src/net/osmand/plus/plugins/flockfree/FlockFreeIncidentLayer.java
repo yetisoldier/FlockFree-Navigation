@@ -4,10 +4,19 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.PointF;
+import android.graphics.RectF;
+import android.graphics.Typeface;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import net.osmand.data.LatLon;
 import net.osmand.data.PointDescription;
@@ -16,6 +25,9 @@ import net.osmand.data.RotatedTileBox;
 import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.plugins.flockfree.TomTomIncidentProvider.TrafficIncident;
+import net.osmand.plus.settings.enums.ThemeUsageContext;
+import net.osmand.plus.utils.ColorUtilities;
+import net.osmand.plus.utils.UiUtilities;
 import net.osmand.plus.views.layers.ContextMenuLayer;
 import net.osmand.plus.views.layers.MapSelectionResult;
 import net.osmand.plus.views.layers.MapSelectionRules;
@@ -35,7 +47,7 @@ public class FlockFreeIncidentLayer extends OsmandMapLayer implements ContextMen
     private static final float CLUSTER_BASE_RADIUS_DP = 10f;
     private static final float CLUSTER_RADIUS_INCREMENT_DP = 1f;
     private static final float CLUSTER_MAX_RADIUS_DP = 20f;
-    private static final float MARKER_RADIUS_DP = 20f;
+    private static final float MARKER_RADIUS_DP = 28f;
     private static final float MARKER_BORDER_DP = 2f;
     private static final long FETCH_DEBOUNCE_MS = 60_000L;
     private static final double VIEWPORT_CHANGE_THRESHOLD = 0.15; // 15% movement before refetch
@@ -45,6 +57,7 @@ public class FlockFreeIncidentLayer extends OsmandMapLayer implements ContextMen
     private final Paint markerPaint;
     private final Paint borderPaint;
     private final Paint textPaint;
+    private final Paint iconPaint;
     private final Paint clusterTextPaint;
 
     private List<TrafficIncident> visibleIncidents = new ArrayList<>();
@@ -96,6 +109,13 @@ public class FlockFreeIncidentLayer extends OsmandMapLayer implements ContextMen
         textPaint.setAntiAlias(true);
         textPaint.setColor(Color.WHITE);
         textPaint.setTextAlign(Paint.Align.CENTER);
+        textPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+
+        iconPaint = new Paint();
+        iconPaint.setAntiAlias(true);
+        iconPaint.setColor(Color.WHITE);
+        iconPaint.setStrokeCap(Paint.Cap.ROUND);
+        iconPaint.setStrokeJoin(Paint.Join.ROUND);
 
         clusterTextPaint = new Paint();
         clusterTextPaint.setAntiAlias(true);
@@ -256,11 +276,185 @@ public class FlockFreeIncidentLayer extends OsmandMapLayer implements ContextMen
         borderPaint.setStrokeWidth(dpToPx(MARKER_BORDER_DP));
         canvas.drawCircle(x, y, radius, borderPaint);
 
-        // Draw letter symbol inside
-        textPaint.setTextSize(radius * 1.0f);
-        String letter = getIncidentLetter(incident.iconCategory);
+        drawIncidentIcon(canvas, x, y, radius, incident.iconCategory);
+    }
+
+    private void drawIncidentIcon(@NonNull Canvas canvas, float x, float y, float radius, int iconCategory) {
+        iconPaint.setColor(Color.WHITE);
+        iconPaint.setStrokeWidth(Math.max(dpToPx(2f), radius * 0.14f));
+        switch (iconCategory) {
+            case 1:
+                drawCarIcon(canvas, x, y, radius, false);
+                break;
+            case 6:
+                drawJamIcon(canvas, x, y, radius);
+                break;
+            case 8:
+                drawRoadClosedIcon(canvas, x, y, radius);
+                break;
+            case 9:
+                drawRoadworksIcon(canvas, x, y, radius);
+                break;
+            case 7:
+                drawLaneClosedIcon(canvas, x, y, radius);
+                break;
+            case 11:
+                drawFloodingIcon(canvas, x, y, radius);
+                break;
+            case 3:
+                drawDangerIcon(canvas, x, y, radius);
+                break;
+            case 2:
+                drawFogIcon(canvas, x, y, radius);
+                break;
+            case 4:
+                drawRainIcon(canvas, x, y, radius);
+                break;
+            case 5:
+                drawIceIcon(canvas, x, y, radius);
+                break;
+            case 10:
+                drawWindIcon(canvas, x, y, radius);
+                break;
+            case 14:
+                drawCarIcon(canvas, x, y, radius, true);
+                break;
+            case 0:
+            default:
+                drawUnknownIcon(canvas, x, y, radius);
+                break;
+        }
+    }
+
+    private void drawCarIcon(@NonNull Canvas canvas, float x, float y, float radius, boolean brokenDown) {
+        float size = radius * 1.12f;
+        iconPaint.setStyle(Paint.Style.FILL);
+        RectF body = new RectF(x - size * 0.48f, y - size * 0.12f,
+                x + size * 0.48f, y + size * 0.25f);
+        canvas.drawRoundRect(body, radius * 0.12f, radius * 0.12f, iconPaint);
+        canvas.drawCircle(x - size * 0.28f, y + size * 0.31f, radius * 0.12f, iconPaint);
+        canvas.drawCircle(x + size * 0.28f, y + size * 0.31f, radius * 0.12f, iconPaint);
+        if (brokenDown) {
+            iconPaint.setStyle(Paint.Style.STROKE);
+            iconPaint.setStrokeWidth(Math.max(dpToPx(2f), radius * 0.12f));
+            float slash = size * 0.34f;
+            canvas.drawLine(x - slash, y - slash * 0.85f, x + slash, y + slash * 0.85f, iconPaint);
+            canvas.drawLine(x + slash, y - slash * 0.85f, x - slash, y + slash * 0.85f, iconPaint);
+        }
+    }
+
+    private void drawJamIcon(@NonNull Canvas canvas, float x, float y, float radius) {
+        float size = radius * 1.05f;
+        iconPaint.setStyle(Paint.Style.STROKE);
+        Path path = new Path();
+        path.moveTo(x - size * 0.38f, y - size * 0.38f);
+        path.lineTo(x + size * 0.25f, y - size * 0.38f);
+        path.lineTo(x - size * 0.18f, y);
+        path.lineTo(x + size * 0.38f, y);
+        path.lineTo(x - size * 0.25f, y + size * 0.38f);
+        path.lineTo(x + size * 0.38f, y + size * 0.38f);
+        canvas.drawPath(path, iconPaint);
+    }
+
+    private void drawRoadClosedIcon(@NonNull Canvas canvas, float x, float y, float radius) {
+        float width = radius * 1.15f;
+        float height = radius * 0.26f;
+        iconPaint.setStyle(Paint.Style.FILL);
+        RectF bar = new RectF(x - width / 2f, y - height / 2f, x + width / 2f, y + height / 2f);
+        canvas.drawRoundRect(bar, height / 2f, height / 2f, iconPaint);
+    }
+
+    private void drawRoadworksIcon(@NonNull Canvas canvas, float x, float y, float radius) {
+        float size = radius * 1.18f;
+        iconPaint.setStyle(Paint.Style.FILL);
+        Path cone = new Path();
+        cone.moveTo(x, y - size * 0.45f);
+        cone.lineTo(x - size * 0.38f, y + size * 0.42f);
+        cone.lineTo(x + size * 0.38f, y + size * 0.42f);
+        cone.close();
+        canvas.drawPath(cone, iconPaint);
+    }
+
+    private void drawLaneClosedIcon(@NonNull Canvas canvas, float x, float y, float radius) {
+        float size = radius * 1.08f;
+        iconPaint.setStyle(Paint.Style.STROKE);
+        float left = x - size * 0.24f;
+        float right = x + size * 0.24f;
+        canvas.drawLine(left, y - size * 0.45f, left, y + size * 0.45f, iconPaint);
+        canvas.drawLine(right, y - size * 0.45f, right, y + size * 0.45f, iconPaint);
+        canvas.drawLine(x - size * 0.42f, y + size * 0.38f, x + size * 0.42f, y - size * 0.38f, iconPaint);
+    }
+
+    private void drawFloodingIcon(@NonNull Canvas canvas, float x, float y, float radius) {
+        iconPaint.setStyle(Paint.Style.STROKE);
+        drawWave(canvas, x, y - radius * 0.14f, radius);
+        drawWave(canvas, x, y + radius * 0.2f, radius);
+    }
+
+    private void drawWave(@NonNull Canvas canvas, float x, float y, float radius) {
+        float size = radius * 1.12f;
+        Path wave = new Path();
+        wave.moveTo(x - size * 0.5f, y);
+        wave.cubicTo(x - size * 0.25f, y - size * 0.25f,
+                x - size * 0.1f, y + size * 0.25f, x + size * 0.1f, y);
+        wave.cubicTo(x + size * 0.25f, y - size * 0.25f,
+                x + size * 0.35f, y + size * 0.25f, x + size * 0.5f, y);
+        canvas.drawPath(wave, iconPaint);
+    }
+
+    private void drawDangerIcon(@NonNull Canvas canvas, float x, float y, float radius) {
+        float size = radius * 1.2f;
+        iconPaint.setStyle(Paint.Style.STROKE);
+        Path triangle = new Path();
+        triangle.moveTo(x, y - size * 0.5f);
+        triangle.lineTo(x - size * 0.46f, y + size * 0.38f);
+        triangle.lineTo(x + size * 0.46f, y + size * 0.38f);
+        triangle.close();
+        canvas.drawPath(triangle, iconPaint);
+    }
+
+    private void drawFogIcon(@NonNull Canvas canvas, float x, float y, float radius) {
+        float width = radius * 1.1f;
+        iconPaint.setStyle(Paint.Style.STROKE);
+        canvas.drawLine(x - width / 2f, y - radius * 0.32f, x + width / 2f, y - radius * 0.32f, iconPaint);
+        canvas.drawLine(x - width / 2f, y, x + width / 2f, y, iconPaint);
+        canvas.drawLine(x - width / 2f, y + radius * 0.32f, x + width / 2f, y + radius * 0.32f, iconPaint);
+    }
+
+    private void drawRainIcon(@NonNull Canvas canvas, float x, float y, float radius) {
+        iconPaint.setStyle(Paint.Style.STROKE);
+        float top = y - radius * 0.45f;
+        for (int i = -1; i <= 2; i++) {
+            float startX = x + i * radius * 0.28f - radius * 0.18f;
+            canvas.drawLine(startX, top, startX - radius * 0.24f, top + radius * 0.9f, iconPaint);
+        }
+    }
+
+    private void drawIceIcon(@NonNull Canvas canvas, float x, float y, float radius) {
+        iconPaint.setStyle(Paint.Style.STROKE);
+        float size = radius * 0.52f;
+        canvas.drawLine(x, y - size, x, y + size, iconPaint);
+        canvas.drawLine(x - size, y, x + size, y, iconPaint);
+        canvas.drawLine(x - size * 0.72f, y - size * 0.72f, x + size * 0.72f, y + size * 0.72f, iconPaint);
+        canvas.drawLine(x + size * 0.72f, y - size * 0.72f, x - size * 0.72f, y + size * 0.72f, iconPaint);
+    }
+
+    private void drawWindIcon(@NonNull Canvas canvas, float x, float y, float radius) {
+        float size = radius * 1.12f;
+        iconPaint.setStyle(Paint.Style.STROKE);
+        Path swirl = new Path();
+        swirl.moveTo(x - size * 0.5f, y - size * 0.18f);
+        swirl.cubicTo(x - size * 0.05f, y - size * 0.55f, x + size * 0.48f, y - size * 0.28f,
+                x + size * 0.18f, y + size * 0.04f);
+        swirl.cubicTo(x - size * 0.1f, y + size * 0.34f, x + size * 0.38f, y + size * 0.46f,
+                x + size * 0.5f, y + size * 0.18f);
+        canvas.drawPath(swirl, iconPaint);
+    }
+
+    private void drawUnknownIcon(@NonNull Canvas canvas, float x, float y, float radius) {
+        textPaint.setTextSize(radius * 1.1f);
         float textOffset = textPaint.getTextSize() / 3f;
-        canvas.drawText(letter, x, y + textOffset, textPaint);
+        canvas.drawText("?", x, y + textOffset, textPaint);
     }
 
     @Override
@@ -368,22 +562,64 @@ public class FlockFreeIncidentLayer extends OsmandMapLayer implements ContextMen
             return;
         }
         String categoryName = getIncidentCategoryName(incident.iconCategory);
-        StringBuilder sb = new StringBuilder();
-        sb.append(getString(R.string.flockfree_incident_type_label)).append(": ").append(categoryName).append("\n");
+        boolean nightMode = mapActivity.getApp().getDaynightHelper().isNightMode(ThemeUsageContext.APP);
+        Context themedContext = UiUtilities.getThemedContext(mapActivity, nightMode);
+        int primaryColor = ColorUtilities.getPrimaryTextColor(themedContext, nightMode);
+        int secondaryColor = ColorUtilities.getSecondaryTextColor(themedContext, nightMode);
+
+        BottomSheetDialog dialog = new BottomSheetDialog(themedContext);
+        LinearLayout layout = new LinearLayout(themedContext);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int horizontalPadding = (int) dpToPx(24f);
+        int verticalPadding = (int) dpToPx(20f);
+        layout.setPadding(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding);
+
+        TextView title = createIncidentDetailsText(themedContext, categoryName, primaryColor, 20f, true);
+        layout.addView(title);
+
         if (incident.description != null && !incident.description.isEmpty()) {
-            sb.append(getString(R.string.flockfree_incident_description_label)).append(": ")
-                    .append(incident.description).append("\n");
+            TextView description = createIncidentDetailsText(themedContext,
+                    incident.description, primaryColor, 15f, false);
+            description.setPadding(0, (int) dpToPx(12f), 0, 0);
+            layout.addView(description);
         }
-        sb.append(getString(R.string.flockfree_incident_coordinates_label)).append(": ")
-                .append(String.format(java.util.Locale.US, "%.5f, %.5f", incident.lat, incident.lon));
+
+        String coordinates = getString(R.string.flockfree_incident_coordinates_label) + ": "
+                + String.format(java.util.Locale.US, "%.5f, %.5f", incident.lat, incident.lon);
+        TextView coordinateView = createIncidentDetailsText(themedContext, coordinates, secondaryColor, 14f, false);
+        coordinateView.setPadding(0, (int) dpToPx(12f), 0, 0);
+        layout.addView(coordinateView);
+
         if (incident.roadClosed) {
-            sb.append("\n").append(getString(R.string.flockfree_incident_road_closed));
+            TextView roadClosed = createIncidentDetailsText(themedContext,
+                    getString(R.string.flockfree_incident_road_closed), getIncidentColor(8), 15f, true);
+            roadClosed.setPadding(0, (int) dpToPx(12f), 0, 0);
+            layout.addView(roadClosed);
         }
-        new android.app.AlertDialog.Builder(mapActivity)
-                .setTitle(categoryName)
-                .setMessage(sb.toString())
-                .setPositiveButton(R.string.shared_string_ok, null)
-                .show();
+
+        Button closeButton = new Button(themedContext);
+        closeButton.setText(R.string.shared_string_close);
+        closeButton.setOnClickListener(v -> dialog.dismiss());
+        LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        buttonParams.topMargin = (int) dpToPx(18f);
+        layout.addView(closeButton, buttonParams);
+
+        dialog.setContentView(layout);
+        dialog.show();
+    }
+
+    @NonNull
+    private TextView createIncidentDetailsText(@NonNull Context context, @NonNull CharSequence text,
+                                                int textColor, float textSizeSp, boolean bold) {
+        TextView textView = new TextView(context);
+        textView.setText(text);
+        textView.setTextColor(textColor);
+        textView.setTextSize(textSizeSp);
+        if (bold) {
+            textView.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        }
+        return textView;
     }
 
     private int getIncidentColor(int iconCategory) {
@@ -412,24 +648,6 @@ public class FlockFreeIncidentLayer extends OsmandMapLayer implements ContextMen
             case 0: // Unknown
             default:
                 return 0xFF9E9E9E;
-        }
-    }
-
-    private String getIncidentLetter(int iconCategory) {
-        switch (iconCategory) {
-            case 1: return "A";
-            case 2: return "F";
-            case 3: return "D";
-            case 4: return "R";
-            case 5: return "I";
-            case 6: return "J";
-            case 7: return "L";
-            case 8: return "C";
-            case 9: return "W";
-            case 10: return "N";
-            case 11: return "FL";
-            case 14: return "B";
-            case 0: default: return "?";
         }
     }
 

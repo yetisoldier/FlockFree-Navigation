@@ -77,6 +77,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     private static final long CAMERA_ALERT_COOLDOWN_MS = 90_000L;
     private static final long SAME_CAMERA_ALERT_COOLDOWN_MS = 10 * 60_000L;
     private static final float MOVING_ALERT_SPEED_MPS = 2.0f;
+    private static final float FLOCKFREE_DEFAULT_TEXT_SCALE = 1.2f;
     private static final int MAP_CENTER_CAMERA_SEARCH_RADIUS_METERS = 5_000;
 
     private FlockFreeLayer cameraLayer;
@@ -156,6 +157,7 @@ public class FlockFreePlugin extends OsmandPlugin {
                 FlockFreePreferences.DEFAULT_RENDERER_MIGRATION_DONE).makeGlobal().cache();
 
         migrateDefaultRendererToFlockFree();
+        applyFlockFreeTextScaleDefaults();
         registerDebugAlertReceiver();
         incidentProvider = new TomTomIncidentProvider();
     }
@@ -169,6 +171,11 @@ public class FlockFreePlugin extends OsmandPlugin {
             app.getSettings().RENDERER.set(RendererRegistry.FLOCKFREE_RENDER);
         }
         RENDERER_MIGRATION_DONE.set(true);
+    }
+
+    private void applyFlockFreeTextScaleDefaults() {
+        app.getSettings().TEXT_SCALE.setDefaultValue(FLOCKFREE_DEFAULT_TEXT_SCALE);
+        app.getSettings().TEXT_SCALE.setModeDefaultValue(ApplicationMode.CAR, FLOCKFREE_DEFAULT_TEXT_SCALE);
     }
 
     private void migrateCydBleEnabledToGlobal(@NonNull CommonPreference<Boolean> preference) {

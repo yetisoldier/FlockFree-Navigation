@@ -98,6 +98,7 @@ import net.osmand.plus.plugins.OsmandPlugin;
 import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.plugins.accessibility.MapAccessibilityActions;
 import net.osmand.plus.plugins.audionotes.AudioVideoNoteRecordingMenu;
+import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.plugins.flockfree.FlockFreeNavigationAssistant;
 import net.osmand.plus.routepreparationmenu.MapRouteInfoMenu;
 import net.osmand.plus.routing.IRouteInformationListener;
@@ -1305,6 +1306,13 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 		AndroidUiHelper.updateVisibility(flockFreeSearchBar, showFlockFreeControls);
 		AndroidUiHelper.updateVisibility(flockFreeLayersButton, showFlockFreeControls);
 		AndroidUiHelper.updateVisibility(flockFreeNavigationActions, showNavigationActions);
+		View trafficLegend = findViewById(R.id.flockfree_traffic_legend);
+		if (trafficLegend != null) {
+			FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
+			boolean showLegend = visible && navigationUiActive
+					&& plugin != null && plugin.TRAFFIC_ROUTING_ENABLED.get();
+			AndroidUiHelper.updateVisibility(trafficLegend, showLegend);
+		}
 		AndroidUiHelper.updateVisibility(findViewById(R.id.map_search_button), false);
 		AndroidUiHelper.updateVisibility(findViewById(R.id.map_layers_button), false);
 	}
