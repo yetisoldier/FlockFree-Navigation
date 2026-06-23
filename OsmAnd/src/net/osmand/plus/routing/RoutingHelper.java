@@ -17,6 +17,8 @@ import net.osmand.plus.helpers.TargetPointsHelper;
 import net.osmand.plus.helpers.TargetPoint;
 import net.osmand.plus.notifications.OsmandNotification.NotificationType;
 import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
+import net.osmand.plus.plugins.flockfree.TrafficRoutingHelper;
 import net.osmand.plus.routing.GPXRouteParams.GPXRouteParamsBuilder;
 import net.osmand.plus.settings.backend.ApplicationMode;
 import net.osmand.plus.settings.backend.OsmAndAppCustomization.OsmAndAppCustomizationListener;
@@ -55,6 +57,8 @@ public class RoutingHelper {
 	private static final boolean ENABLE_LOG_POS_PROCESSED = false;
 	private static final int STOP_NAVIGATION_ON_AA_DISCONNECT_DISTANCE_THRESHOLD = 100;
 	private static final int PAUSE_NAVIGATION_ON_AA_DISCONNECT_SPEED_THRESHOLD = 1;
+	private static final int FASTER_ROUTE_PROMPT_MIN_SAVINGS_SECONDS = 3 * 60;
+	private static final long FASTER_ROUTE_PROMPT_INTERVAL_MS = 2 * 60 * 1000L;
 
 	private List<WeakReference<IRouteInformationListener>> listeners = new LinkedList<>();
 	private List<WeakReference<IRoutingDataUpdateListener>> updateListeners = new LinkedList<>();
@@ -89,6 +93,7 @@ public class RoutingHelper {
 	private long deviateFromRouteDetected;
 	//private long wrongMovementDetected = 0;
 	private boolean voiceRouterStopped;
+	private long lastFasterRoutePromptMs;
 
 	public boolean isDeviatedFromRoute() {
 		return isDeviatedFromRoute;
@@ -313,6 +318,32 @@ public class RoutingHelper {
 				app.showToastMessage(msg);
 			}
 		});
+	}
+
+	void maybeShowFasterTrafficRoutePrompt(@NonNull RouteCalculationResult currentRoute,
+	                                       @NonNull RouteCalculationResult trafficAwareRoute,
+	                                       @Nullable Location currentLocation) {
+		if (!isFollowingMode || currentRoute == trafficAwareRoute
+				|| !currentRoute.isCalculated() || !trafficAwareRoute.isCalculated()) {
+			return;
+		}
+		FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
+		if (plugin == null || !plugin.TRAFFIC_ROUTING_ENABLED.get()) {
+			return;
+		}
+		TrafficRoutingHelper trafficHelper = plugin.getTrafficRoutingHelper();
+		int etaSavingsSeconds = trafficHelper.getTrafficAwareEtaSavingsSeconds(currentRoute,
+				trafficAwareRoute, currentLocation);
+		if (etaSavingsSeconds <= FASTER_ROUTE_PROMPT_MIN_SAVINGS_SECONDS) {
+			return;
+		}
+		long now = System.currentTimeMillis();
+		if (lastFasterRoutePromptMs != 0
+				&& now - lastFasterRoutePromptMs < FASTER_ROUTE_PROMPT_INTERVAL_MS) {
+			return;
+		}
+		lastFasterRoutePromptMs = now;
+		app.runInUIThread(() -> app.showShortToastMessage("Faster route available \u2014 tap to accept"));
 	}
 
 	public GPXRouteParamsBuilder getCurrentGPXRoute() {

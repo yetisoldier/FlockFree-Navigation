@@ -33,6 +33,7 @@ public class LanesDrawable extends Drawable {
 	private final Paint paintBlack;
 	private final Paint paintRouteDirection;
 	private final Paint paintSecondTurn;
+	private final Paint paintRecommendedLaneHighlight;
 	private final float size;
 
 	private float delta;
@@ -64,6 +65,12 @@ public class LanesDrawable extends Drawable {
 		paintBlack.setStyle(Paint.Style.STROKE);
 		paintBlack.setColor(Color.BLACK);
 		paintBlack.setStrokeWidth(strokeWidth);
+
+		paintRecommendedLaneHighlight = new Paint(Paint.ANTI_ALIAS_FLAG);
+		paintRecommendedLaneHighlight.setStyle(Paint.Style.STROKE);
+		paintRecommendedLaneHighlight.setStrokeWidth(strokeWidth * 2.4f);
+		paintRecommendedLaneHighlight.setStrokeCap(Paint.Cap.ROUND);
+		paintRecommendedLaneHighlight.setStrokeJoin(Paint.Join.ROUND);
 
 		paintRouteDirection = new Paint(Paint.ANTI_ALIAS_FLAG);
 		paintRouteDirection.setStyle(Paint.Style.FILL);
@@ -152,11 +159,12 @@ public class LanesDrawable extends Drawable {
 				RectF b1 = boundsList.get(0);
 				w = b1.width();
 			}
+			float padding = Math.max(4, paintRecommendedLaneHighlight.getStrokeWidth());
 			if (w > 0) {
-				w += 4;
+				w += padding;
 			}
 			if (h > 0) {
-				h += 4;
+				h += padding;
 			}
 		}
 		this.width = (int) w;
@@ -185,7 +193,8 @@ public class LanesDrawable extends Drawable {
 			canvas.save();
 			// canvas.translate((int) (16 * scaleCoefficient), 0);
 			for (int i = 0; i < lanes.length; i++) {
-				if ((lanes[i] & 1) == 1) {
+				boolean recommendedLane = isRecommendedLane(lanes[i]);
+				if (recommendedLane) {
 					if (isTurnByTurn) {
 						paintRouteDirection.setColor(ColorUtilities.getActiveColor(ctx, isNightMode));
 					} else {
@@ -195,6 +204,8 @@ public class LanesDrawable extends Drawable {
 				} else {
 					paintRouteDirection.setColor(ContextCompat.getColor(ctx, R.color.nav_arrow_distant));
 				}
+				paintSecondTurn.setColor(ContextCompat.getColor(ctx,
+						recommendedLane ? R.color.nav_arrow : R.color.nav_arrow_distant));
 				int turnType = TurnType.getPrimaryTurn(lanes[i]);
 				int secondTurnType = TurnType.getSecondaryTurn(lanes[i]);
 				int thirdTurnType = TurnType.getTertiaryTurn(lanes[i]);
@@ -259,6 +270,20 @@ public class LanesDrawable extends Drawable {
 						canvas.translate(-laneHalfSize, 0);
 					}
 
+					if (recommendedLane) {
+						paintRecommendedLaneHighlight.setColor(ColorUtilities.getSecondaryActiveColor(ctx, isNightMode));
+						paintRecommendedLaneHighlight.setAlpha(isNightMode ? 230 : 255);
+						if (thirdTurnPath != null) {
+							canvas.drawPath(thirdTurnPath, paintRecommendedLaneHighlight);
+						}
+						if (secondTurnPath != null) {
+							canvas.drawPath(secondTurnPath, paintRecommendedLaneHighlight);
+						}
+						if (firstTurnPath != null) {
+							canvas.drawPath(firstTurnPath, paintRecommendedLaneHighlight);
+						}
+					}
+
 					// 1st pass
 					if (thirdTurnPath != null) {
 						//canvas.drawPath(thirdTurnPath, paintSecondTurn);
@@ -289,6 +314,10 @@ public class LanesDrawable extends Drawable {
 			}
 			canvas.restore();
 		}
+	}
+
+	private boolean isRecommendedLane(int lane) {
+		return (lane & 1) == 1;
 	}
 
 	@Override

@@ -155,6 +155,10 @@ class RouteRecalculationHelper {
 	}
 
 	private void setNewRoute(RouteCalculationResult prevRoute, RouteCalculationResult res, Location start) {
+		Location comparisonLocation = isFollowingMode() && getLastFixedLocation() != null
+				? getLastFixedLocation()
+				: start;
+		routingHelper.maybeShowFasterTrafficRoutePrompt(prevRoute, res, comparisonLocation);
 		routingHelper.setRoute(res);
 		boolean newRoute = !prevRoute.isCalculated();
 		if (isFollowingMode()) {

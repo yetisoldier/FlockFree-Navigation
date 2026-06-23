@@ -3,10 +3,12 @@ package net.osmand.plus.plugins.flockfree;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import net.osmand.Location;
 import net.osmand.data.LatLon;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
 import net.osmand.plus.routing.RouteCalculationResult;
+import net.osmand.plus.routing.RouteDirectionInfo;
 import net.osmand.router.RouteSegmentResult;
 import net.osmand.util.Algorithms;
 
@@ -109,6 +111,25 @@ public class TrafficRoutingHelper {
 		lastTrafficRoadCount = 0;
 	}
 
+	public synchronized boolean hasPendingTrafficAwareRoute() {
+		return lastTrafficStatus == TrafficStatus.APPLIED;
+	}
+
+	public int getTrafficAwareEtaSavingsSeconds(@NonNull RouteCalculationResult currentRoute,
+	                                            @NonNull RouteCalculationResult trafficAwareRoute,
+	                                            @Nullable Location currentLocation) {
+		if (!hasPendingTrafficAwareRoute() || !isTrafficRoutingEnabled()
+				|| !currentRoute.isCalculated() || !trafficAwareRoute.isCalculated()) {
+			return 0;
+		}
+		int currentEta = getComparableEtaSeconds(currentRoute, currentLocation);
+		int trafficAwareEta = getComparableEtaSeconds(trafficAwareRoute, currentLocation);
+		if (currentEta <= 0 || trafficAwareEta <= 0) {
+			return 0;
+		}
+		return currentEta - trafficAwareEta;
+	}
+
 	@NonNull
 	public synchronized String consumeLastTrafficStatusSummary() {
 		String summary;
@@ -139,6 +160,19 @@ public class TrafficRoutingHelper {
 		lastTrafficStatus = TrafficStatus.NONE;
 		lastTrafficRoadCount = 0;
 		return summary;
+	}
+
+	private int getComparableEtaSeconds(@NonNull RouteCalculationResult route,
+	                                    @Nullable Location currentLocation) {
+		int eta = route.getLeftTime(currentLocation);
+		if (eta > 0) {
+			return eta;
+		}
+		int wholeRouteTime = 0;
+		for (RouteDirectionInfo directionInfo : route.getImmutableAllDirections()) {
+			wholeRouteTime += directionInfo.getExpectedTime();
+		}
+		return wholeRouteTime;
 	}
 
 	/**

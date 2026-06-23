@@ -85,18 +85,16 @@ public class WidgetsAvailabilityHelper {
 		ApplicationMode[] exceptDefault = {CAR, BICYCLE, PEDESTRIAN, PUBLIC_TRANSPORT, BOAT,
 				AIRCRAFT, SKI, TRUCK, MOTORCYCLE, HORSE, MOPED, TRAIN};
 		ApplicationMode[] all = null;
-		ApplicationMode[] none = {};
 
 		// left
 		ApplicationMode[] nextTurnSet = {CAR, BICYCLE, BOAT, SKI, TRUCK, MOTORCYCLE, HORSE, MOPED};
 		ApplicationMode[] smallNextTurnSet = {PEDESTRIAN, PUBLIC_TRANSPORT, AIRCRAFT, TRAIN};
 		ApplicationMode[] secondNextTurnSet = {CAR, BICYCLE, PEDESTRIAN, BOAT, SKI, TRUCK, MOTORCYCLE, HORSE, MOPED};
 		ApplicationMode[] flockFreeNavigationSet = {CAR, TRUCK, MOTORCYCLE, MOPED};
+		ApplicationMode[] legacyNavigationPointSet = {BICYCLE, PEDESTRIAN, PUBLIC_TRANSPORT, BOAT, AIRCRAFT, SKI, HORSE, TRAIN};
 
 		boolean enableWidgetsV2 = Version.getInstallTime(app) >= ROUTE_WIDGETS_V2_INTRO_TIME_MS;
-		if (enableWidgetsV2) {
-			regWidgetVisibility(ROUTE_INFO, exceptDefault);
-		}
+		regWidgetVisibility(ROUTE_INFO, exceptDefault);
 
 		regWidgetVisibility(NEXT_TURN, nextTurnSet);
 		regWidgetVisibility(SMALL_NEXT_TURN, smallNextTurnSet);
@@ -111,14 +109,14 @@ public class WidgetsAvailabilityHelper {
 		regWidgetAvailability(TRAFFIC_STATUS, all);
 
 		if (!enableWidgetsV2) {
-			regWidgetVisibility(INTERMEDIATE_DESTINATION, all);
-			regWidgetVisibility(DISTANCE_TO_DESTINATION, all);
-			regWidgetVisibility(TIME_TO_INTERMEDIATE, all);
-			regWidgetVisibility(TIME_TO_DESTINATION, all);
+			regWidgetVisibility(INTERMEDIATE_DESTINATION, legacyNavigationPointSet);
+			regWidgetVisibility(DISTANCE_TO_DESTINATION, legacyNavigationPointSet);
+			regWidgetVisibility(TIME_TO_INTERMEDIATE, legacyNavigationPointSet);
+			regWidgetVisibility(TIME_TO_DESTINATION, legacyNavigationPointSet);
 		}
 
 		regWidgetVisibility(CURRENT_SPEED, BICYCLE, BOAT, SKI, PUBLIC_TRANSPORT, AIRCRAFT, HORSE, TRAIN);
-		regWidgetVisibility(MAX_SPEED, none);
+		regWidgetVisibility(MAX_SPEED, flockFreeNavigationSet);
 		regWidgetVisibility(ALTITUDE_MAP_CENTER, PEDESTRIAN, BICYCLE);
 		regWidgetVisibility(ALTITUDE_MY_LOCATION, PEDESTRIAN, BICYCLE);
 

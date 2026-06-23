@@ -865,7 +865,9 @@ public class SpeedometerWidget {
 	}
 
 	private int getSpeedLimitColor(boolean nightMode) {
-		if (isUsaOrCanadaRegion() || isEuropeRegion()) {
+		if (isUsaOrCanadaRegion()) {
+			return app.getColor(R.color.widgettext_day);
+		} else if (isEuropeRegion()) {
 			return app.getColor(nightMode ? R.color.widgettext_night : R.color.widgettext_day);
 		} else {
 			return app.getColor(R.color.widgettext_day);

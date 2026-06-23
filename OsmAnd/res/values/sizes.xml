@@ -24,10 +24,10 @@
 	<dimen name="card_padding">12dp</dimen>
 	<dimen name="dlg_button_rect_rad">3dp</dimen>
 
-	<dimen name="widget_turn_lane_size">36dp</dimen>
-	<dimen name="widget_turn_lane_border">6dp</dimen>
-	<dimen name="widget_turn_lane_margin">2dp</dimen>
-	<dimen name="widget_turn_lane_min_delta">18dp</dimen>
+	<dimen name="widget_turn_lane_size">44dp</dimen>
+	<dimen name="widget_turn_lane_border">7dp</dimen>
+	<dimen name="widget_turn_lane_margin">3dp</dimen>
+	<dimen name="widget_turn_lane_min_delta">22dp</dimen>
 
     <dimen name="acceptable_touch_radius">48dp</dimen>
 

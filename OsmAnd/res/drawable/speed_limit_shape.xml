@@ -1,22 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
 	<item android:id="@+id/background">
-		<shape android:shape="oval">
+		<shape android:shape="rectangle">
 			<solid android:color="@color/widget_background_color_light" />
+			<corners android:radius="6dp" />
 			<stroke
-				android:width="20dp"
-				android:color="@color/widget_background_color_light" />
-		</shape>
-	</item>
-	<item android:id="@+id/red_circle">
-		<shape
-			android:angle="0"
-			android:innerRadiusRatio="2.65"
-			android:shape="ring"
-			android:thicknessRatio="12.0"
-			android:type="sweep"
-			android:useLevel="false">
-			<solid android:color="@color/map_widget_red" />
+				android:width="5dp"
+				android:color="@color/map_widget_red" />
 		</shape>
 	</item>
 </layer-list>
