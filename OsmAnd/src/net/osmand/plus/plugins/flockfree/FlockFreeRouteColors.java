@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 import net.osmand.PlatformUtil;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.settings.backend.ApplicationMode;
+import net.osmand.shared.routing.ColoringType;
 import net.osmand.plus.settings.backend.OsmandSettings;
 import net.osmand.plus.settings.backend.preferences.CommonPreference;
 
@@ -64,16 +65,25 @@ public final class FlockFreeRouteColors {
 			int currentDay = settings.CUSTOM_ROUTE_COLOR_DAY.getModeValue(carMode);
 			int currentNight = settings.CUSTOM_ROUTE_COLOR_NIGHT.getModeValue(carMode);
 
-			// OsmAnd's default route color is the first entry in DefaultColors (0xFF2196F3 blue).
+			// OsmAnd's default route color is the first entry in DefaultColors (dark yellow 0xFFEECC22).
 			// If the user has already customised the colour to something other than the
 			// OsmAnd default, respect their choice and skip migration.
-			int osmandDefaultColor = 0xFF2196F3; // DefaultColors.values()[0].getColor()
+			int osmandDefaultColor = 0xFFEECC22; // DefaultColors.DARK_YELLOW.getColor()
 
 			if (currentDay == osmandDefaultColor) {
 				settings.CUSTOM_ROUTE_COLOR_DAY.setModeValue(carMode, NAV_PURPLE_DAY);
 			}
 			if (currentNight == osmandDefaultColor) {
 				settings.CUSTOM_ROUTE_COLOR_NIGHT.setModeValue(carMode, NAV_PURPLE_NIGHT);
+			}
+
+			// Also set the route coloring type to CUSTOM_COLOR so the purple
+			// values are actually used during route rendering. OsmAnd defaults
+			// to ColoringType.DEFAULT which uses the renderer's route color, not
+			// the custom color preference.
+			ColoringType currentColoringType = settings.ROUTE_COLORING_TYPE.getModeValue(carMode);
+			if (currentColoringType == ColoringType.DEFAULT) {
+				settings.ROUTE_COLORING_TYPE.setModeValue(carMode, ColoringType.CUSTOM_COLOR);
 			}
 
 			migrationDone.set(true);

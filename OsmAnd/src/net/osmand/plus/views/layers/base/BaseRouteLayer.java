@@ -117,6 +117,14 @@ public abstract class BaseRouteLayer extends OsmandMapLayer {
 	}
 
 	protected void updateRouteColors(boolean night) {
+		// Lazy FlockFree route-colour migration: set purple defaults + custom coloring type
+		FlockFreePlugin flockFreePlugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
+		if (flockFreePlugin != null && previewRouteLineInfo == null) {
+			FlockFreeRouteColors.apply(view.getApplication());
+			// Re-read coloring type after migration may have changed it
+			ApplicationMode mode = view.getApplication().getRoutingHelper().getAppMode();
+			routeColoringType = view.getSettings().ROUTE_COLORING_TYPE.getModeValue(mode);
+		}
 		if (routeColoringType.isCustomColor()) {
 			updateCustomColor(night);
 		} else {
@@ -128,12 +136,6 @@ public abstract class BaseRouteLayer extends OsmandMapLayer {
 	}
 
 	private void updateCustomColor(boolean night) {
-		// Lazy FlockFree route-colour migration: set purple defaults on first render
-		FlockFreePlugin flockFreePlugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
-		if (flockFreePlugin != null && previewRouteLineInfo == null) {
-			FlockFreeRouteColors.apply(view.getApplication());
-		}
-
 		int customColor;
 		if (previewRouteLineInfo != null) {
 			customColor = previewRouteLineInfo.getCustomColor(night);
