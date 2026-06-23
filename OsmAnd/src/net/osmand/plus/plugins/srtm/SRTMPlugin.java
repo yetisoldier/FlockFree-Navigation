@@ -36,6 +36,7 @@ import net.osmand.plus.plugins.openseamaps.NauticalMapsPlugin;
 import net.osmand.plus.plugins.srtm.building.Building3DDetailLevel;
 import net.osmand.plus.plugins.srtm.building.Buildings3DColorType;
 import net.osmand.plus.quickaction.QuickActionType;
+import net.osmand.plus.settings.backend.ApplicationMode;
 import net.osmand.plus.settings.backend.OsmandSettings;
 import net.osmand.plus.settings.backend.preferences.CommonPreference;
 import net.osmand.plus.settings.backend.preferences.OsmandPreference;
@@ -124,7 +125,9 @@ public class SRTMPlugin extends OsmandPlugin {
 	public SRTMPlugin(OsmandApplication app) {
 		super(app);
 
-		ENABLE_3D_MAP_OBJECTS = registerBooleanPreference("enable_3d_map_objects", false, false).makeProfile().cache();
+		CommonPreference<Boolean> enable3DMapObjects = registerBooleanPreference("enable_3d_map_objects", false, false).makeProfile().cache();
+		enable3DMapObjects.setModeDefaultValue(ApplicationMode.CAR, true);
+		ENABLE_3D_MAP_OBJECTS = enable3DMapObjects;
 		BUILDINGS_3D_ALPHA = registerFloatPreference("3d_buildings_alpha", BUILDINGS_3D_ALPHA_DEF_VALUE).makeProfile().cache();
 		BUILDINGS_3D_VIEW_DISTANCE = registerIntPreference("3d_buildings_view_distance", 1).makeProfile().cache();
 

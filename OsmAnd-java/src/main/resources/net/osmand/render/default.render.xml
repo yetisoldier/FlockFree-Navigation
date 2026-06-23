@@ -191,7 +191,7 @@
 		<renderingAttribute name="shadowRendering">
 		<!-- 0 - no shadow, 1 - one step, 2 - blur shadow, 3 - solid shadow -->
 			<!-- next line ensures bridges stand out ok -->
-			<case minzoom="14" nightMode="false" attrIntValue="3" shadowColor="#969696"/>
+			<case minzoom="14" nightMode="false" attrIntValue="2" shadowColor="#969696"/>
 			<case minzoom="14" attrIntValue="3" shadowColor="#464646"/>
 			<case roadStyle="germanRoadAtlas" minzoom="6" maxzoom="13" attrIntValue="3"/>
 			<case roadStyle="americanRoadAtlas" minzoom="6" maxzoom="13" attrIntValue="3"/>
@@ -557,7 +557,7 @@
 			<case roadStyle="pale" attrColorValue="$roadStylePale_streetColorShadow_day">
 				<apply_if nightMode="true" attrColorValue="$roadStylePale_streetColorShadow_night"/>
 			</case>
-			<case attrColorValue="#905d2e8c">
+			<case attrColorValue="#665d2e8c">
 				<case streetLighting="true">
 					<apply_if nightMode="false" streetLightingNight="false" attrColorValue="#555555"/>
 				</case>
@@ -566,8 +566,8 @@
 			</case>
 			<apply_if additional="construction=yes" attrColorValue="$null"/>
 		</renderingAttribute>
-		<renderingConstant name="motorwayShadowRadius" value="1.6"/>
-		<renderingConstant name="motorwayShadowRadius_v2" value="1:1"/>
+		<renderingConstant name="motorwayShadowRadius" value="0.9"/>
+		<renderingConstant name="motorwayShadowRadius_v2" value="0.6:0.6"/>
 		<renderingAttribute name="highwayShadowRadius"> <!-- OpenGL engine only for now (bug in engine_v1 - does not works)-->
 			<case showAccess="true" additional="motorroad=yes" attrFloatValue="1:1"/>
 			<case additional="winter_road=yes" attrFloatValue="1:1"/>
@@ -8160,7 +8160,7 @@
 						<case minzoom="17" tag="shop" value="curtain" icon="shop_curtain"/>
 						<case minzoom="17" tag="shop" value="dairy" icon="shop_dairy"/>
 						<case minzoom="17" tag="shop" value="deli" icon="shop_deli"/>
-						<case minzoom="15" tag="shop" value="department_store" icon="shop_department_store" iconVisibleSize="32" iconOrder="156"/>
+						<case minzoom="16" tag="shop" value="department_store" icon="shop_department_store" iconVisibleSize="32" iconOrder="156"/>
 						<case minzoom="17" tag="shop" value="dive" icon="shop_dive"/>
 						<case minzoom="17" tag="shop" value="doityourself" icon="shop_doityourself" iconVisibleSize="32"/>
 						<case minzoom="17" tag="shop" value="doors" icon="shop_doors"/>
@@ -8210,8 +8210,8 @@
 						<case minzoom="17" tag="shop" value="lighting" icon="shop_lighting"/>
 						<case minzoom="17" tag="shop" value="locksmith" icon="shop_locksmith"/>
 						<case minzoom="17" tag="shop" value="lottery" icon="shop_lottery"/>
-						<case minzoom="15" tag="shop" value="mall" icon="shop_mall" iconVisibleSize="22" iconOrder="132"/>
-						<case minzoom="15" tag="amenity" value="marketplace" icon="amenity_marketplace" iconVisibleSize="32" iconOrder="155"/>
+						<case minzoom="16" tag="shop" value="mall" icon="shop_mall" iconVisibleSize="22" iconOrder="132"/>
+						<case minzoom="16" tag="amenity" value="marketplace" icon="amenity_marketplace" iconVisibleSize="32" iconOrder="155"/>
 						<case minzoom="17" tag="shop" value="medical_supply" icon="shop_medical_supply"/>
 						<case minzoom="17" tag="shop" value="mobile_phone" icon="shop_mobile_phone" iconVisibleSize="32"/>
 						<case minzoom="17" tag="shop" value="model" icon="shop_model"/>
@@ -8252,7 +8252,7 @@
 						<case minzoom="17" tag="shop" value="skate" icon="shop_skate"/>
 						<case minzoom="17" tag="shop" value="sports" icon="shop_sports"/>
 						<case minzoom="17" tag="shop" value="stationery" icon="shop_stationery"/>
-						<case minzoom="15" tag="shop" value="supermarket" icon="shop_supermarket" iconVisibleSize="22" iconOrder="140"/>
+						<case minzoom="16" tag="shop" value="supermarket" icon="shop_supermarket" iconVisibleSize="22" iconOrder="140"/>
 						<case minzoom="17" tag="shop" value="spices" icon="shop_spices"/>
 						<case minzoom="17" tag="shop" value="tattoo" icon="shop_tattoo"/>
 						<case minzoom="17" tag="shop" value="tea" icon="shop_tea"/>
