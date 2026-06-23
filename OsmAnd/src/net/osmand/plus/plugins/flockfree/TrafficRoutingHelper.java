@@ -15,6 +15,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Owns FlockFree live-traffic routing state.
@@ -36,12 +38,28 @@ public class TrafficRoutingHelper {
 	}
 
 	public static final String TRAFFIC_ROUTE_INFO_ATTRIBUTE = "routeInfo_traffic";
+	private static final long TRAFFIC_COLOR_REFRESH_INTERVAL_MS = 90_000L;
 
 	private final OsmandApplication app;
 	private final FlockFreePlugin plugin;
 	private final TomTomTrafficProvider tomTomTrafficProvider = new TomTomTrafficProvider();
+	private final ExecutorService trafficColorExecutor = Executors.newSingleThreadExecutor();
+	private final Object trafficColorLock = new Object();
 	private TrafficStatus lastTrafficStatus = TrafficStatus.NONE;
 	private int lastTrafficRoadCount;
+	@NonNull
+	private List<Integer> cachedTrafficSegmentColors = Collections.emptyList();
+	private long cachedTrafficRouteSignature;
+	private long lastTrafficColorRefreshMs;
+	private long trafficColorGeneration;
+	private boolean trafficColorRefreshRunning;
+	private int lastTrafficColorSegmentCount;
+	private int lastTrafficColorSampleCount;
+	private int lastTrafficFreeFlowCount;
+	private int lastTrafficSlowCount;
+	private int lastTrafficCongestedCount;
+	private int lastTrafficNoDataCount;
+	private boolean closed;
 
 	public TrafficRoutingHelper(@NonNull OsmandApplication app, @NonNull FlockFreePlugin plugin) {
 		this.app = app;
@@ -141,12 +159,164 @@ public class TrafficRoutingHelper {
 		}
 		String tomTomApiKey = plugin.TOMTOM_API_KEY.get();
 		if (!isTrafficRoutingEnabled() || Algorithms.isEmpty(tomTomApiKey)) {
-			List<Integer> defaults = new ArrayList<>(segments.size());
-			for (int i = 0; i < segments.size(); i++) {
-				defaults.add(TomTomTrafficProvider.COLOR_NO_DATA);
-			}
-			return defaults;
+			resetCachedTrafficColors();
+			return buildNoDataColors(segments.size());
 		}
+
+		long routeSignature = buildRouteSignature(segments);
+		scheduleTrafficColorRefreshIfNeeded(segments, tomTomApiKey.trim(), routeSignature);
+		synchronized (trafficColorLock) {
+			if (cachedTrafficRouteSignature == routeSignature && cachedTrafficSegmentColors.size() == segments.size()) {
+				return new ArrayList<>(cachedTrafficSegmentColors);
+			}
+		}
+		return buildNoDataColors(segments.size());
+	}
+
+	public long getTrafficColorGeneration() {
+		synchronized (trafficColorLock) {
+			return trafficColorGeneration;
+		}
+	}
+
+	public boolean isTrafficColorRefreshRunning() {
+		synchronized (trafficColorLock) {
+			return trafficColorRefreshRunning;
+		}
+	}
+
+	public long getLastTrafficColorRefreshMs() {
+		synchronized (trafficColorLock) {
+			return lastTrafficColorRefreshMs;
+		}
+	}
+
+	public int getLastTrafficColorSegmentCount() {
+		synchronized (trafficColorLock) {
+			return lastTrafficColorSegmentCount;
+		}
+	}
+
+	public int getLastTrafficColorSampleCount() {
+		synchronized (trafficColorLock) {
+			return lastTrafficColorSampleCount;
+		}
+	}
+
+	@NonNull
+	public String getTrafficColorLegendSummary() {
+		if (!isTrafficRoutingEnabled()) {
+			return app.getString(R.string.flockfree_traffic_widget_off);
+		}
+		if (Algorithms.isEmpty(plugin.TOMTOM_API_KEY.get())) {
+			return app.getString(R.string.flockfree_traffic_widget_no_provider);
+		}
+		synchronized (trafficColorLock) {
+			if (trafficColorRefreshRunning && lastTrafficColorRefreshMs == 0) {
+				return app.getString(R.string.flockfree_traffic_widget_refreshing);
+			}
+			if (lastTrafficColorRefreshMs == 0) {
+				return app.getString(R.string.flockfree_traffic_widget_waiting);
+			}
+			if (trafficColorRefreshRunning) {
+				return app.getString(R.string.flockfree_traffic_widget_refreshing);
+			}
+			int coloredCount = lastTrafficFreeFlowCount + lastTrafficSlowCount + lastTrafficCongestedCount;
+			return app.getString(R.string.flockfree_traffic_widget_summary,
+					coloredCount, lastTrafficNoDataCount, lastTrafficColorSampleCount);
+		}
+	}
+
+	private void scheduleTrafficColorRefreshIfNeeded(@NonNull List<RouteSegmentResult> segments,
+	                                                 @NonNull String tomTomApiKey,
+	                                                 long routeSignature) {
+		long now = System.currentTimeMillis();
+		synchronized (trafficColorLock) {
+			if (closed) {
+				return;
+			}
+			boolean routeChanged = cachedTrafficRouteSignature != routeSignature
+					|| cachedTrafficSegmentColors.size() != segments.size();
+			boolean stale = now - lastTrafficColorRefreshMs >= TRAFFIC_COLOR_REFRESH_INTERVAL_MS;
+			if (trafficColorRefreshRunning || (!routeChanged && !stale)) {
+				return;
+			}
+			trafficColorRefreshRunning = true;
+		}
+		List<RouteSegmentResult> segmentsSnapshot = new ArrayList<>(segments);
+		try {
+			trafficColorExecutor.execute(() -> refreshTrafficColors(segmentsSnapshot, tomTomApiKey, routeSignature));
+		} catch (RuntimeException e) {
+			synchronized (trafficColorLock) {
+				trafficColorRefreshRunning = false;
+			}
+		}
+	}
+
+	private void refreshTrafficColors(@NonNull List<RouteSegmentResult> segments,
+	                                  @NonNull String tomTomApiKey,
+	                                  long routeSignature) {
+		List<Integer> colors;
+		try {
+			colors = buildTrafficColors(segments, tomTomApiKey);
+		} catch (RuntimeException e) {
+			colors = buildNoDataColors(segments.size());
+		}
+		long now = System.currentTimeMillis();
+		int freeFlowCount = 0;
+		int slowCount = 0;
+		int congestedCount = 0;
+		int noDataCount = 0;
+		for (Integer color : colors) {
+			int normalized = color != null && color != 0 ? color : TomTomTrafficProvider.COLOR_NO_DATA;
+			if (normalized == TomTomTrafficProvider.COLOR_FREE_FLOW) {
+				freeFlowCount++;
+			} else if (normalized == TomTomTrafficProvider.COLOR_SLOW) {
+				slowCount++;
+			} else if (normalized == TomTomTrafficProvider.COLOR_CONGESTED
+					|| normalized == TomTomTrafficProvider.COLOR_ROAD_CLOSED) {
+				congestedCount++;
+			} else {
+				noDataCount++;
+			}
+		}
+
+		synchronized (trafficColorLock) {
+			cachedTrafficRouteSignature = routeSignature;
+			cachedTrafficSegmentColors = new ArrayList<>(colors);
+			lastTrafficColorRefreshMs = now;
+			lastTrafficColorSegmentCount = segments.size();
+			lastTrafficColorSampleCount = getTrafficColorSampleIndexes(segments.size()).size();
+			lastTrafficFreeFlowCount = freeFlowCount;
+			lastTrafficSlowCount = slowCount;
+			lastTrafficCongestedCount = congestedCount;
+			lastTrafficNoDataCount = noDataCount;
+			trafficColorGeneration++;
+			trafficColorRefreshRunning = false;
+		}
+		plugin.setLastTrafficRouteCheckSummary(getTrafficColorLegendSummary());
+		app.runInUIThread(() -> app.getOsmandMap().refreshMap());
+		scheduleNextTrafficColorRefresh(routeSignature);
+	}
+
+	private void scheduleNextTrafficColorRefresh(long routeSignature) {
+		app.runInUIThread(() -> {
+			synchronized (trafficColorLock) {
+				if (closed) {
+					return;
+				}
+			}
+			RouteCalculationResult route = app.getRoutingHelper().getRoute();
+			if (route != null && route.isCalculated()
+					&& route.getOriginalRoute() != null && !route.getOriginalRoute().isEmpty()
+					&& buildRouteSignature(route.getOriginalRoute()) == routeSignature) {
+				getTrafficColorsForRoute(route.getOriginalRoute());
+			}
+		}, TRAFFIC_COLOR_REFRESH_INTERVAL_MS);
+	}
+
+	@NonNull
+	private List<Integer> buildTrafficColors(@NonNull List<RouteSegmentResult> segments, @NonNull String tomTomApiKey) {
 		List<Integer> sampleIndexes = getTrafficColorSampleIndexes(segments.size());
 		List<double[]> sampleMidpoints = new ArrayList<>(sampleIndexes.size());
 		for (Integer index : sampleIndexes) {
@@ -168,6 +338,59 @@ public class TrafficRoutingHelper {
 			colors.add(getNearestSampleColor(i, sampleIndexes, sampleColors));
 		}
 		return colors;
+	}
+
+	private void resetCachedTrafficColors() {
+		synchronized (trafficColorLock) {
+			cachedTrafficSegmentColors = Collections.emptyList();
+			cachedTrafficRouteSignature = 0;
+			lastTrafficColorRefreshMs = 0;
+			lastTrafficColorSegmentCount = 0;
+			lastTrafficColorSampleCount = 0;
+			lastTrafficFreeFlowCount = 0;
+			lastTrafficSlowCount = 0;
+			lastTrafficCongestedCount = 0;
+			lastTrafficNoDataCount = 0;
+			trafficColorRefreshRunning = false;
+			trafficColorGeneration++;
+		}
+	}
+
+	@NonNull
+	private List<Integer> buildNoDataColors(int count) {
+		List<Integer> colors = new ArrayList<>(Math.max(0, count));
+		for (int i = 0; i < count; i++) {
+			colors.add(TomTomTrafficProvider.COLOR_NO_DATA);
+		}
+		return colors;
+	}
+
+	private long buildRouteSignature(@NonNull List<RouteSegmentResult> segments) {
+		long signature = segments.size();
+		List<Integer> sampleIndexes = getTrafficColorSampleIndexes(segments.size());
+		for (Integer index : sampleIndexes) {
+			if (index >= 0 && index < segments.size()) {
+				signature = 31 * signature + getCoordinateHash(getSegmentMidpoint(segments.get(index)));
+			}
+		}
+		return signature;
+	}
+
+	private long getCoordinateHash(@Nullable LatLon point) {
+		if (point == null) {
+			return 0;
+		}
+		long lat = Math.round(point.getLatitude() * 100000);
+		long lon = Math.round(point.getLongitude() * 100000);
+		return (lat << 32) ^ lon;
+	}
+
+	public void close() {
+		synchronized (trafficColorLock) {
+			closed = true;
+			trafficColorRefreshRunning = false;
+		}
+		trafficColorExecutor.shutdownNow();
 	}
 
 	@NonNull

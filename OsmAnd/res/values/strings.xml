@@ -6816,6 +6816,14 @@ Download tile maps directly, or copy them as SQLite database files to OsmAnd\'s 
     <string name="flockfree_widget_camera_proximity_desc">Shows the count of known ALPR cameras within 1 km and the distance to the nearest one.</string>
     <string name="flockfree_widget_no_cameras">No cameras nearby</string>
     <string name="flockfree_widget_nearest">Nearest: %1$s</string>
+    <string name="flockfree_widget_traffic_status">Traffic</string>
+    <string name="flockfree_widget_traffic_status_desc">Shows live traffic refresh status and route color coverage.</string>
+    <string name="flockfree_traffic_widget_off">Traffic off</string>
+    <string name="flockfree_traffic_widget_no_provider">No traffic provider</string>
+    <string name="flockfree_traffic_widget_waiting">Waiting for route</string>
+    <string name="flockfree_traffic_widget_refreshing">Refreshing traffic</string>
+    <string name="flockfree_traffic_widget_summary">%1$d live, %2$d no data, %3$d samples</string>
+    <string name="flockfree_traffic_widget_updated">%1$s | %2$s</string>
     <string name="route_info_traffic">Traffic</string>
     <string name="routeInfo_traffic_name">Traffic</string>
     <string name="traffic_coloring_description">Color route line by live traffic conditions</string>

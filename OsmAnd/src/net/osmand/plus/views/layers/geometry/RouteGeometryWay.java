@@ -60,6 +60,7 @@ public class RouteGeometryWay extends
 
 	private List<Segment> cachedSegments = new ArrayList<>();
 	private Segment currentCachedSegment = null;
+	private long trafficColorGeneration = -1;
 
 	public RouteGeometryWay(RouteGeometryWayContext context) {
 		super(context, new MultiColoringGeometryWayDrawer<>(context));
@@ -74,9 +75,11 @@ public class RouteGeometryWay extends
 	                                @NonNull ColoringType routeColoringType,
 	                                @Nullable String routeInfoAttribute,
 									@Nullable String gradientPalette) {
-		this.coloringChanged = this.coloringType != routeColoringType || !this.gradientPalette.equals(gradientPalette)
+		long nextTrafficColorGeneration = getTrafficColorGeneration(routeColoringType, routeInfoAttribute);
+		this.coloringChanged = this.coloringType != routeColoringType || !Algorithms.objectEquals(this.gradientPalette, gradientPalette)
 				|| routeColoringType == ColoringType.ATTRIBUTE
-				&& !Algorithms.objectEquals(this.routeInfoAttribute, routeInfoAttribute);
+				&& !Algorithms.objectEquals(this.routeInfoAttribute, routeInfoAttribute)
+				|| trafficColorGeneration != nextTrafficColorGeneration;
 
 		boolean widthChanged = !Algorithms.objectEquals(customWidth, pathWidth);
 		if (widthChanged) {
@@ -95,6 +98,18 @@ public class RouteGeometryWay extends
 		this.coloringType = routeColoringType;
 		this.routeInfoAttribute = routeInfoAttribute;
 		this.gradientPalette = gradientPalette;
+		this.trafficColorGeneration = nextTrafficColorGeneration;
+	}
+
+	private long getTrafficColorGeneration(@NonNull ColoringType routeColoringType, @Nullable String routeInfoAttribute) {
+		if (routeColoringType == ColoringType.ATTRIBUTE
+				&& TrafficRoutingHelper.TRAFFIC_ROUTE_INFO_ATTRIBUTE.equals(routeInfoAttribute)) {
+			FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
+			if (plugin != null) {
+				return plugin.getTrafficRoutingHelper().getTrafficColorGeneration();
+			}
+		}
+		return -1;
 	}
 
 	@Override

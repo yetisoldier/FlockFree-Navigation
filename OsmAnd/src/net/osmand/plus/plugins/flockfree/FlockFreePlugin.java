@@ -20,6 +20,7 @@ import net.osmand.plus.plugins.flockfree.cyd.CydHardwareManager;
 import net.osmand.plus.plugins.flockfree.wifi.WifiScannerManager;
 import net.osmand.plus.routing.RouteCalculationResult;
 import net.osmand.plus.plugins.flockfree.widgets.CameraProximityWidget;
+import net.osmand.plus.plugins.flockfree.widgets.TrafficStatusWidget;
 import net.osmand.plus.quickaction.QuickActionType;
 import net.osmand.plus.quickaction.actions.ShowHideCamerasAction;
 import net.osmand.plus.quickaction.actions.ToggleCameraAvoidanceAction;
@@ -282,7 +283,7 @@ public class FlockFreePlugin extends OsmandPlugin {
                 : app.getString(R.string.flockfree_traffic_last_check_none);
     }
 
-    private synchronized void setLastTrafficRouteCheckSummary(@NonNull String summary) {
+    public synchronized void setLastTrafficRouteCheckSummary(@NonNull String summary) {
         TRAFFIC_ROUTE_LAST_CHECK_SUMMARY.set(summary);
     }
 
@@ -428,6 +429,10 @@ public class FlockFreePlugin extends OsmandPlugin {
         if (cameraWidget != null) {
             widgetInfos.add(creator.createWidgetInfo(cameraWidget));
         }
+        MapWidget trafficWidget = createMapWidgetForParams(activity, WidgetType.TRAFFIC_STATUS);
+        if (trafficWidget != null) {
+            widgetInfos.add(creator.createWidgetInfo(trafficWidget));
+        }
     }
 
     @Nullable
@@ -436,6 +441,9 @@ public class FlockFreePlugin extends OsmandPlugin {
                                                   @Nullable String customId, @Nullable WidgetsPanel widgetsPanel) {
         if (widgetType == WidgetType.CAMERA_PROXIMITY) {
             return new CameraProximityWidget(mapActivity, customId, widgetsPanel);
+        }
+        if (widgetType == WidgetType.TRAFFIC_STATUS) {
+            return new TrafficStatusWidget(mapActivity, customId, widgetsPanel);
         }
         return null;
     }
@@ -583,6 +591,10 @@ public class FlockFreePlugin extends OsmandPlugin {
         if (cydHardwareManager != null) {
             cydHardwareManager.close();
             cydHardwareManager = null;
+        }
+        if (trafficRoutingHelper != null) {
+            trafficRoutingHelper.close();
+            trafficRoutingHelper = null;
         }
         if (wifiScannerManager != null) {
             wifiScannerManager.stop();
@@ -801,7 +813,12 @@ public class FlockFreePlugin extends OsmandPlugin {
                 routeSummary = routeSummary + "\n" + avoidanceSummary;
             }
         }
-        String trafficSummary = getTrafficRoutingHelper().consumeLastTrafficStatusSummary();
+        TrafficRoutingHelper trafficHelper = getTrafficRoutingHelper();
+        if (TRAFFIC_ROUTING_ENABLED.get() && route.getOriginalRoute() != null && !route.getOriginalRoute().isEmpty()) {
+            trafficHelper.getTrafficColorsForRoute(route.getOriginalRoute());
+            setLastTrafficRouteCheckSummary(trafficHelper.getTrafficColorLegendSummary());
+        }
+        String trafficSummary = trafficHelper.consumeLastTrafficStatusSummary();
         if (!trafficSummary.isEmpty()) {
             setLastTrafficRouteCheckSummary(trafficSummary);
             routeSummary = routeSummary.isEmpty() ? trafficSummary : routeSummary + "\n" + trafficSummary;
