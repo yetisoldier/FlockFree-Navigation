@@ -374,6 +374,8 @@ public class MapControlsLayer extends OsmandMapLayer {
 			mapButton.setShowBottomButtons(showBottomMenuButtons);
 			mapButton.update();
 		}
+		mapActivity.updateFlockFreeHudControls(!isRoutePlanningMode && !isRouteFollowingMode
+				&& !isRouteDialogOpened && visibilityHelper.shouldShowTopButtons());
 	}
 
 	@Override

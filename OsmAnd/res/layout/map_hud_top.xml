@@ -8,6 +8,23 @@
 
 	<include layout="@layout/widget_top_bar" />
 
+	<include
+		android:id="@+id/flockfree_search_bar"
+		layout="@layout/flockfree_search_bar"
+		android:layout_width="280dp"
+		android:layout_height="48dp"
+		android:layout_gravity="top|center_horizontal"
+		android:layout_marginTop="8dp" />
+
+	<include
+		android:id="@+id/flockfree_layers_button"
+		layout="@layout/flockfree_layers_button"
+		android:layout_width="48dp"
+		android:layout_height="48dp"
+		android:layout_gravity="top|end"
+		android:layout_marginTop="68dp"
+		android:layout_marginEnd="@dimen/content_padding_small" />
+
 	<net.osmand.plus.views.controls.VerticalWidgetPanel
 		android:id="@+id/top_widgets_panel"
 		android:layout_width="match_parent"

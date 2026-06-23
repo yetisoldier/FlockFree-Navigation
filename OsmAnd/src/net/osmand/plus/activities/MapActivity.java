@@ -3,9 +3,11 @@ package net.osmand.plus.activities;
 import static net.osmand.aidlapi.OsmAndCustomizationConstants.FRAGMENT_DRAWER_ID;
 import static net.osmand.aidlapi.OsmAndCustomizationConstants.MAP_STYLE_ID;
 import static net.osmand.plus.chooseplan.OsmAndFeature.UNLIMITED_MAP_DOWNLOADS;
+import static net.osmand.plus.dashboard.DashboardType.CONFIGURE_MAP;
 import static net.osmand.plus.firstusage.FirstUsageWizardFragment.FIRST_USAGE;
 import static net.osmand.plus.measurementtool.MeasurementToolFragment.PLAN_ROUTE_MODE;
 import static net.osmand.plus.search.ShowQuickSearchMode.CURRENT;
+import static net.osmand.plus.search.ShowQuickSearchMode.NEW_IF_EXPIRED;
 import static net.osmand.plus.settings.enums.ThemeUsageContext.MAP;
 import static net.osmand.plus.views.AnimateDraggingMapThread.TARGET_NO_ROTATION;
 
@@ -174,6 +176,10 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 	private IntentHelper intentHelper;
 	private MapScrollHelper mapScrollHelper;
 	private RestoreNavigationHelper restoreNavigationHelper;
+	@Nullable
+	private View flockFreeSearchBar;
+	@Nullable
+	private View flockFreeLayersButton;
 
 	private StateChangedListener<ApplicationMode> applicationModeListener;
 
@@ -260,6 +266,7 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 		mapWidgetsVisibilityHelper = new WidgetsVisibilityHelper(this);
 		dashboardOnMap.createDashboardView();
 		extendedMapActivity = new ExtendedMapActivity();
+		setupFlockFreeHudControls();
 
 		getMapActions().setMapActivity(this);
 		getMapView().setMapActivity(this);
@@ -790,6 +797,7 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 		extendedMapActivity.onResume(this);
 
 		getMapView().getAnimatedDraggingThread().toggleAnimations();
+		updateFlockFreeHudControls();
 	}
 
 	@Override
@@ -1216,6 +1224,54 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 		if (!getDashboard().isVisible() && mapLayers.getMapControlsLayer() != null) {
 			mapLayers.getMapControlsLayer().showMapControlsIfHidden();
 		}
+	}
+
+	private void setupFlockFreeHudControls() {
+		flockFreeSearchBar = findViewById(R.id.flockfree_search_bar);
+		if (flockFreeSearchBar != null) {
+			flockFreeSearchBar.setOnClickListener(v -> {
+				fragmentsHelper.dismissCardDialog();
+				fragmentsHelper.showQuickSearch(NEW_IF_EXPIRED, false);
+			});
+		}
+
+		flockFreeLayersButton = findViewById(R.id.flockfree_layers_button);
+		if (flockFreeLayersButton != null) {
+			flockFreeLayersButton.setOnClickListener(v -> {
+				if (AndroidUtils.isActivityNotDestroyed(this)) {
+					clearPrevActivityIntent();
+					dashboardOnMap.setDashboardVisibility(true, CONFIGURE_MAP, AndroidUtils.getCenterViewCoordinates(v));
+				}
+			});
+		}
+		updateFlockFreeHudControls();
+	}
+
+	public void updateFlockFreeHudControls() {
+		updateFlockFreeHudControls(!isFlockFreeNavigationUiActive());
+	}
+
+	public void updateFlockFreeHudControls(boolean visible) {
+		if (flockFreeSearchBar == null) {
+			flockFreeSearchBar = findViewById(R.id.flockfree_search_bar);
+		}
+		if (flockFreeLayersButton == null) {
+			flockFreeLayersButton = findViewById(R.id.flockfree_layers_button);
+		}
+		boolean showFlockFreeControls = visible && !isFlockFreeNavigationUiActive();
+		AndroidUiHelper.updateVisibility(flockFreeSearchBar, showFlockFreeControls);
+		AndroidUiHelper.updateVisibility(flockFreeLayersButton, showFlockFreeControls);
+		AndroidUiHelper.updateVisibility(findViewById(R.id.map_search_button), false);
+		AndroidUiHelper.updateVisibility(findViewById(R.id.map_layers_button), false);
+	}
+
+	private boolean isFlockFreeNavigationUiActive() {
+		RoutingHelper routingHelper = app.getRoutingHelper();
+		return routingHelper.isFollowingMode()
+				|| routingHelper.isPauseNavigation()
+				|| routingHelper.isRoutePlanningMode()
+				|| routingHelper.isRouteBeingCalculated()
+				|| routingHelper.isRouteCalculated();
 	}
 
 	public boolean shouldHideTopControls() {

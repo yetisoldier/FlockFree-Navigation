@@ -23,7 +23,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.content.res.AppCompatResources;
 import androidx.core.content.ContextCompat;
-import androidx.core.graphics.drawable.DrawableCompat;
 
 import net.osmand.Location;
 import net.osmand.core.android.MapRendererView;
@@ -48,7 +47,6 @@ import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.base.MapViewTrackingUtilities;
 import net.osmand.plus.helpers.Model3dHelper;
 import net.osmand.plus.profiles.LocationIcon;
-import net.osmand.plus.profiles.ProfileIconColors;
 import net.osmand.plus.routing.RoutingHelper;
 import net.osmand.plus.routing.RoutingHelperUtils;
 import net.osmand.plus.settings.backend.ApplicationMode;
@@ -75,9 +73,9 @@ public class PointLocationLayer extends OsmandMapLayer
 	protected static final int RADIUS = 7;
 	private static final float FLOCKFREE_LOCATION_MARKER_SCALE = 0.78f;
 	private static final float FLOCKFREE_NAVIGATION_MARKER_SCALE = 0.84f;
-	private static final float FLOCKFREE_CORE_ACCURACY_ALPHA = 0.12f;
-	private static final float FLOCKFREE_LEGACY_ACCURACY_ALPHA = 0.10f;
-	private static final float FLOCKFREE_LEGACY_ACCURACY_STROKE_ALPHA = 0.48f;
+	private static final float FLOCKFREE_CORE_ACCURACY_ALPHA = 0.16f;
+	private static final float FLOCKFREE_LEGACY_ACCURACY_ALPHA = 0.16f;
+	private static final float FLOCKFREE_LEGACY_ACCURACY_STROKE_ALPHA = 0.24f;
 
 	private Paint headingPaint;
 	private Paint area;
@@ -807,9 +805,7 @@ public class PointLocationLayer extends OsmandMapLayer
 	private void updateParams(ApplicationMode appMode, boolean nighMode, boolean locationOutdated) {
 		boolean hasMapRenderer = hasMapRenderer();
 		Context ctx = getContext();
-		int profileColor = locationOutdated ?
-				ContextCompat.getColor(ctx, ProfileIconColors.getOutdatedLocationColor(nighMode)) :
-				appMode.getProfileColor(nighMode);
+		int profileColor = ContextCompat.getColor(ctx, R.color.google_maps_blue);
 		String locationIconName = getLocationIconName(appMode);
 		String navigationIconName = getNavigationIconName(appMode);
 		float textScale = getTextScale();
@@ -838,45 +834,11 @@ public class PointLocationLayer extends OsmandMapLayer
 				brokenLocationModel = false;
 			}
 
-			if (LocationIcon.isModel(navigationIconName)) {
-				navigationModel = model3dHelper.getModel(navigationIconName, model -> {
-					navigationModel = model;
-					if (navigationModel != null) {
-						navigationModel.setMainColor(NativeUtilities.createFColorARGB(profileColor));
-					}
-					brokenNavigationModel = model == null;
-					markersInvalidated = true;
-					if (LocationIcon.isModel(locationIconName)) {
-						setLocationModel();
-					}
-					return true;
-				});
-				if (navigationModel != null) {
-					navigationModel.setMainColor(NativeUtilities.createFColorARGB(profileColor));
-				}
-				navigationIcon = null;
-			} else {
-				int navigationIconId = LocationIcon.fromName(navigationIconName, false).getIconId();
-				navigationIcon = (LayerDrawable) AppCompatResources.getDrawable(ctx, navigationIconId);
-				if (navigationIcon != null) {
-					DrawableCompat.setTint(navigationIcon.getDrawable(1), profileColor);
-				}
-				navigationModel = null;
-			}
-
-			LocationIcon locationIconType = LocationIcon.fromName(locationIconName, true);
-			if (LocationIcon.isModel(locationIconName)) {
-				if (!LocationIcon.isModel(navigationIconName) || navigationModel != null) {
-					setLocationModel();
-				}
-			} else {
-				locationIcon = (LayerDrawable) AppCompatResources.getDrawable(ctx, locationIconType.getIconId());
-				if (locationIcon != null) {
-					DrawableCompat.setTint(DrawableCompat.wrap(locationIcon.getDrawable(1)), profileColor);
-				}
-				locationModel = null;
-			}
-			headingIconId = locationIconType.getHeadingIconId();
+			navigationIcon = (LayerDrawable) AppCompatResources.getDrawable(ctx, R.drawable.flockfree_navigation_puck);
+			navigationModel = null;
+			locationIcon = (LayerDrawable) AppCompatResources.getDrawable(ctx, R.drawable.flockfree_location_puck);
+			locationModel = null;
+			headingIconId = R.drawable.flockfree_heading_arrow;
 			headingIcon = getScaledBitmap(headingIconId, textScale * FLOCKFREE_LOCATION_MARKER_SCALE);
 
 			if (!hasMapRenderer) {

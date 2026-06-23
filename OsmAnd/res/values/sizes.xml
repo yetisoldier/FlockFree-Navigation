@@ -129,7 +129,7 @@
 	<dimen name="map_address_height">40dp</dimen>
 	<dimen name="street_name_widget_min_height">36dp</dimen>
 	<dimen name="street_name_widget_text_size">20sp</dimen>
-	<dimen name="map_button_size">48dp</dimen>
+	<dimen name="map_button_size">44dp</dimen>
 	<dimen name="map_small_button_size">38dp</dimen>
 	<dimen name="map_small_button_margin">4dp</dimen>
 
@@ -148,7 +148,7 @@
 	<dimen name="map_widget_image">80dp</dimen>
 	<dimen name="map_button_spacing">8dp</dimen>
 	<dimen name="map_button_spacing_land">6dp</dimen>
-	<dimen name="map_button_margin">4dp</dimen>
+	<dimen name="map_button_margin">12dp</dimen>
 	<dimen name="map_routing_progress_width">100dp</dimen>
 	<dimen name="map_window_height">136dp</dimen>
 	<dimen name="map_tile_preview_size">128dp</dimen>

@@ -39,7 +39,7 @@ data class ButtonAppearanceParams(
 		internal const val OPAQUE_ALPHA = 1f
 		internal const val TRANSPARENT_ALPHA = 0.5f
 
-		internal const val BIG_SIZE_DP = 48
+		internal const val BIG_SIZE_DP = 44
 		internal const val SMALL_SIZE_DP = 40
 
 		internal const val ROUND_RADIUS_DP = 36

@@ -199,8 +199,8 @@ public abstract class MapButtonState {
 		position.setPosV(posV);
 		position.setXMove(xMove);
 		position.setYMove(yMove);
-		position.setMarginX(0);
-		position.setMarginY(0);
+		position.setMarginX(1);
+		position.setMarginY(1);
 
 		return position;
 	}
