@@ -107,7 +107,7 @@ public class InAppPurchaseUtils {
 	}
 
 	public static boolean isVehicleMetricsAvailable(@NonNull OsmandApplication app) {
-		return isOsmAndProAvailable(app) || isBrandPromoAvailable(app);
+		return Version.isFlockFreeVersion(app) || isOsmAndProAvailable(app) || isBrandPromoAvailable(app);
 	}
 
 	public static boolean isAstronomyAvailable(@NonNull OsmandApplication app) {
@@ -115,11 +115,11 @@ public class InAppPurchaseUtils {
 	}
 
 	public static boolean isProWidgetsAvailable(@NonNull OsmandApplication app) {
-		return isOsmAndProAvailable(app) || isBrandPromoAvailable(app);
+		return Version.isFlockFreeVersion(app) || isOsmAndProAvailable(app) || isBrandPromoAvailable(app);
 	}
 
 	public static boolean is3dMapsAvailable(@NonNull OsmandApplication app) {
-		return isOsmAndProAvailable(app) || isBrandPromoAvailable(app);
+		return Version.isFlockFreeVersion(app) || isOsmAndProAvailable(app) || isBrandPromoAvailable(app);
 	}
 
 	public static boolean isExportTypeAvailable(@NonNull OsmandApplication app,
@@ -136,7 +136,7 @@ public class InAppPurchaseUtils {
 	}
 
 	public static boolean isColoringTypeAvailable(@NonNull OsmandApplication app) {
-		return isOsmAndProAvailable(app) || isBrandPromoAvailable(app);
+		return Version.isFlockFreeVersion(app) || isOsmAndProAvailable(app) || isBrandPromoAvailable(app);
 	}
 
 	public static boolean isBrandPromoAvailable(@NonNull OsmandApplication app) {
@@ -162,7 +162,7 @@ public class InAppPurchaseUtils {
 	}
 
 	public static boolean isGradientEditorAvailable(@NonNull OsmandApplication app) {
-		return isOsmAndProAvailable(app) || isBrandPromoAvailable(app);
+		return Version.isFlockFreeVersion(app) || isOsmAndProAvailable(app) || isBrandPromoAvailable(app);
 	}
 
 	public static boolean isAndroidAutoAvailable(@NonNull OsmandApplication app) {
@@ -235,6 +235,6 @@ public class InAppPurchaseUtils {
 	}
 
 	public static boolean isOrganizeByTypeApplicable(OsmandApplication app, OrganizeByType organizeByType) {
-		return organizeByType == null || isOsmAndProAvailable(app) || !organizeByType.isPro();
+		return organizeByType == null || Version.isFlockFreeVersion(app) || isOsmAndProAvailable(app) || !organizeByType.isPro();
 	}
 }
