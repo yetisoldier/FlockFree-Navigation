@@ -90,7 +90,14 @@ public class ColoringStyleAlgorithms {
 	                                                @NonNull ColoringStyle coloringStyle,
 	                                                boolean useForRoute) {
 		ColoringType coloringType = coloringStyle.getType();
-		if ((coloringType.isRouteInfoAttribute() && useForRoute) || coloringType == ColoringType.SLOPE) {
+		if (coloringType.isRouteInfoAttribute() && useForRoute) {
+			// FlockFree traffic attribute is free — no subscription required
+			if (TrafficRoutingHelper.TRAFFIC_ROUTE_INFO_ATTRIBUTE.equals(coloringStyle.getRouteInfoAttribute())) {
+				return true;
+			}
+			return InAppPurchaseUtils.isColoringTypeAvailable(app);
+		}
+		if (coloringType == ColoringType.SLOPE) {
 			return InAppPurchaseUtils.isColoringTypeAvailable(app);
 		}
 		return true;
