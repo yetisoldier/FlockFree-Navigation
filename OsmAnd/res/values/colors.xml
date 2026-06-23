@@ -280,6 +280,7 @@
 	<color name="google_maps_nav_bar_bg">#FFFFFF</color>
 	<color name="google_maps_nav_bar_bg_night">#2A2A2E</color>
 	<color name="google_maps_nav_bar_text_night">#E8EAED</color>
+	<color name="google_maps_text_secondary_night">#9AA0A6</color>
 	<color name="google_maps_nav_bar_text_secondary_night">#9AA0A6</color>
 	<color name="map_window_outer_color">#99000000</color>
 	<color name="map_window_stroke_dark">#3F3F3F</color>

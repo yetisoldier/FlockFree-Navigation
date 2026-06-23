@@ -178,13 +178,18 @@ public class LanesWidget extends MapWidget {
 	public void updateColors(@NonNull TextState textState) {
 		super.updateColors(textState);
 
+		// Google Maps-style card: white (day) / dark grey (night)
 		getView().setBackgroundResource(textState.night
-				? textState.boxFree
+				? R.drawable.bg_flockfree_lanes_card_night
 				: R.drawable.bg_white_rounded_card);
+
+		// Update lane drawable colors for current day/night mode
+		lanesDrawable.updateLaneColors(textState.night);
+		lanesImage.invalidate();
 
 		shadowRadius = textState.textShadowRadius / 2;
 		int textColor = textState.night
-				? textState.textColor
+				? app.getColor(R.color.google_maps_nav_bar_text_night)
 				: app.getColor(R.color.google_maps_text_primary);
 		updateTextColor(lanesText, lanesShadowText, textColor,
 				textState.textShadowColor, textState.textBold, shadowRadius);

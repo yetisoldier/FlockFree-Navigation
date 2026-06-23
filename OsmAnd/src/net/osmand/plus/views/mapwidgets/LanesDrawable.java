@@ -79,6 +79,22 @@ public class LanesDrawable extends Drawable {
 		paintSecondTurn = new Paint(Paint.ANTI_ALIAS_FLAG);
 		paintSecondTurn.setStyle(Paint.Style.FILL);
 		paintSecondTurn.setColor(ContextCompat.getColor(ctx, R.color.nav_arrow_distant));
+
+		updateLaneColors(isNightMode);
+	}
+
+	/**
+	 * Updates lane colors for Google Maps-style day/night rendering.
+	 * Recommended lanes use white fill with blue highlight; non-recommended use grey.
+	 */
+	public void updateLaneColors(boolean nightMode) {
+		this.isNightMode = nightMode;
+		int recommendedColor = ContextCompat.getColor(ctx,
+				nightMode ? R.color.google_maps_blue_night : R.color.google_maps_blue);
+		int distantColor = ContextCompat.getColor(ctx,
+				nightMode ? R.color.google_maps_text_secondary_night : R.color.google_maps_text_secondary);
+		paintRouteDirection.setColor(recommendedColor);
+		paintSecondTurn.setColor(distantColor);
 	}
 
 	public void updateBounds() {
@@ -198,14 +214,14 @@ public class LanesDrawable extends Drawable {
 					if (isTurnByTurn) {
 						paintRouteDirection.setColor(ColorUtilities.getActiveColor(ctx, isNightMode));
 					} else {
-						paintRouteDirection.setColor(imminent ? ContextCompat.getColor(ctx, R.color.nav_arrow_imminent) :
-								ContextCompat.getColor(ctx, R.color.nav_arrow));
+						paintRouteDirection.setColor(Color.WHITE);
 					}
 				} else {
-					paintRouteDirection.setColor(ContextCompat.getColor(ctx, R.color.nav_arrow_distant));
+					paintRouteDirection.setColor(ContextCompat.getColor(ctx,
+						isNightMode ? R.color.google_maps_text_secondary_night : R.color.google_maps_text_secondary));
 				}
 				paintSecondTurn.setColor(ContextCompat.getColor(ctx,
-						recommendedLane ? R.color.nav_arrow : R.color.nav_arrow_distant));
+						isNightMode ? R.color.google_maps_text_secondary_night : R.color.google_maps_text_secondary));
 				int turnType = TurnType.getPrimaryTurn(lanes[i]);
 				int secondTurnType = TurnType.getSecondaryTurn(lanes[i]);
 				int thirdTurnType = TurnType.getTertiaryTurn(lanes[i]);
@@ -271,7 +287,8 @@ public class LanesDrawable extends Drawable {
 					}
 
 					if (recommendedLane) {
-						paintRecommendedLaneHighlight.setColor(ColorUtilities.getSecondaryActiveColor(ctx, isNightMode));
+						paintRecommendedLaneHighlight.setColor(ContextCompat.getColor(ctx,
+						isNightMode ? R.color.google_maps_blue_night : R.color.google_maps_blue));
 						paintRecommendedLaneHighlight.setAlpha(isNightMode ? 230 : 255);
 						if (thirdTurnPath != null) {
 							canvas.drawPath(thirdTurnPath, paintRecommendedLaneHighlight);
