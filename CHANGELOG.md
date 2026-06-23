@@ -2,6 +2,11 @@
 
 All notable changes to FlockFree Navigation are documented here.
 
+## [Unreleased]
+
+### Added
+- Google Maps-style navigation workflow controls: route option cards, add-stop chips for gas/coffee/food/parking/EV charging, a compact layers sheet, a bottom faster-route prompt with undo, richer navigation notification status, and destination arrival hints
+
 ## [v1.4.0] — 2026-06-22
 
 ### Added

@@ -48,6 +48,38 @@
         <item name="android:windowFullscreen">true</item>
     </style>
 
+    <style name="FlockFreeNavigationChip">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:layout_marginEnd">8dp</item>
+        <item name="android:background">@drawable/bg_flockfree_chip</item>
+        <item name="android:clickable">true</item>
+        <item name="android:elevation">3dp</item>
+        <item name="android:focusable">true</item>
+        <item name="android:gravity">center</item>
+        <item name="android:minWidth">64dp</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:textColor">@color/google_maps_text_primary</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="FlockFreePromptButton">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:gravity">center</item>
+        <item name="android:minWidth">54dp</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:textColor">@color/google_maps_blue</item>
+        <item name="android:textSize">14sp</item>
+        <item name="typefaceWeight">medium</item>
+    </style>
+
     <style name="FirstSplashScreenCustom" parent="SplashScreenBaseTheme">
         <item name="android:windowBackground">@drawable/first_splash_screen_free</item>
     </style>

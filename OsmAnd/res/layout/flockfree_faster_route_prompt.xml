@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:id="@+id/flockfree_faster_route_prompt"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:layout_marginStart="12dp"
+	android:layout_marginEnd="12dp"
+	android:background="@drawable/bg_flockfree_prompt"
+	android:clickable="true"
+	android:elevation="6dp"
+	android:focusable="true"
+	android:gravity="center_vertical"
+	android:minHeight="56dp"
+	android:orientation="horizontal"
+	android:paddingStart="14dp"
+	android:paddingTop="8dp"
+	android:paddingEnd="8dp"
+	android:paddingBottom="8dp"
+	android:visibility="gone">
+
+	<TextView
+		android:id="@+id/flockfree_faster_route_prompt_text"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_weight="1"
+		android:ellipsize="end"
+		android:maxLines="2"
+		android:textColor="@color/google_maps_text_primary"
+		android:textSize="14sp" />
+
+	<TextView
+		android:id="@+id/flockfree_faster_route_keep"
+		style="@style/FlockFreePromptButton"
+		android:text="@string/flockfree_faster_route_keep" />
+
+	<TextView
+		android:id="@+id/flockfree_faster_route_undo"
+		style="@style/FlockFreePromptButton"
+		android:text="@string/flockfree_faster_route_undo" />
+
+</LinearLayout>

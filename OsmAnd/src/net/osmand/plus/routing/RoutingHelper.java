@@ -12,11 +12,13 @@ import net.osmand.data.ValueHolder;
 import net.osmand.plus.NavigationService;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
+import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.auto.NavigationSession;
 import net.osmand.plus.helpers.TargetPointsHelper;
 import net.osmand.plus.helpers.TargetPoint;
 import net.osmand.plus.notifications.OsmandNotification.NotificationType;
 import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.FlockFreeNavigationAssistant;
 import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.plugins.flockfree.TrafficRoutingHelper;
 import net.osmand.plus.routing.GPXRouteParams.GPXRouteParamsBuilder;
@@ -343,7 +345,16 @@ public class RoutingHelper {
 			return;
 		}
 		lastFasterRoutePromptMs = now;
-		app.runInUIThread(() -> app.showShortToastMessage("Faster route available \u2014 tap to accept"));
+		int savingsSeconds = etaSavingsSeconds;
+		app.runInUIThread(() -> {
+			MapActivity mapActivity = app.getOsmandMap().getMapView().getMapActivity();
+			if (mapActivity != null) {
+				mapActivity.showFlockFreeFasterRoutePrompt(savingsSeconds, () -> setRoute(currentRoute));
+			} else {
+				int minutes = Math.max(1, Math.round(savingsSeconds / 60f));
+				app.showShortToastMessage(app.getString(R.string.flockfree_faster_route_prompt, minutes));
+			}
+		});
 	}
 
 	public GPXRouteParamsBuilder getCurrentGPXRoute() {
@@ -637,6 +648,10 @@ public class RoutingHelper {
 			String description = tp == null ? "" : tp.getOnlyName();
 			if (isFollowingMode) {
 				voiceRouter.arrivedDestinationPoint(description);
+			}
+			if (PluginsHelper.getEnabledPlugin(FlockFreePlugin.class) != null) {
+				app.runInUIThread(() -> app.showShortToastMessage(
+						FlockFreeNavigationAssistant.getArrivalSummary(app, description)));
 			}
 			boolean onDestinationReached = true;
 			if (onDestinationReached) {

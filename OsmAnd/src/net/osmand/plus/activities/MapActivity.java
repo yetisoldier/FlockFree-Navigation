@@ -3,7 +3,6 @@ package net.osmand.plus.activities;
 import static net.osmand.aidlapi.OsmAndCustomizationConstants.FRAGMENT_DRAWER_ID;
 import static net.osmand.aidlapi.OsmAndCustomizationConstants.MAP_STYLE_ID;
 import static net.osmand.plus.chooseplan.OsmAndFeature.UNLIMITED_MAP_DOWNLOADS;
-import static net.osmand.plus.dashboard.DashboardType.CONFIGURE_MAP;
 import static net.osmand.plus.firstusage.FirstUsageWizardFragment.FIRST_USAGE;
 import static net.osmand.plus.measurementtool.MeasurementToolFragment.PLAN_ROUTE_MODE;
 import static net.osmand.plus.search.ShowQuickSearchMode.CURRENT;
@@ -28,6 +27,7 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -98,6 +98,7 @@ import net.osmand.plus.plugins.OsmandPlugin;
 import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.plugins.accessibility.MapAccessibilityActions;
 import net.osmand.plus.plugins.audionotes.AudioVideoNoteRecordingMenu;
+import net.osmand.plus.plugins.flockfree.FlockFreeNavigationAssistant;
 import net.osmand.plus.routepreparationmenu.MapRouteInfoMenu;
 import net.osmand.plus.routing.IRouteInformationListener;
 import net.osmand.plus.routing.RouteCalculationProgressListener;
@@ -180,6 +181,15 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 	private View flockFreeSearchBar;
 	@Nullable
 	private View flockFreeLayersButton;
+	@Nullable
+	private View flockFreeNavigationActions;
+	@Nullable
+	private View flockFreeFasterRoutePrompt;
+	@Nullable
+	private TextView flockFreeFasterRoutePromptText;
+	@Nullable
+	private Runnable flockFreeFasterRouteUndoAction;
+	private final Runnable flockFreeFasterRoutePromptTimeout = this::hideFlockFreeFasterRoutePrompt;
 
 	private StateChangedListener<ApplicationMode> applicationModeListener;
 
@@ -1240,15 +1250,43 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 			flockFreeLayersButton.setOnClickListener(v -> {
 				if (AndroidUtils.isActivityNotDestroyed(this)) {
 					clearPrevActivityIntent();
-					dashboardOnMap.setDashboardVisibility(true, CONFIGURE_MAP, AndroidUtils.getCenterViewCoordinates(v));
+					FlockFreeNavigationAssistant.showLayersSheet(this);
 				}
 			});
 		}
+
+		flockFreeNavigationActions = findViewById(R.id.flockfree_navigation_actions);
+		setFlockFreeNavigationAction(R.id.flockfree_route_preview_chip,
+				v -> FlockFreeNavigationAssistant.showRoutePreview(this));
+		setFlockFreeNavigationAction(R.id.flockfree_stop_gas_chip,
+				v -> FlockFreeNavigationAssistant.openAddStopSearch(this, "gas station"));
+		setFlockFreeNavigationAction(R.id.flockfree_stop_coffee_chip,
+				v -> FlockFreeNavigationAssistant.openAddStopSearch(this, "coffee"));
+		setFlockFreeNavigationAction(R.id.flockfree_stop_food_chip,
+				v -> FlockFreeNavigationAssistant.openAddStopSearch(this, "food"));
+		setFlockFreeNavigationAction(R.id.flockfree_stop_parking_chip,
+				v -> FlockFreeNavigationAssistant.openAddStopSearch(this, "parking"));
+		setFlockFreeNavigationAction(R.id.flockfree_stop_ev_chip,
+				v -> FlockFreeNavigationAssistant.openAddStopSearch(this, "EV charging"));
+
+		flockFreeFasterRoutePrompt = findViewById(R.id.flockfree_faster_route_prompt);
+		flockFreeFasterRoutePromptText = findViewById(R.id.flockfree_faster_route_prompt_text);
+		setFlockFreeNavigationAction(R.id.flockfree_faster_route_keep,
+				v -> hideFlockFreeFasterRoutePrompt());
+		setFlockFreeNavigationAction(R.id.flockfree_faster_route_undo,
+				v -> runFlockFreeFasterRouteUndo());
 		updateFlockFreeHudControls();
 	}
 
+	private void setFlockFreeNavigationAction(int id, @NonNull View.OnClickListener listener) {
+		View view = findViewById(id);
+		if (view != null) {
+			view.setOnClickListener(listener);
+		}
+	}
+
 	public void updateFlockFreeHudControls() {
-		updateFlockFreeHudControls(!isFlockFreeNavigationUiActive());
+		updateFlockFreeHudControls(true);
 	}
 
 	public void updateFlockFreeHudControls(boolean visible) {
@@ -1258,11 +1296,53 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 		if (flockFreeLayersButton == null) {
 			flockFreeLayersButton = findViewById(R.id.flockfree_layers_button);
 		}
-		boolean showFlockFreeControls = visible && !isFlockFreeNavigationUiActive();
+		if (flockFreeNavigationActions == null) {
+			flockFreeNavigationActions = findViewById(R.id.flockfree_navigation_actions);
+		}
+		boolean navigationUiActive = isFlockFreeNavigationUiActive();
+		boolean showFlockFreeControls = visible && !navigationUiActive;
+		boolean showNavigationActions = visible && navigationUiActive;
 		AndroidUiHelper.updateVisibility(flockFreeSearchBar, showFlockFreeControls);
 		AndroidUiHelper.updateVisibility(flockFreeLayersButton, showFlockFreeControls);
+		AndroidUiHelper.updateVisibility(flockFreeNavigationActions, showNavigationActions);
 		AndroidUiHelper.updateVisibility(findViewById(R.id.map_search_button), false);
 		AndroidUiHelper.updateVisibility(findViewById(R.id.map_layers_button), false);
+	}
+
+	public void showFlockFreeFasterRoutePrompt(int etaSavingsSeconds, @Nullable Runnable undoAction) {
+		if (flockFreeFasterRoutePrompt == null) {
+			flockFreeFasterRoutePrompt = findViewById(R.id.flockfree_faster_route_prompt);
+		}
+		if (flockFreeFasterRoutePromptText == null) {
+			flockFreeFasterRoutePromptText = findViewById(R.id.flockfree_faster_route_prompt_text);
+		}
+		if (flockFreeFasterRoutePrompt == null || flockFreeFasterRoutePromptText == null) {
+			return;
+		}
+		int minutes = Math.max(1, Math.round(etaSavingsSeconds / 60f));
+		flockFreeFasterRouteUndoAction = undoAction;
+		flockFreeFasterRoutePromptText.setText(getString(R.string.flockfree_faster_route_prompt, minutes));
+		flockFreeFasterRoutePrompt.setVisibility(View.VISIBLE);
+		flockFreeFasterRoutePrompt.bringToFront();
+		flockFreeFasterRoutePrompt.removeCallbacks(flockFreeFasterRoutePromptTimeout);
+		flockFreeFasterRoutePrompt.postDelayed(flockFreeFasterRoutePromptTimeout, 20_000L);
+	}
+
+	private void hideFlockFreeFasterRoutePrompt() {
+		if (flockFreeFasterRoutePrompt != null) {
+			flockFreeFasterRoutePrompt.setVisibility(View.GONE);
+			flockFreeFasterRoutePrompt.removeCallbacks(flockFreeFasterRoutePromptTimeout);
+		}
+		flockFreeFasterRouteUndoAction = null;
+	}
+
+	private void runFlockFreeFasterRouteUndo() {
+		Runnable undoAction = flockFreeFasterRouteUndoAction;
+		hideFlockFreeFasterRoutePrompt();
+		if (undoAction != null) {
+			undoAction.run();
+			app.showShortToastMessage(R.string.flockfree_faster_route_undone);
+		}
 	}
 
 	private boolean isFlockFreeNavigationUiActive() {

@@ -17,6 +17,7 @@ import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.view.View;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.car.app.notification.CarAppExtender;
 import androidx.car.app.notification.CarPendingIntent;
@@ -32,6 +33,8 @@ import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.auto.NavigationCarAppService;
 import net.osmand.plus.auto.NavigationSession;
 import net.osmand.plus.helpers.TargetPoint;
+import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.routing.RouteCalculationResult;
 import net.osmand.plus.routing.NextDirectionInfo;
 import net.osmand.plus.routing.RouteDirectionInfo;
@@ -211,6 +214,7 @@ public class NavigationNotification extends OsmandNotification {
 				if (speedStr != null) {
 					notificationText.append(" • ").append(speedStr);
 				}
+				appendFlockFreeNavigationState(notificationText);
 			} else {
 				notificationTitle = app.getString(R.string.shared_string_navigation);
 				String error = routingHelper.getLastRouteCalcErrorShort();
@@ -267,6 +271,31 @@ public class NavigationNotification extends OsmandNotification {
 		}
 
 		return notificationBuilder;
+	}
+
+	private void appendFlockFreeNavigationState(@NonNull StringBuilder notificationText) {
+		FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
+		if (plugin == null) {
+			return;
+		}
+		appendFlockFreeStatus(notificationText,
+				app.getString(R.string.flockfree_notification_traffic_state,
+						plugin.getLastTrafficRouteCheckSummary()),
+				app.getString(R.string.flockfree_traffic_last_check_none),
+				app.getString(R.string.flockfree_traffic_status_disabled));
+		appendFlockFreeStatus(notificationText,
+				app.getString(R.string.flockfree_notification_camera_state,
+						plugin.getLastCameraAlertCheckSummary()),
+				app.getString(R.string.flockfree_alert_last_check_none),
+				app.getString(R.string.flockfree_alert_last_check_waiting));
+	}
+
+	private void appendFlockFreeStatus(@NonNull StringBuilder notificationText, @NonNull String status,
+	                                   @NonNull String hiddenStatus1, @NonNull String hiddenStatus2) {
+		if (Algorithms.isEmpty(status) || status.endsWith(hiddenStatus1) || status.endsWith(hiddenStatus2)) {
+			return;
+		}
+		notificationText.append("\n").append(status);
 	}
 
 	@Override

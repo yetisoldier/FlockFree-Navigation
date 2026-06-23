@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<HorizontalScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+	android:id="@+id/flockfree_navigation_actions"
+	android:layout_width="match_parent"
+	android:layout_height="56dp"
+	android:clipToPadding="false"
+	android:fillViewport="false"
+	android:overScrollMode="never"
+	android:paddingStart="12dp"
+	android:paddingEnd="12dp"
+	android:scrollbars="none"
+	android:visibility="gone">
+
+	<LinearLayout
+		android:layout_width="wrap_content"
+		android:layout_height="match_parent"
+		android:gravity="center_vertical"
+		android:orientation="horizontal">
+
+		<TextView
+			android:id="@+id/flockfree_route_preview_chip"
+			style="@style/FlockFreeNavigationChip"
+			android:text="@string/flockfree_route_preview_chip" />
+
+		<TextView
+			android:id="@+id/flockfree_stop_gas_chip"
+			style="@style/FlockFreeNavigationChip"
+			android:text="@string/flockfree_stop_gas" />
+
+		<TextView
+			android:id="@+id/flockfree_stop_coffee_chip"
+			style="@style/FlockFreeNavigationChip"
+			android:text="@string/flockfree_stop_coffee" />
+
+		<TextView
+			android:id="@+id/flockfree_stop_food_chip"
+			style="@style/FlockFreeNavigationChip"
+			android:text="@string/flockfree_stop_food" />
+
+		<TextView
+			android:id="@+id/flockfree_stop_parking_chip"
+			style="@style/FlockFreeNavigationChip"
+			android:text="@string/flockfree_stop_parking" />
+
+		<TextView
+			android:id="@+id/flockfree_stop_ev_chip"
+			style="@style/FlockFreeNavigationChip"
+			android:text="@string/flockfree_stop_ev" />
+
+	</LinearLayout>
+</HorizontalScrollView>
