@@ -42,7 +42,7 @@ public class MultiColoringGeometryWayDrawer<T extends MultiColoringGeometryWayCo
 		if (DRAW_BORDER && zoom < BORDER_TYPE_ZOOM_THRESHOLD && requireDrawingBorder()) {
 			Path fullPath = new Path();
 			for (DrawPathData data : pathsData) {
-				if (data.style != null && data.style.color != 0) {
+				if (data.style != null && data.style.getColor(0) != 0) {
 					fullPath.addPath(data.path);
 				}
 			}
