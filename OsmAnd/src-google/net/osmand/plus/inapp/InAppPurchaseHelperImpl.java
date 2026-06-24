@@ -48,8 +48,8 @@ public class InAppPurchaseHelperImpl extends InAppPurchaseHelper {
 	private BillingManager billingManager;
 	private List<ProductDetails> productDetailsList;
 
-	private boolean purchasedLocalFullVersion = false;
-	private boolean purchasedLocalDepthContours = false;
+	private boolean purchasedLocalFullVersion = true; // FlockFree: always full version
+	private boolean purchasedLocalDepthContours = true; // FlockFree: always unlocked
 	private boolean subscribedToLocalLiveUpdates = false;
 	private boolean subscribedToLocalOsmAndPro = false;
 	private boolean subscribedToLocalMaps = false;
@@ -79,12 +79,12 @@ public class InAppPurchaseHelperImpl extends InAppPurchaseHelper {
 
 	@Override
 	public boolean isPurchasedLocalFullVersion() {
-		return purchasedLocalFullVersion;
+		return true; // FlockFree: always full version
 	}
 
 	@Override
 	public boolean isPurchasedLocalDeepContours() {
-		return purchasedLocalDepthContours;
+		return true; // FlockFree: always unlocked
 	}
 
 	@Override

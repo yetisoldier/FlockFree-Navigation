@@ -58,3 +58,5 @@ OsmAnd-java/src/test/resources/approximation/*
 OsmAnd-shared/src/androidMain/resources/
 OsmAnd-shared/src/jvmMain/resources/
 __pycache__/
+keystores/*.keystore
+keystores/*.jks

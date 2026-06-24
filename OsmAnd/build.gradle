@@ -31,10 +31,10 @@ android {
 		}
 
 		publishing {
-			storeFile file("/var/lib/jenkins/osmand_key")
-			storePassword System.getenv("OSMAND_APK_PASSWORD")
-			keyAlias "osmand"
-			keyPassword System.getenv("OSMAND_APK_PASSWORD")
+			storeFile file("../keystores/flockfree-release.keystore")
+			storePassword System.getenv("FLOCKFREE_KEYSTORE_PASSWORD") ?: "FLOCKFREE_CHANGE_ME_2026"
+			keyAlias "flockfree"
+			keyPassword System.getenv("FLOCKFREE_KEYSTORE_PASSWORD") ?: "FLOCKFREE_CHANGE_ME_2026"
 		}
 	}
 

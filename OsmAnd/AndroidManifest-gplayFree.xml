@@ -2,10 +2,22 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Strip permissions not needed by FlockFree for Play Store build -->
+    <uses-permission android:name="android.permission.CAMERA" tools:node="remove"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove"/>
+    <uses-permission android:name="android.permission.STORAGE" tools:node="remove"/>
+
+    <!-- Remove features not needed by FlockFree -->
+    <uses-feature android:name="android.hardware.camera" tools:node="remove"/>
+    <uses-feature android:name="android.hardware.camera.autofocus" tools:node="remove"/>
+    <uses-feature android:name="android.hardware.microphone" tools:node="remove"/>
+
     <application
         android:icon="@mipmap/icon_free"
 		android:label="@string/app_name"
-        tools:replace="android:icon, android:label">
+        android:requestLegacyExternalStorage="false"
+        tools:replace="android:icon, android:label, android:requestLegacyExternalStorage">
 
         <meta-data
             android:name="com.facebook.sdk.ApplicationId"
