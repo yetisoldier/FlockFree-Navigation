@@ -197,8 +197,8 @@ public class NavigationReportButton implements IRouteInformationListener {
 				app.getSettings().getApplicationMode(), ThemeUsageContext.MAP);
 
 		int bgRes = nightMode
-				? R.drawable.btn_circle_night
-				: R.drawable.btn_circle;
+				? R.drawable.flockfree_report_button_night
+				: R.drawable.flockfree_report_button;
 		fabView.setBackgroundResource(bgRes);
 
 		fabView.setColorFilter(ColorUtilities.getMapButtonIconColor(app, nightMode),
