@@ -35,6 +35,16 @@
 		android:layout_marginEnd="@dimen/content_padding_small"
 		android:visibility="gone" />
 
+	<include
+		android:id="@+id/flockfree_camera_widget"
+		layout="@layout/flockfree_camera_widget_chip"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_gravity="top|end"
+		android:layout_marginTop="88dp"
+		android:layout_marginEnd="14dp"
+		android:visibility="gone" />
+
 	<net.osmand.plus.views.controls.VerticalWidgetPanel
 		android:id="@+id/top_widgets_panel"
 		android:layout_width="match_parent"

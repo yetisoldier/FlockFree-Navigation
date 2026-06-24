@@ -26,6 +26,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -98,11 +99,13 @@ import net.osmand.plus.plugins.OsmandPlugin;
 import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.plugins.accessibility.MapAccessibilityActions;
 import net.osmand.plus.plugins.audionotes.AudioVideoNoteRecordingMenu;
+import net.osmand.plus.plugins.flockfree.CameraData;
 import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.plugins.flockfree.FlockFreeNavigationAssistant;
 import net.osmand.plus.routepreparationmenu.MapRouteInfoMenu;
 import net.osmand.plus.routing.IRouteInformationListener;
 import net.osmand.plus.routing.RouteCalculationProgressListener;
+import net.osmand.plus.routing.RouteCalculationResult;
 import net.osmand.plus.routing.RouteService;
 import net.osmand.plus.routing.RoutingHelper;
 import net.osmand.plus.routing.TransportRoutingHelper.TransportRouteCalculationProgressCallback;
@@ -138,11 +141,13 @@ import net.osmand.plus.views.OsmandMapTileView;
 import net.osmand.plus.views.controls.VerticalWidgetPanel;
 import net.osmand.plus.views.layers.MapControlsLayer;
 import net.osmand.plus.views.layers.MapInfoLayer;
+import net.osmand.plus.views.mapwidgets.OutlinedTextContainer;
 import net.osmand.plus.views.mapwidgets.TopToolbarController;
 import net.osmand.plus.views.mapwidgets.TopToolbarController.TopToolbarControllerType;
 import net.osmand.plus.views.mapwidgets.WidgetsVisibilityHelper;
 import net.osmand.shared.gpx.GpxFile;
 import net.osmand.util.Algorithms;
+import net.osmand.util.MapUtils;
 
 import org.apache.commons.logging.Log;
 
@@ -1300,6 +1305,7 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 		if (trafficLegend != null) {
 			AndroidUiHelper.updateVisibility(trafficLegend, false);
 		}
+		updateFlockFreeCameraWidget();
 		AndroidUiHelper.updateVisibility(findViewById(R.id.map_search_button), false);
 		AndroidUiHelper.updateVisibility(findViewById(R.id.map_layers_button), false);
 	}
@@ -1347,6 +1353,82 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 				|| routingHelper.isRoutePlanningMode()
 				|| routingHelper.isRouteBeingCalculated()
 				|| routingHelper.isRouteCalculated();
+	}
+
+	private View flockFreeCameraWidget;
+	private OutlinedTextContainer flockFreeCameraText;
+	private OutlinedTextContainer flockFreeCameraSubText;
+	private ImageView flockFreeCameraIcon;
+
+	public void updateFlockFreeCameraWidget() {
+		if (flockFreeCameraWidget == null) {
+			flockFreeCameraWidget = findViewById(R.id.flockfree_camera_widget);
+			if (flockFreeCameraWidget != null) {
+				flockFreeCameraText = flockFreeCameraWidget.findViewById(R.id.widget_text);
+				flockFreeCameraSubText = flockFreeCameraWidget.findViewById(R.id.widget_text_small);
+				flockFreeCameraIcon = flockFreeCameraWidget.findViewById(R.id.widget_icon);
+			}
+		}
+		if (flockFreeCameraWidget == null) return;
+		FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
+		if (plugin == null || !plugin.CAMERA_SHOW_LAYER.get()) {
+			flockFreeCameraWidget.setVisibility(View.GONE);
+			return;
+		}
+		RoutingHelper rh = app.getRoutingHelper();
+		if (!rh.isFollowingMode() || rh.isRouteBeingCalculated()) {
+			flockFreeCameraWidget.setVisibility(View.GONE);
+			return;
+		}
+		RouteCalculationResult route = rh.getRoute();
+		if (route == null || !route.isCalculated()) {
+			flockFreeCameraWidget.setVisibility(View.GONE);
+			return;
+		}
+		List<Location> routeLocations = route.getImmutableAllLocations();
+		if (routeLocations == null || routeLocations.isEmpty()) {
+			flockFreeCameraWidget.setVisibility(View.GONE);
+			return;
+		}
+		Location location = app.getLocationProvider().getLastKnownLocation();
+		if (location == null) {
+			flockFreeCameraWidget.setVisibility(View.GONE);
+			return;
+		}
+		int startIndex = findNearestRouteIndex(location, routeLocations);
+		int radius = plugin.CAMERA_AVOIDANCE_RADIUS.get();
+		List<Location> remainingRoute = routeLocations.subList(startIndex, routeLocations.size());
+		List<CameraData.CameraPoint> cameras =
+				plugin.getAvoidanceHelper().findCamerasNearRouteLocations(remainingRoute, radius);
+		int count = cameras.size();
+		if (flockFreeCameraText != null) flockFreeCameraText.setText(String.valueOf(count));
+		if (flockFreeCameraSubText != null) {
+			flockFreeCameraSubText.setText(app.getString(count == 0
+					? R.string.flockfree_widget_no_route_cameras_left
+					: R.string.flockfree_widget_route_cameras_left));
+		}
+		if (flockFreeCameraIcon != null) {
+			boolean nightMode = app.getDaynightHelper().isNightMode(MAP);
+			flockFreeCameraIcon.setImageResource(nightMode
+					? R.drawable.widget_camera_route_night : R.drawable.widget_camera_route_day);
+		}
+		flockFreeCameraWidget.setVisibility(View.VISIBLE);
+	}
+
+	private int findNearestRouteIndex(@NonNull Location location, @NonNull List<Location> routeLocations) {
+		int nearestIndex = 0;
+		double nearestDistance = Double.MAX_VALUE;
+		double lat = location.getLatitude();
+		double lon = location.getLongitude();
+		for (int i = 0; i < routeLocations.size(); i++) {
+			Location rl = routeLocations.get(i);
+			double dist = MapUtils.getDistance(lat, lon, rl.getLatitude(), rl.getLongitude());
+			if (dist < nearestDistance) {
+				nearestDistance = dist;
+				nearestIndex = i;
+			}
+		}
+		return nearestIndex;
 	}
 
 	public boolean shouldHideTopControls() {
@@ -1450,6 +1532,7 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 
 	public void refreshMap() {
 		getMapView().refreshMap();
+		updateFlockFreeCameraWidget();
 	}
 
 	public void updateLayers() {
@@ -1740,6 +1823,7 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 		for (OsmandPlugin plugin : PluginsHelper.getEnabledPlugins()) {
 			plugin.newRouteIsCalculated(newRoute);
 		}
+		updateFlockFreeCameraWidget();
 	}
 
 	private void fitCurrentRouteToMap() {

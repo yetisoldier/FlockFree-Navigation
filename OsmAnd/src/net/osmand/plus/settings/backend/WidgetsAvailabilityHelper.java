@@ -98,12 +98,10 @@ public class WidgetsAvailabilityHelper {
 		regWidgetVisibility(NEXT_TURN, nextTurnSet);
 		regWidgetVisibility(SMALL_NEXT_TURN, smallNextTurnSet);
 		regWidgetVisibility(SECOND_NEXT_TURN, secondNextTurnSet);
-		regWidgetVisibility(CAMERA_PROXIMITY, flockFreeNavigationSet);
 		
 		regWidgetAvailability(NEXT_TURN, exceptDefault);
 		regWidgetAvailability(SMALL_NEXT_TURN, exceptDefault);
 		regWidgetAvailability(SECOND_NEXT_TURN, exceptDefault);
-		regWidgetAvailability(CAMERA_PROXIMITY, all);
 
 		if (!enableWidgetsV2) {
 			regWidgetVisibility(INTERMEDIATE_DESTINATION, legacyNavigationPointSet);
