@@ -119,13 +119,8 @@ public class NavigationReportButton implements IRouteInformationListener {
 			((ViewGroup) fabView.getParent()).removeView(fabView);
 		}
 
-		// Find a suitable parent — the root content view
-		View root = activity.findViewById(android.R.id.content);
-		if (root == null) {
-			return;
-		}
-		ViewGroup rootGroup = root instanceof ViewGroup ? (ViewGroup) root : null;
-		if (rootGroup == null) {
+		ViewGroup parent = findReportButtonParent(activity);
+		if (parent == null) {
 			return;
 		}
 
@@ -140,7 +135,7 @@ public class NavigationReportButton implements IRouteInformationListener {
 		int fabSize = getMapButtonSize();
 		FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(fabSize, fabSize);
 		lp.gravity = Gravity.END | Gravity.BOTTOM;
-		lp.setMargins(0, 0, getMapButtonMargin(), dp(FAB_FALLBACK_BOTTOM_MARGIN_DP));
+		lp.setMargins(0, 0, getMapButtonMargin(), getFallbackBottomMargin());
 
 		fabView.setLayoutParams(lp);
 		fabView.setElevation(6f);
@@ -151,8 +146,18 @@ public class NavigationReportButton implements IRouteInformationListener {
 			}
 		});
 
-		rootGroup.addView(fabView);
+		parent.addView(fabView);
 		updateColors();
+	}
+
+	@Nullable
+	private ViewGroup findReportButtonParent(@NonNull MapActivity activity) {
+		View mapHudLayout = activity.findViewById(R.id.map_hud_layout);
+		if (mapHudLayout instanceof ViewGroup) {
+			return (ViewGroup) mapHudLayout;
+		}
+		View root = activity.findViewById(android.R.id.content);
+		return root instanceof ViewGroup ? (ViewGroup) root : null;
 	}
 
 	private void updateVisibility() {
@@ -179,6 +184,7 @@ public class NavigationReportButton implements IRouteInformationListener {
 		updateColors();
 		if (fabView != null) {
 			fabView.setVisibility(View.VISIBLE);
+			fabView.post(this::updatePosition);
 		}
 	}
 
@@ -209,34 +215,35 @@ public class NavigationReportButton implements IRouteInformationListener {
 		if (fabView == null || mapActivity == null) {
 			return;
 		}
-		View root = mapActivity.findViewById(android.R.id.content);
-		View zoomInButton = mapActivity.findViewById(R.id.map_zoom_in_button);
+		View parent = fabView.getParent() instanceof View ? (View) fabView.getParent() : null;
+		View zoomInButton = findZoomInButton();
 		View navBar = mapActivity.findViewById(R.id.flockfree_nav_bar);
-		int bottomMargin = dp(FAB_FALLBACK_BOTTOM_MARGIN_DP);
+		int bottomMargin = getFallbackBottomMargin();
 		int endMargin = getMapButtonMargin();
-		if (root != null && zoomInButton != null && zoomInButton.isShown()
-				&& root.getHeight() > 0 && root.getWidth() > 0
+		if (parent != null && zoomInButton != null && zoomInButton.isShown()
+				&& parent.getHeight() > 0 && parent.getWidth() > 0
 				&& zoomInButton.getHeight() > 0 && zoomInButton.getWidth() > 0) {
-			int[] rootLocation = new int[2];
+			int[] parentLocation = new int[2];
 			int[] zoomLocation = new int[2];
-			root.getLocationOnScreen(rootLocation);
+			parent.getLocationOnScreen(parentLocation);
 			zoomInButton.getLocationOnScreen(zoomLocation);
-			int zoomTop = zoomLocation[1] - rootLocation[1];
-			int zoomRight = zoomLocation[0] - rootLocation[0] + zoomInButton.getWidth();
-			if (zoomTop > 0 && zoomTop < root.getHeight()) {
-				bottomMargin = root.getHeight() - zoomTop + getMapButtonSpacing();
+			int zoomTop = zoomLocation[1] - parentLocation[1];
+			int zoomRight = zoomLocation[0] - parentLocation[0] + zoomInButton.getWidth();
+			if (zoomTop > 0 && zoomTop < parent.getHeight()) {
+				bottomMargin = parent.getHeight() - zoomTop + getMapButtonSpacing();
 			}
-			if (zoomRight > 0 && zoomRight <= root.getWidth()) {
-				endMargin = Math.max(0, root.getWidth() - zoomRight);
+			if (zoomRight > 0 && zoomRight <= parent.getWidth()) {
+				endMargin = Math.max(0, parent.getWidth() - zoomRight);
 			}
-		} else if (root != null && navBar != null && navBar.getVisibility() == View.VISIBLE) {
-			int[] rootLocation = new int[2];
+		} else if (parent != null && navBar != null && navBar.getVisibility() == View.VISIBLE) {
+			int[] parentLocation = new int[2];
 			int[] navBarLocation = new int[2];
-			root.getLocationOnScreen(rootLocation);
+			parent.getLocationOnScreen(parentLocation);
 			navBar.getLocationOnScreen(navBarLocation);
-			int navBarTop = navBarLocation[1] - rootLocation[1];
-			if (root.getHeight() > 0 && navBarTop > 0 && navBarTop < root.getHeight()) {
-				bottomMargin = root.getHeight() - navBarTop + getMapButtonSpacing();
+			int navBarTop = navBarLocation[1] - parentLocation[1];
+			if (parent.getHeight() > 0 && navBarTop > 0 && navBarTop < parent.getHeight()) {
+				bottomMargin = parent.getHeight() - navBarTop + getMapButtonSpacing()
+						+ getZoomStackOffset();
 			}
 		}
 		ViewGroup.LayoutParams params = fabView.getLayoutParams();
@@ -250,6 +257,24 @@ public class NavigationReportButton implements IRouteInformationListener {
 		}
 	}
 
+	@Nullable
+	private View findZoomInButton() {
+		if (mapActivity == null) {
+			return null;
+		}
+		View mapHudLayout = mapActivity.findViewById(R.id.map_hud_layout);
+		View zoomInButton = mapHudLayout != null ? mapHudLayout.findViewById(R.id.map_zoom_in_button) : null;
+		if (isUsableAnchor(zoomInButton)) {
+			return zoomInButton;
+		}
+		zoomInButton = mapActivity.findViewById(R.id.map_zoom_in_button);
+		return isUsableAnchor(zoomInButton) ? zoomInButton : null;
+	}
+
+	private boolean isUsableAnchor(@Nullable View view) {
+		return view != null && view.isShown() && view.getWidth() > 0 && view.getHeight() > 0;
+	}
+
 	private int getMapButtonSize() {
 		return app.getResources().getDimensionPixelSize(R.dimen.map_button_size);
 	}
@@ -260,6 +285,14 @@ public class NavigationReportButton implements IRouteInformationListener {
 
 	private int getMapButtonMargin() {
 		return app.getResources().getDimensionPixelSize(R.dimen.map_button_margin);
+	}
+
+	private int getFallbackBottomMargin() {
+		return dp(FAB_FALLBACK_BOTTOM_MARGIN_DP) + getZoomStackOffset();
+	}
+
+	private int getZoomStackOffset() {
+		return 2 * (getMapButtonSize() + getMapButtonSpacing());
 	}
 
 	private int dp(float value) {
