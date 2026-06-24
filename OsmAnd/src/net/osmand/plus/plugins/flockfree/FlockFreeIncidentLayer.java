@@ -18,6 +18,7 @@ import androidx.annotation.Nullable;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 
+import net.osmand.core.android.MapRendererView;
 import net.osmand.data.LatLon;
 import net.osmand.data.PointDescription;
 import net.osmand.data.QuadRect;
@@ -27,6 +28,7 @@ import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.plugins.flockfree.TomTomIncidentProvider.TrafficIncident;
 import net.osmand.plus.settings.enums.ThemeUsageContext;
 import net.osmand.plus.utils.ColorUtilities;
+import net.osmand.plus.utils.NativeUtilities;
 import net.osmand.plus.utils.UiUtilities;
 import net.osmand.plus.views.layers.ContextMenuLayer;
 import net.osmand.plus.views.layers.MapSelectionResult;
@@ -216,8 +218,9 @@ public class FlockFreeIncidentLayer extends OsmandMapLayer implements ContextMen
         Map<Long, float[]> cellScreenCenter = new HashMap<>();
 
         for (TrafficIncident incident : incidents) {
-            float x = tileBox.getPixXFromLatLon(incident.lat, incident.lon);
-            float y = tileBox.getPixYFromLatLon(incident.lat, incident.lon);
+            PointF pos = getPixelFromLatLon(tileBox, incident.lat, incident.lon);
+            float x = pos.x;
+            float y = pos.y;
             int cellX = (int) (x / cellSize);
             int cellY = (int) (y / cellSize);
             long key = ((long) cellX << 32) | (cellY & 0xFFFFFFFFL);
@@ -270,8 +273,9 @@ public class FlockFreeIncidentLayer extends OsmandMapLayer implements ContextMen
 
     private void drawIncidentMarker(@NonNull Canvas canvas, @NonNull RotatedTileBox tileBox,
                                      @NonNull TrafficIncident incident) {
-        float x = tileBox.getPixXFromLatLon(incident.lat, incident.lon);
-        float y = tileBox.getPixYFromLatLon(incident.lat, incident.lon);
+        PointF pos = getPixelFromLatLon(tileBox, incident.lat, incident.lon);
+        float x = pos.x;
+        float y = pos.y;
         float radius = dpToPx(MARKER_RADIUS_DP / 2f);
 
         // Draw filled circle
@@ -561,6 +565,15 @@ public class FlockFreeIncidentLayer extends OsmandMapLayer implements ContextMen
     @Override
     public boolean drawInScreenPixels() {
         return true;
+    }
+
+    @NonNull
+    private PointF getPixelFromLatLon(@NonNull RotatedTileBox tileBox, double lat, double lon) {
+        MapRendererView mapRenderer = getMapRenderer();
+        if (mapRenderer != null) {
+            return NativeUtilities.getPixelFromLatLon(mapRenderer, tileBox, lat, lon);
+        }
+        return new PointF(tileBox.getPixXFromLatLon(lat, lon), tileBox.getPixYFromLatLon(lat, lon));
     }
 
     private void showIncidentDetails(@NonNull TrafficIncident incident) {

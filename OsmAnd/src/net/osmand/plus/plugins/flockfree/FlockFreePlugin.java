@@ -611,13 +611,13 @@ public class FlockFreePlugin extends OsmandPlugin {
                               @Nullable net.osmand.plus.settings.enums.ScreenLayoutMode layoutMode) {
         WidgetInfoCreator creator = new WidgetInfoCreator(app, appMode, layoutMode);
 
-        // Camera proximity widget — TOP panel to avoid portrait overlap with search bar
+        // Camera proximity widget — RIGHT side panel (small, unobtrusive)
         MapWidget cameraWidget = createMapWidgetForParams(activity, WidgetType.CAMERA_PROXIMITY);
         if (cameraWidget != null) {
             widgetInfos.add(creator.createWidgetInfo(cameraWidget));
         }
 
-        // Traffic status widget — TOP panel
+        // Traffic status widget — RIGHT side panel
         MapWidget trafficWidget = createMapWidgetForParams(activity, WidgetType.TRAFFIC_STATUS);
         if (trafficWidget != null) {
             widgetInfos.add(creator.createWidgetInfo(trafficWidget));

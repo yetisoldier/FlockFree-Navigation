@@ -10,6 +10,7 @@ import android.graphics.PointF;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import net.osmand.core.android.MapRendererView;
 import net.osmand.data.LatLon;
 import net.osmand.data.PointDescription;
 import net.osmand.data.QuadRect;
@@ -17,6 +18,7 @@ import net.osmand.data.RotatedTileBox;
 import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.plugins.flockfree.cyd.CydDetectionCandidate;
+import net.osmand.plus.utils.NativeUtilities;
 import net.osmand.plus.views.layers.ContextMenuLayer;
 import net.osmand.plus.views.layers.MapSelectionResult;
 import net.osmand.plus.views.layers.MapSelectionRules;
@@ -199,8 +201,9 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         clusterScreenCenter.clear();
 
         for (CameraData.CameraPoint camera : cameras) {
-            float x = tileBox.getPixXFromLatLon(camera.lat, camera.lon);
-            float y = tileBox.getPixYFromLatLon(camera.lat, camera.lon);
+            PointF pos = getPixelFromLatLon(tileBox, camera.lat, camera.lon);
+            float x = pos.x;
+            float y = pos.y;
             int cellX = (int) (x / cellSize);
             int cellY = (int) (y / cellSize);
             long key = ((long) cellX << 32) | (cellY & 0xFFFFFFFFL);
@@ -238,7 +241,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
             int dominantColor = getDominantBrandColor(cellCameras);
 
             // Convert screen center back to lat/lon for tap handling
-            LatLon centerLatLon = tileBox.getLatLonFromPixel(centerX, centerY);
+            LatLon centerLatLon = getLatLonFromPixel(tileBox, centerX, centerY);
 
             CameraCluster cluster = new CameraCluster(
                     centerX, centerY,
@@ -325,7 +328,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         }
 
         // Check if a camera marker was tapped
-        LatLon latLon = tileBox.getLatLonFromPixel(point.x, point.y);
+        LatLon latLon = getLatLonFromPixel(tileBox, point.x, point.y);
         double tapLat = latLon.getLatitude();
         double tapLon = latLon.getLongitude();
 
@@ -417,7 +420,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     }
 
     private CameraData.CameraPoint findClosestCamera(@NonNull PointF point, @NonNull RotatedTileBox tileBox) {
-        LatLon latLon = tileBox.getLatLonFromPixel(point.x, point.y);
+        LatLon latLon = getLatLonFromPixel(tileBox, point.x, point.y);
         CameraData.CameraPoint closest = null;
         double closestDist = Double.MAX_VALUE;
         for (CameraData.CameraPoint camera : visibleCameras) {
@@ -432,7 +435,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
 
     @Nullable
     private CydDetectionCandidate findClosestDetection(@NonNull PointF point, @NonNull RotatedTileBox tileBox) {
-        LatLon latLon = tileBox.getLatLonFromPixel(point.x, point.y);
+        LatLon latLon = getLatLonFromPixel(tileBox, point.x, point.y);
         CydDetectionCandidate closest = null;
         double closestDist = Double.MAX_VALUE;
         for (CydDetectionCandidate detection : visibleDetections) {
@@ -461,6 +464,24 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         }
     }
 
+    @NonNull
+    private PointF getPixelFromLatLon(@NonNull RotatedTileBox tileBox, double lat, double lon) {
+        MapRendererView mapRenderer = getMapRenderer();
+        if (mapRenderer != null) {
+            return NativeUtilities.getPixelFromLatLon(mapRenderer, tileBox, lat, lon);
+        }
+        return new PointF(tileBox.getPixXFromLatLon(lat, lon), tileBox.getPixYFromLatLon(lat, lon));
+    }
+
+
+    @NonNull
+    private LatLon getLatLonFromPixel(@NonNull RotatedTileBox tileBox, float x, float y) {
+        MapRendererView mapRenderer = getMapRenderer();
+        if (mapRenderer != null) {
+            return NativeUtilities.getLatLonFromElevatedPixel(mapRenderer, tileBox, x, y);
+        }
+        return tileBox.getLatLonFromPixel(x, y);
+    }
     private boolean isInBounds(@NonNull QuadRect screenArea, double lat, double lon) {
         double top = Math.max(screenArea.top, screenArea.bottom);
         double bottom = Math.min(screenArea.top, screenArea.bottom);
@@ -476,8 +497,9 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
 
     private void drawCamera(@NonNull Canvas canvas, @NonNull RotatedTileBox tileBox,
                             @NonNull CameraData.CameraPoint camera) {
-        float x = tileBox.getPixXFromLatLon(camera.lat, camera.lon);
-        float y = tileBox.getPixYFromLatLon(camera.lat, camera.lon);
+        PointF pos = getPixelFromLatLon(tileBox, camera.lat, camera.lon);
+        float x = pos.x;
+        float y = pos.y;
         int color = getBrandColor(camera.brand);
 
         // Draw orientation cone when direction is available and zoom is high enough
@@ -565,8 +587,9 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         if (lat == null || lon == null) {
             return;
         }
-        float x = tileBox.getPixXFromLatLon(lat, lon);
-        float y = tileBox.getPixYFromLatLon(lat, lon);
+        PointF pos = getPixelFromLatLon(tileBox, lat, lon);
+        float x = pos.x;
+        float y = pos.y;
         float radius = detectionRadiusPx;
 
         // Reuse class-level diamondPath — reset before each use instead of allocating
