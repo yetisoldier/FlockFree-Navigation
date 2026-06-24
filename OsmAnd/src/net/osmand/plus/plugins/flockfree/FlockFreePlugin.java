@@ -73,6 +73,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     public final CommonPreference<String> CAMERA_NEAREST_LAST_CHECK_SUMMARY;
     private final CommonPreference<Boolean> RENDERER_MIGRATION_DONE;
     private final CommonPreference<Boolean> VISUAL_DEFAULTS_MIGRATION_DONE;
+    private final CommonPreference<Boolean> CAMERA_AVOIDANCE_DEFAULTS_MIGRATION_DONE;
     private final CommonPreference<Boolean> TRAFFIC_DEFAULTS_MIGRATION_DONE;
     public final OsmandPreference<Boolean> FORCE_NIGHT_MAP;
 
@@ -97,6 +98,29 @@ public class FlockFreePlugin extends OsmandPlugin {
     private static final float FLOCKFREE_MAX_LEGACY_TEXT_SCALE = 1.3f;
     private static final int MAP_CENTER_CAMERA_SEARCH_RADIUS_METERS = 5_000;
 
+    public static final class RouteComparisonInfo {
+        public final int fastestDistanceMeters;
+        public final int fastestTimeSeconds;
+        public final int fastestCameraCount;
+        public final int privacyDistanceMeters;
+        public final int privacyTimeSeconds;
+        public final int privacyCameraCount;
+
+        private RouteComparisonInfo(int fastestDistanceMeters, int fastestTimeSeconds, int fastestCameraCount,
+                                    int privacyDistanceMeters, int privacyTimeSeconds, int privacyCameraCount) {
+            this.fastestDistanceMeters = Math.max(0, fastestDistanceMeters);
+            this.fastestTimeSeconds = Math.max(0, fastestTimeSeconds);
+            this.fastestCameraCount = Math.max(0, fastestCameraCount);
+            this.privacyDistanceMeters = Math.max(0, privacyDistanceMeters);
+            this.privacyTimeSeconds = Math.max(0, privacyTimeSeconds);
+            this.privacyCameraCount = Math.max(0, privacyCameraCount);
+        }
+
+        public int getAvoidedCameraCount() {
+            return Math.max(0, fastestCameraCount - privacyCameraCount);
+        }
+    }
+
     private FlockFreeLayer cameraLayer;
     private FlockFreeIncidentLayer incidentLayer;
     private TomTomIncidentProvider incidentProvider;
@@ -108,6 +132,9 @@ public class FlockFreePlugin extends OsmandPlugin {
     private WifiScannerManager wifiScannerManager;
     private NavigationTiltController navigationTiltController;
     private BuildingTransparencyController buildingTransparencyController;
+    private RouteComparisonInfo lastRouteComparisonInfo;
+    private boolean privacyRouteActive = true;
+    private boolean userInitiatedRouteSwitch = false;
     private long lastCameraAlertTimeMs;
     private String lastCameraAlertKey;
     private BroadcastReceiver debugAlertReceiver;
@@ -180,6 +207,9 @@ public class FlockFreePlugin extends OsmandPlugin {
         VISUAL_DEFAULTS_MIGRATION_DONE = registerBooleanPreference(
                 FlockFreePreferences.VISUAL_DEFAULTS_MIGRATION_DONE,
                 FlockFreePreferences.DEFAULT_VISUAL_DEFAULTS_MIGRATION_DONE).makeGlobal().cache();
+        CAMERA_AVOIDANCE_DEFAULTS_MIGRATION_DONE = registerBooleanPreference(
+                FlockFreePreferences.CAMERA_AVOIDANCE_DEFAULTS_MIGRATION_DONE,
+                FlockFreePreferences.DEFAULT_CAMERA_AVOIDANCE_DEFAULTS_MIGRATION_DONE).makeGlobal().cache();
         TRAFFIC_DEFAULTS_MIGRATION_DONE = registerBooleanPreference(
                 FlockFreePreferences.TRAFFIC_DEFAULTS_MIGRATION_DONE,
                 FlockFreePreferences.DEFAULT_TRAFFIC_DEFAULTS_MIGRATION_DONE).makeGlobal().cache();
@@ -199,6 +229,7 @@ public class FlockFreePlugin extends OsmandPlugin {
 
         migrateDefaultRendererToFlockFree();
         applyFlockFreeVisualDefaults();
+        applyFlockFreeAvoidanceDefaults();
         applyFlockFreeTrafficDefaults();
         registerForceNightMapThemeProvider();
         registerDebugAlertReceiver();
@@ -278,6 +309,19 @@ public class FlockFreePlugin extends OsmandPlugin {
             TRAFFIC_ROUTING_ENABLED.setModeValue(mode, true);
         }
         TRAFFIC_DEFAULTS_MIGRATION_DONE.set(true);
+    }
+
+    private void applyFlockFreeAvoidanceDefaults() {
+        CAMERA_AVOIDANCE_ENABLED.setDefaultValue(true);
+        if (Boolean.TRUE.equals(CAMERA_AVOIDANCE_DEFAULTS_MIGRATION_DONE.get())) {
+            return;
+        }
+        for (ApplicationMode mode : ApplicationMode.allPossibleValues()) {
+            if (!CAMERA_AVOIDANCE_ENABLED.isSetForMode(mode)) {
+                CAMERA_AVOIDANCE_ENABLED.setModeValue(mode, true);
+            }
+        }
+        CAMERA_AVOIDANCE_DEFAULTS_MIGRATION_DONE.set(true);
     }
 
     private void migrateCydBleEnabledToGlobal(@NonNull CommonPreference<Boolean> preference) {
@@ -446,6 +490,29 @@ public class FlockFreePlugin extends OsmandPlugin {
 
     private synchronized void setLastRouteTradeoffSummary(@Nullable String summary) {
         ROUTE_TRADEOFF_SUMMARY.set(summary != null ? summary : "");
+    }
+
+    @Nullable
+    public synchronized RouteComparisonInfo getLastRouteComparisonInfo() {
+        return lastRouteComparisonInfo;
+    }
+
+    public synchronized boolean isPrivacyRouteActive() {
+        return privacyRouteActive;
+    }
+
+    public synchronized void setPrivacyRouteActive(boolean active) {
+        privacyRouteActive = active;
+    }
+
+    public void setCameraAvoidanceEnabled(boolean enabled) {
+        ApplicationMode mode = app.getSettings().getApplicationMode();
+        CAMERA_AVOIDANCE_ENABLED.setModeValue(mode, enabled);
+        userInitiatedRouteSwitch = true;
+    }
+
+    private synchronized void setLastRouteComparisonInfo(@Nullable RouteComparisonInfo routeComparisonInfo) {
+        lastRouteComparisonInfo = routeComparisonInfo;
     }
 
     @NonNull
@@ -1013,7 +1080,20 @@ public class FlockFreePlugin extends OsmandPlugin {
     @Override
     public void newRouteIsCalculated(boolean newRoute) {
         boolean trafficEnabled = TRAFFIC_ROUTING_ENABLED.get() && !Algorithms.isEmpty(TOMTOM_API_KEY.get());
-        if (!newRoute || (!CAMERA_AVOIDANCE_ENABLED.get() && !trafficEnabled)) {
+        if (!newRoute) {
+            return;
+        }
+        boolean preserveComparison = false;
+        if (!CAMERA_AVOIDANCE_ENABLED.get()) {
+            if (userInitiatedRouteSwitch) {
+                // User switched to fastest route - keep the comparison card visible
+                userInitiatedRouteSwitch = false;
+                preserveComparison = true;
+            } else {
+                setLastRouteComparisonInfo(null);
+            }
+        }
+        if (!CAMERA_AVOIDANCE_ENABLED.get() && !trafficEnabled) {
             return;
         }
         boolean cameraAvoidanceEnabled = CAMERA_AVOIDANCE_ENABLED.get();
@@ -1024,6 +1104,7 @@ public class FlockFreePlugin extends OsmandPlugin {
             String loadingSummary = app.getString(R.string.flockfree_route_camera_data_loading);
             setLastRouteCheckSummary(loadingSummary);
             setLastRouteTradeoffSummary(null);
+            setLastRouteComparisonInfo(null);
             app.showShortToastMessage(loadingSummary);
             return;
         }
@@ -1031,12 +1112,14 @@ public class FlockFreePlugin extends OsmandPlugin {
         if (route == null || !route.isCalculated()) {
             setLastRouteCheckSummary(app.getString(R.string.flockfree_route_last_check_no_route));
             setLastRouteTradeoffSummary(null);
+            setLastRouteComparisonInfo(null);
             return;
         }
         List<Location> routeLocations = route.getImmutableAllLocations();
         if (routeLocations == null || routeLocations.isEmpty()) {
             setLastRouteCheckSummary(app.getString(R.string.flockfree_route_last_check_no_route));
             setLastRouteTradeoffSummary(null);
+            setLastRouteComparisonInfo(null);
             return;
         }
         String routeSummary = "";
@@ -1044,6 +1127,11 @@ public class FlockFreePlugin extends OsmandPlugin {
         if (cameraAvoidanceEnabled) {
             CameraAvoidanceHelper helper = getAvoidanceHelper();
             routeSummary = helper.getRouteCameraSummaryFromLocations(routeLocations);
+            int privacyCameraCount = helper.findCamerasNearRouteLocations(routeLocations, helper.getAvoidanceRadius()).size();
+            updateLastRouteComparisonInfo(helper, route, privacyCameraCount);
+            if (getLastRouteComparisonInfo() != null) {
+                setPrivacyRouteActive(true);
+            }
             String tradeoffSummary = helper.getAvoidanceTradeoffSummary();
             if (!Algorithms.isEmpty(tradeoffSummary)) {
                 routeTradeoffSummary = formatAvoidanceTradeoffSummary(tradeoffSummary,
@@ -1054,6 +1142,8 @@ public class FlockFreePlugin extends OsmandPlugin {
             if (!avoidanceSummary.isEmpty()) {
                 routeSummary = routeSummary + "\n" + avoidanceSummary;
             }
+        } else if (!preserveComparison) {
+            setLastRouteComparisonInfo(null);
         }
         setLastRouteTradeoffSummary(routeTradeoffSummary);
         TrafficRoutingHelper trafficHelper = getTrafficRoutingHelper();
@@ -1071,6 +1161,22 @@ public class FlockFreePlugin extends OsmandPlugin {
         }
         setLastRouteCheckSummary(routeSummary);
         app.showToastMessage(routeSummary);
+    }
+
+    private void updateLastRouteComparisonInfo(@NonNull CameraAvoidanceHelper helper,
+                                               @NonNull RouteCalculationResult route,
+                                               int privacyCameraCount) {
+        if (!helper.hasLastAvoidanceComparison()) {
+            setLastRouteComparisonInfo(null);
+            return;
+        }
+        setLastRouteComparisonInfo(new RouteComparisonInfo(
+                helper.getLastAvoidanceOriginalDistanceMeters(),
+                helper.getLastAvoidanceOriginalTimeSeconds(),
+                helper.getLastAvoidanceOriginalCameraCount(),
+                route.getWholeDistance(),
+                route.getLeftTime(null),
+                privacyCameraCount));
     }
 
     @NonNull

@@ -80,6 +80,8 @@ import net.osmand.plus.mapmarkers.MapMarkerSelectionFragment;
 import net.osmand.plus.measurementtool.MeasurementToolFragment;
 import net.osmand.plus.myplaces.favorites.FavoritesListener;
 import net.osmand.plus.poi.PoiUIFilter;
+import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.profiles.ConfigureAppModesBottomSheetDialogFragment;
 import net.osmand.plus.routepreparationmenu.cards.*;
 import net.osmand.plus.routepreparationmenu.cards.BaseCard.CardListener;
@@ -534,6 +536,21 @@ public class MapRouteInfoMenu implements IRouteInformationListener, CardListener
 
 		boolean bottomShadowVisible = true;
 		if (isBasicRouteCalculated()) {
+			FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
+			if (plugin != null) {
+				FlockFreePlugin.RouteComparisonInfo comparisonInfo = plugin.getLastRouteComparisonInfo();
+				if (comparisonInfo != null && comparisonInfo.getAvoidedCameraCount() > 0) {
+					FlockFreeRouteComparisonCard card = new FlockFreeRouteComparisonCard(mapActivity, comparisonInfo,
+							plugin.isPrivacyRouteActive());
+					card.setListener(this);
+					card.setSelectionListener(privacyRoute -> {
+						plugin.setPrivacyRouteActive(privacyRoute);
+						plugin.setCameraAvoidanceEnabled(privacyRoute);
+						app.getRoutingHelper().recalculateRouteDueToSettingsChange(true);
+					});
+					menuCards.add(card);
+				}
+			}
 			GpxFile gpx = GpxUiHelper.makeGpxFromRoute(routingHelper.getRoute(), app);
 			SimpleRouteCard simpleRouteCard = new SimpleRouteCard(mapActivity, gpx);
 			simpleRouteCard.setListener(this);

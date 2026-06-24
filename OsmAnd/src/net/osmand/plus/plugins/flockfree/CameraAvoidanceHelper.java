@@ -66,6 +66,8 @@ public class CameraAvoidanceHelper {
     private int lastAvoidanceRoadCount;
     private int lastAvoidanceCameraCount;
     private int lastAvoidanceOriginalTimeSeconds = UNKNOWN_ROUTE_TIME_SECONDS;
+    private int lastAvoidanceOriginalDistanceMeters;
+    private int lastAvoidanceOriginalCameraCount;
     private int lastPartialBlockedRoadCount;
     private int lastPartialTotalCameraRoadCount;
     private int lastPartialRemainingCameraCount;
@@ -92,10 +94,17 @@ public class CameraAvoidanceHelper {
     }
 
     public synchronized void recordAvoidanceApplied(int roadCount, int cameraCount, int originalRouteTimeSeconds) {
+        recordAvoidanceApplied(roadCount, cameraCount, originalRouteTimeSeconds, 0);
+    }
+
+    public synchronized void recordAvoidanceApplied(int roadCount, int cameraCount, int originalRouteTimeSeconds,
+                                                    int originalRouteDistanceMeters) {
         lastAvoidanceStatus = AvoidanceStatus.APPLIED;
         lastAvoidanceRoadCount = roadCount;
         lastAvoidanceCameraCount = Math.max(0, cameraCount);
         lastAvoidanceOriginalTimeSeconds = originalRouteTimeSeconds;
+        lastAvoidanceOriginalDistanceMeters = Math.max(0, originalRouteDistanceMeters);
+        lastAvoidanceOriginalCameraCount = Math.max(0, cameraCount);
         lastPartialBlockedRoadCount = 0;
         lastPartialTotalCameraRoadCount = 0;
         lastPartialRemainingCameraCount = 0;
@@ -106,6 +115,8 @@ public class CameraAvoidanceHelper {
         lastAvoidanceRoadCount = roadCount;
         lastAvoidanceCameraCount = 0;
         lastAvoidanceOriginalTimeSeconds = UNKNOWN_ROUTE_TIME_SECONDS;
+        lastAvoidanceOriginalDistanceMeters = 0;
+        lastAvoidanceOriginalCameraCount = 0;
         lastPartialBlockedRoadCount = 0;
         lastPartialTotalCameraRoadCount = 0;
         lastPartialRemainingCameraCount = 0;
@@ -116,6 +127,8 @@ public class CameraAvoidanceHelper {
         lastAvoidanceRoadCount = 0;
         lastAvoidanceCameraCount = 0;
         lastAvoidanceOriginalTimeSeconds = UNKNOWN_ROUTE_TIME_SECONDS;
+        lastAvoidanceOriginalDistanceMeters = 0;
+        lastAvoidanceOriginalCameraCount = 0;
         lastPartialBlockedRoadCount = 0;
         lastPartialTotalCameraRoadCount = 0;
         lastPartialRemainingCameraCount = 0;
@@ -136,10 +149,19 @@ public class CameraAvoidanceHelper {
     public synchronized void recordAvoidancePartial(int blockedRoadCount, int totalCameraRoadCount,
                                                     int remainingCameraCount, int avoidedCameraCount,
                                                     int originalRouteTimeSeconds) {
+        recordAvoidancePartial(blockedRoadCount, totalCameraRoadCount, remainingCameraCount,
+                avoidedCameraCount, originalRouteTimeSeconds, 0);
+    }
+
+    public synchronized void recordAvoidancePartial(int blockedRoadCount, int totalCameraRoadCount,
+                                                    int remainingCameraCount, int avoidedCameraCount,
+                                                    int originalRouteTimeSeconds, int originalRouteDistanceMeters) {
         lastAvoidanceStatus = AvoidanceStatus.PARTIAL_APPLIED;
         lastAvoidanceRoadCount = blockedRoadCount;
         lastAvoidanceCameraCount = Math.max(0, avoidedCameraCount);
         lastAvoidanceOriginalTimeSeconds = originalRouteTimeSeconds;
+        lastAvoidanceOriginalDistanceMeters = Math.max(0, originalRouteDistanceMeters);
+        lastAvoidanceOriginalCameraCount = Math.max(0, avoidedCameraCount) + Math.max(0, remainingCameraCount);
         lastPartialBlockedRoadCount = blockedRoadCount;
         lastPartialTotalCameraRoadCount = totalCameraRoadCount;
         lastPartialRemainingCameraCount = remainingCameraCount;
@@ -177,6 +199,8 @@ public class CameraAvoidanceHelper {
         lastAvoidanceRoadCount = 0;
         lastAvoidanceCameraCount = 0;
         lastAvoidanceOriginalTimeSeconds = UNKNOWN_ROUTE_TIME_SECONDS;
+        lastAvoidanceOriginalDistanceMeters = 0;
+        lastAvoidanceOriginalCameraCount = 0;
         lastPartialBlockedRoadCount = 0;
         lastPartialTotalCameraRoadCount = 0;
         lastPartialRemainingCameraCount = 0;
@@ -200,6 +224,22 @@ public class CameraAvoidanceHelper {
 
     public synchronized int getLastAvoidanceOriginalTimeSeconds() {
         return lastAvoidanceOriginalTimeSeconds;
+    }
+
+    public synchronized int getLastAvoidanceOriginalDistanceMeters() {
+        return lastAvoidanceOriginalDistanceMeters;
+    }
+
+    public synchronized int getLastAvoidanceOriginalCameraCount() {
+        return lastAvoidanceOriginalCameraCount;
+    }
+
+    public synchronized boolean hasLastAvoidanceComparison() {
+        return (lastAvoidanceStatus == AvoidanceStatus.APPLIED
+                || lastAvoidanceStatus == AvoidanceStatus.PARTIAL_APPLIED)
+                && lastAvoidanceOriginalCameraCount > 0
+                && lastAvoidanceOriginalTimeSeconds > 0
+                && lastAvoidanceOriginalDistanceMeters > 0;
     }
 
     /**

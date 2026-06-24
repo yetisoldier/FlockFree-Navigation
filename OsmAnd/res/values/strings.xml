@@ -41,6 +41,17 @@
 	<string name="flockfree_route_preview_camera_summary">%1$d cameras in the active avoidance corridor</string>
 	<string name="flockfree_route_preview_no_camera_data">Camera data is not loaded yet.</string>
 	<string name="flockfree_route_preview_traffic_summary">%1$s</string>
+	<string name="flockfree_route_comparison_title">Directions</string>
+	<string name="flockfree_route_comparison_privacy">Privacy</string>
+	<string name="flockfree_route_comparison_active_route">Active route</string>
+	<string name="flockfree_route_comparison_distance_time">%1$s • %2$s</string>
+	<plurals name="flockfree_route_comparison_cameras">
+		<item quantity="one">%1$d camera</item>
+		<item quantity="other">%1$d cameras</item>
+	</plurals>
+	<string name="flockfree_route_comparison_fewer">%1$d%% fewer</string>
+	<string name="flockfree_route_comparison_distance_delta">+%1$d%% distance</string>
+	<string name="flockfree_route_comparison_time_delta">+%1$d min</string>
 	<string name="flockfree_layers_title">Map layers</string>
 	<string name="flockfree_layer_traffic">Traffic</string>
 	<string name="flockfree_layer_cameras">Cameras</string>
@@ -6919,8 +6930,8 @@ Download tile maps directly, or copy them as SQLite database files to OsmAnd\'s 
     <string name="flockfree_settings">FlockFree Settings</string>
     <string name="flockfree_widget_camera_proximity">Route cameras</string>
     <string name="flockfree_widget_camera_proximity_desc">Shows known ALPR cameras remaining on the active navigation route.</string>
-    <string name="flockfree_widget_no_route_cameras_left">No cameras left</string>
-    <string name="flockfree_widget_route_cameras_left">left on route</string>
+    <string name="flockfree_widget_no_route_cameras_left">cams left</string>
+    <string name="flockfree_widget_route_cameras_left">cams left</string>
     <string name="flockfree_traffic_widget_off">Traffic off</string>
     <string name="flockfree_traffic_widget_no_provider">No traffic provider</string>
     <string name="flockfree_traffic_widget_waiting">Waiting for route</string>
