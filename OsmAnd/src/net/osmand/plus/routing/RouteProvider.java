@@ -32,6 +32,7 @@ import net.osmand.plus.onlinerouting.engine.OnlineRoutingEngine;
 import net.osmand.plus.onlinerouting.engine.OnlineRoutingEngine.OnlineRoutingResponse;
 import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.plugins.flockfree.CameraAvoidanceHelper;
+import net.osmand.plus.plugins.flockfree.CameraData;
 import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.plugins.flockfree.TrafficRoutingHelper;
 import net.osmand.plus.render.NativeOsmandLibrary;
@@ -79,6 +80,7 @@ public class RouteProvider {
 	private static final org.apache.commons.logging.Log log = PlatformUtil.getLog(RouteProvider.class);
 	private static final int MIN_STRAIGHT_DIST = 50000;
 	private static final int MAX_RELAXATION_ITERATIONS = 4;
+	private static final int MAX_AVOIDANCE_PASSES = 5;
 
 	private final GpxRouteHelper gpxRouteHelper = new GpxRouteHelper(this);
 
@@ -230,7 +232,7 @@ public class RouteProvider {
 			return null;
 		}
 		FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
-		if (plugin == null || !plugin.CAMERA_AVOIDANCE_ENABLED.get()) {
+		if (plugin == null || !plugin.isCameraAvoidanceActive()) {
 			return null;
 		}
 		CameraAvoidanceHelper avoidanceHelper = plugin.getAvoidanceHelper();
@@ -269,6 +271,15 @@ public class RouteProvider {
 		try {
 			RouteCalculationResult avoided = findVectorMapsRoute(avoidedParams, calcGPXRoute);
 			if (avoided.isCalculated()) {
+				// Multi-pass: check if the avoidance route itself passes near cameras
+				RouteCalculationResult multiPassResult = applyMultiPassAvoidance(
+						params, avoided, blockedIds, calcGPXRoute, plugin,
+						originalRouteTimeSeconds, originalRouteDistanceMeters,
+						totalCameraCount, totalCameraRoadCount);
+				if (multiPassResult != null) {
+					return new FlockFreeRouteVariant(multiPassResult, 
+							copyParamsForFlockFreeAvoidance(params, blockedIds).temporaryImpassableRoadIds);
+				}
 				log.info("FlockFree recalculated route with " + blockedIds.size()
 						+ " temporary avoid road ids (full avoidance)");
 				avoidanceHelper.recordAvoidanceApplied(blockedIds.size(),
@@ -305,6 +316,15 @@ public class RouteProvider {
 			try {
 				RouteCalculationResult avoided = findVectorMapsRoute(avoidedParams, calcGPXRoute);
 				if (avoided.isCalculated()) {
+					// Multi-pass: check if the relaxed route still passes near cameras
+					RouteCalculationResult multiPassResult = applyMultiPassAvoidance(
+							params, avoided, blockedIds, calcGPXRoute, plugin,
+							originalRouteTimeSeconds, originalRouteDistanceMeters,
+							totalCameraCount, totalCameraRoadCount);
+					if (multiPassResult != null) {
+						return new FlockFreeRouteVariant(multiPassResult,
+								copyParamsForFlockFreeAvoidance(params, blockedIds).temporaryImpassableRoadIds);
+					}
 					log.info("FlockFree relaxation succeeded after " + (i + 1)
 							+ " iteration(s); blocked " + blockedIds.size()
 							+ " of " + totalCameraRoadCount + " camera roads"
@@ -329,6 +349,105 @@ public class RouteProvider {
 		avoidanceHelper.recordAvoidanceFallback(blockedIds.size());
 		log.warn("FlockFree iterative relaxation exhausted after " + MAX_RELAXATION_ITERATIONS
 				+ " iterations; returning original route");
+		return null;
+	}
+
+	/**
+	 * Multi-pass avoidance: after an avoidance route is calculated, scan it for cameras
+	 * that weren't on the original route. If found, add those road IDs to the blocked set
+	 * and recalculate. Only accept a new route if it has fewer cameras than the current one.
+	 * Up to {@link #MAX_AVOIDANCE_PASSES} extra passes.
+	 *
+	 * @return a better avoidance route if one was found, or null if no improvement was made
+	 */
+	@Nullable
+	private RouteCalculationResult applyMultiPassAvoidance(@NonNull RouteCalculationParams params,
+	                                                       @NonNull RouteCalculationResult currentRoute,
+	                                                       @NonNull Set<Long> blockedIds,
+	                                                       boolean calcGPXRoute,
+	                                                       @NonNull FlockFreePlugin plugin,
+	                                                       int originalRouteTimeSeconds,
+	                                                       int originalRouteDistanceMeters,
+	                                                       int originalCameraCount,
+	                                                       int originalRoadCount) throws IOException {
+		CameraAvoidanceHelper helper = plugin.getAvoidanceHelper();
+		int radius = plugin.CAMERA_AVOIDANCE_RADIUS.get();
+
+		// Track the best route found so far
+		RouteCalculationResult bestRoute = currentRoute;
+		Set<Long> bestBlockedIds = new LinkedHashSet<>(blockedIds);
+		int bestCameraCount = helper.findCamerasNearRouteLocations(
+				currentRoute.getImmutableAllLocations(), radius).size();
+
+		for (int pass = 0; pass < MAX_AVOIDANCE_PASSES; pass++) {
+			// Find cameras on the current best route
+			List<CameraAvoidanceHelper.RoadWithCameraCount> newCameras =
+					helper.collectAvoidRoadIdsWithCameraCountForRoute(bestRoute, radius);
+			if (Algorithms.isEmpty(newCameras)) {
+				// No cameras on the route — we're done
+				break;
+			}
+
+			// Check if any of these road IDs are new (not already in bestBlockedIds)
+			Set<Long> newBlockedIds = new LinkedHashSet<>(bestBlockedIds);
+			for (CameraAvoidanceHelper.RoadWithCameraCount rwc : newCameras) {
+				newBlockedIds.add(rwc.roadId);
+			}
+			if (newBlockedIds.size() == bestBlockedIds.size()) {
+				// All road IDs were already blocked — can't improve further
+				break;
+			}
+
+			log.info("FlockFree multi-pass avoidance pass " + (pass + 1)
+					+ ": found " + newCameras.size() + " cameras on route, "
+					+ (newBlockedIds.size() - bestBlockedIds.size()) + " new road IDs to block");
+
+			// Recalculate with the expanded blocked set
+			RouteCalculationParams expandedParams = copyParamsForFlockFreeAvoidance(params, newBlockedIds);
+			RouteCalculationResult expanded = findVectorMapsRoute(expandedParams, calcGPXRoute);
+			if (!expanded.isCalculated()) {
+				// Can't find a route with the expanded blocks — stop trying
+				log.info("FlockFree multi-pass pass " + (pass + 1)
+						+ " failed to find route with expanded blocks; stopping");
+				break;
+			}
+
+			// Count cameras on the new route
+			int newCameraCount = helper.findCamerasNearRouteLocations(
+					expanded.getImmutableAllLocations(), radius).size();
+			log.info("FlockFree multi-pass pass " + (pass + 1)
+					+ " result: " + newCameraCount + " cameras (was " + bestCameraCount + ")");
+
+			if (newCameraCount < bestCameraCount) {
+				// Improvement — accept this route
+				bestRoute = expanded;
+				bestBlockedIds = newBlockedIds;
+				bestCameraCount = newCameraCount;
+
+				if (bestCameraCount == 0) {
+					// All cameras avoided!
+					break;
+				}
+			} else {
+				// No improvement or worse — stop, we've hit diminishing returns
+				log.info("FlockFree multi-pass pass " + (pass + 1)
+						+ " did not improve; stopping at " + bestCameraCount + " cameras");
+				break;
+			}
+		}
+
+		if (bestCameraCount < helper.findCamerasNearRouteLocations(
+				currentRoute.getImmutableAllLocations(), radius).size()) {
+			// We found a better route — update blockedIds and return it
+			blockedIds.clear();
+			blockedIds.addAll(bestBlockedIds);
+			log.info("FlockFree multi-pass improved from "
+					+ helper.findCamerasNearRouteLocations(currentRoute.getImmutableAllLocations(), radius).size()
+					+ " to " + bestCameraCount + " cameras");
+			return bestRoute;
+		}
+
+		log.info("FlockFree multi-pass did not improve beyond initial route");
 		return null;
 	}
 
@@ -385,7 +504,7 @@ public class RouteProvider {
 
 	private boolean hasCameraRoadsOnTrafficCandidate(@NonNull FlockFreePlugin plugin,
 	                                                @NonNull RouteCalculationResult candidate) {
-		if (!plugin.CAMERA_AVOIDANCE_ENABLED.get()) {
+		if (!plugin.isCameraAvoidanceActive()) {
 			return false;
 		}
 		if (!plugin.getCameraData().isDataLoaded()

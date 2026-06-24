@@ -135,6 +135,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     private RouteComparisonInfo lastRouteComparisonInfo;
     private boolean privacyRouteActive = true;
     private boolean userInitiatedRouteSwitch = false;
+    private Boolean cameraAvoidanceRuntimeOverride = null;  // null = use preference, true/false = temporary override
     private long lastCameraAlertTimeMs;
     private String lastCameraAlertKey;
     private BroadcastReceiver debugAlertReceiver;
@@ -317,9 +318,7 @@ public class FlockFreePlugin extends OsmandPlugin {
             return;
         }
         for (ApplicationMode mode : ApplicationMode.allPossibleValues()) {
-            if (!CAMERA_AVOIDANCE_ENABLED.isSetForMode(mode)) {
-                CAMERA_AVOIDANCE_ENABLED.setModeValue(mode, true);
-            }
+            CAMERA_AVOIDANCE_ENABLED.setModeValue(mode, true);
         }
         CAMERA_AVOIDANCE_DEFAULTS_MIGRATION_DONE.set(true);
     }
@@ -506,9 +505,18 @@ public class FlockFreePlugin extends OsmandPlugin {
     }
 
     public void setCameraAvoidanceEnabled(boolean enabled) {
-        ApplicationMode mode = app.getSettings().getApplicationMode();
-        CAMERA_AVOIDANCE_ENABLED.setModeValue(mode, enabled);
+        cameraAvoidanceRuntimeOverride = enabled;
         userInitiatedRouteSwitch = true;
+    }
+
+    public boolean isCameraAvoidanceActive() {
+        return cameraAvoidanceRuntimeOverride != null
+                ? cameraAvoidanceRuntimeOverride
+                : CAMERA_AVOIDANCE_ENABLED.get();
+    }
+
+    public void clearCameraAvoidanceOverride() {
+        cameraAvoidanceRuntimeOverride = null;
     }
 
     private synchronized void setLastRouteComparisonInfo(@Nullable RouteComparisonInfo routeComparisonInfo) {
@@ -1084,7 +1092,8 @@ public class FlockFreePlugin extends OsmandPlugin {
             return;
         }
         boolean preserveComparison = false;
-        if (!CAMERA_AVOIDANCE_ENABLED.get()) {
+        boolean avoidActive = isCameraAvoidanceActive();
+        if (!avoidActive) {
             if (userInitiatedRouteSwitch) {
                 // User switched to fastest route - keep the comparison card visible
                 userInitiatedRouteSwitch = false;
@@ -1093,10 +1102,10 @@ public class FlockFreePlugin extends OsmandPlugin {
                 setLastRouteComparisonInfo(null);
             }
         }
-        if (!CAMERA_AVOIDANCE_ENABLED.get() && !trafficEnabled) {
+        if (!avoidActive && !trafficEnabled) {
             return;
         }
-        boolean cameraAvoidanceEnabled = CAMERA_AVOIDANCE_ENABLED.get();
+        boolean cameraAvoidanceEnabled = avoidActive;
         if (cameraAvoidanceEnabled) {
             getCameraData().ensureDataLoaded();
         }
