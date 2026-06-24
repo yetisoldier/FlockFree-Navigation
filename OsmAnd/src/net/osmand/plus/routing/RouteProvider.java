@@ -441,9 +441,13 @@ public class RouteProvider {
 			// We found a better route — update blockedIds and return it
 			blockedIds.clear();
 			blockedIds.addAll(bestBlockedIds);
+			int originalCameras = helper.findCamerasNearRouteLocations(
+					currentRoute.getImmutableAllLocations(), radius).size();
 			log.info("FlockFree multi-pass improved from "
-					+ helper.findCamerasNearRouteLocations(currentRoute.getImmutableAllLocations(), radius).size()
-					+ " to " + bestCameraCount + " cameras");
+					+ originalCameras + " to " + bestCameraCount + " cameras");
+			// Record the avoidance with the improved camera count
+			helper.recordAvoidanceApplied(bestBlockedIds.size(),
+					originalCameras, originalRouteTimeSeconds, originalRouteDistanceMeters);
 			return bestRoute;
 		}
 
