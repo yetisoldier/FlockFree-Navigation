@@ -4,6 +4,30 @@ All notable changes to FlockFree Navigation are documented here.
 
 ## [Unreleased]
 
+## [v1.6.0] — 2026-06-23
+
+### Added
+- Google Maps-style lane guidance — recommended lanes show white fill with blue highlight outline, non-recommended lanes show grey fill, with proper day/night card backgrounds
+- Transparent buildings ahead of turns — 3D buildings automatically hide when approaching a turn (< 300m) and restore after (> 500m) with hysteresis to prevent flickering
+- Destination arrival preview — navigation bar shows destination name and side-of-street (left/right) when within 500m of destination, with "You have arrived" message at 50m
+- Search-along-route chips — row of pill buttons (Gas, Food, Coffee, Parking, EV Charging) above the navigation bar, opening OsmAnd's quick search as an intermediate stop
+- Camera avoidance route tradeoff explanations — shows "Avoids N cameras · +X min" when camera avoidance reroutes, with last tradeoff visible in FlockFree settings
+- Camera proximity widget repositioned to TOP panel — eliminates portrait-mode overlap with the search bar
+- WidgetReattachHelper utility for common widget reattach patterns
+
+### Changed
+- Night mode now follows system UI theme (APP_THEME) instead of sun position (AUTO) for the car profile
+- Map renderer colors refined to exact Google Maps day/night palettes: land (#F5F5F0/#1A1A1E), water (#AECDF0/#1C3A4A), parks (#C8E6C9/#243B24), grassland, farm, and built-up areas
+- Camera markers restyled to Google Maps POI pins: outer brand-color ring (7dp), inner white circle (5dp), tiny camera glyph at center
+- FlockFreeLayer rendering optimized — cached dpToPx values and reused Path/collection objects to eliminate ~3,000-5,000 per-frame allocations in camera-dense areas
+- FlockFreeIncidentLayer rendering optimized — reused Path and RectF objects to eliminate ~120 per-frame allocations for incident icons
+- Listener leak cleanup — FlockFreeNavigationBar, NavigationReportButton, and SearchAlongRouteChips now properly unregister route listeners and Handler callbacks on plugin disable
+- CydParserSelfCheck logging replaced with proper PlatformUtil logger
+
+### Fixed
+- CydBleService ForegroundServiceStartNotAllowedException on Android 14+ — startForegroundService() now wrapped in try/catch with fallback to startService()
+- Three listener leaks fixed — FlockFreeNavigationBar, NavigationReportButton, and SearchAlongRouteChips were not unregistering their IRouteInformationListener registrations or Handler callbacks on plugin disable, potentially retaining a full MapActivity instance
+
 ## [v1.5.0] — 2026-06-23
 
 ### Added

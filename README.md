@@ -37,13 +37,24 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 - **Traffic route colors and widget** — Optional route-line coloring and the Traffic widget show live-data coverage, stale/no-data status, and refresh state.
 
 ### Map and Navigation Experience
-- **Google Maps-inspired map styling** — Lighter land/water/park colors, reduced POI clutter, subtler road casing, and cleaner route colors.
+- **Google Maps-inspired map styling** — Refined land (#F5F5F0), water (#AECDF0), and park (#C8E6C9) colors with reduced POI clutter, subtler road casing, and cleaner route colors. Night-mode palette tuned to match Google Maps dark theme.
 - **Modern navigation HUD** — Search bar, layer button, circular map controls, compact ETA/speed presentation, and a simplified blue location puck.
 - **Google Maps-style turn indicators** — Main turn card uses a teal background with a bold white arrow. The second-next-turn preview appears as a compact white chip below the main indicator with a blue arrow, dark distance text, and grey street name — matching Google Maps' layered turn guidance layout.
+- **Google Maps-style lane guidance** — Lane arrows show recommended lanes in white with a blue highlight outline and non-recommended lanes in grey, with day/night card backgrounds matching Google Maps.
 - **Automatic 3D tilt** — Map tilts to a perspective view during navigation and resets when stopped.
+- **Transparent buildings ahead of turns** — 3D buildings automatically hide when approaching a turn (within 300m) and restore after (past 500m) so they don't obstruct the route view.
 - **Navigation workflows** — Route option cards, add-stop chips (gas, coffee, food, parking, EV charging), compact layers sheet, faster-route prompt with undo.
+- **Destination arrival preview** — Navigation bar shows destination name and side-of-street (left/right) when within 500m of destination, with an arrival message at 50m.
+- **Search-along-route chips** — Quick-search pill buttons for gas, food, coffee, parking, and EV charging appear above the navigation bar during active navigation, opening OsmAnd's quick search as an intermediate stop.
+- **Camera avoidance tradeoffs** — When camera avoidance reroutes, shows a summary like "Avoids 5 cameras · +2 min" with the last tradeoff visible in FlockFree settings.
+- **Night mode** — Car profile defaults to following the system dark/light theme (APP_THEME) instead of sun position.
 - **Android Auto navigation** — FlockFree registers OsmAnd's Android Auto navigation service for the FlockFree package. Sideloaded builds may require Android Auto developer settings and Unknown sources before appearing on a head unit.
 - **Local map tools** — Includes local 3D relief/maps, route and terrain coloring, gradient palette editing, advanced widgets, vehicle metrics/OBD widgets, and richer track organization options.
+
+### Performance
+- **Rendering optimization** — Camera and incident map layers cache dp-to-px conversions and reuse Path/collection objects, eliminating ~3,000-5,000 per-frame allocations in camera-dense areas for smoother panning.
+- **Listener leak fixes** — All navigation widgets (nav bar, report button, search chips, tilt controller, building transparency) properly unregister route listeners and Handler callbacks on plugin disable, preventing MapActivity retention.
+- **Android 14+ compatibility** — CYD BLE foreground service start is guarded against ForegroundServiceStartNotAllowedException with fallback to background service start.
 
 ### Reporting
 - **OSM POI editor integration** — Opens OsmAnd's native editor with ALPR/surveillance tags prefilled
@@ -57,7 +68,8 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 - **Add camera** — Open the ALPR reporting dialog at the current map center
 
 ### Map Widget
-- **Camera proximity widget** — Shows the count of known ALPR cameras within 1 km and the distance to the nearest one, updating in real time as you move
+- **Camera proximity widget** — Shows the count of known ALPR cameras within 1 km and the distance to the nearest one, updating in real time as you move. Positioned in the TOP panel to avoid overlap with the search bar in portrait mode.
+- **Traffic status widget** — Shows current traffic routing status and last refresh time. Also positioned in the TOP panel.
 
 ### Branding
 - **FlockFree identity** — Custom blue/white FF road mark on navy splash with dark blue/cyan controls
