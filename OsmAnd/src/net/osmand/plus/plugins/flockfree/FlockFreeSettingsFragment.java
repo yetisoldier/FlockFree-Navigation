@@ -76,8 +76,6 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 				R.string.flockfree_incidents_show_layer_description);
 		setupCameraDataStatusPreference();
 		setupNearestCameraLastCheckPreference();
-		setupSwitchPreference(plugin.CAMERA_AVOIDANCE_ENABLED.getId(),
-				R.string.flockfree_camera_avoidance_enabled_description);
 		setupDistancePreference(plugin.CAMERA_AVOIDANCE_RADIUS.getId(), AVOIDANCE_RADIUS_VALUES,
 				R.string.flockfree_avoidance_radius_description);
 		setupRouteLastCheckPreference();

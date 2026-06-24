@@ -9,13 +9,6 @@
 		android:title="@string/flockfree_quick_controls" />
 
 	<net.osmand.plus.settings.preferences.SwitchPreferenceEx
-		android:key="camera_avoidance_enabled"
-		android:layout="@layout/preference_with_descr_dialog_and_switch"
-		android:summaryOff="@string/shared_string_disabled"
-		android:summaryOn="@string/shared_string_enabled"
-		android:title="@string/flockfree_camera_avoidance_enabled" />
-
-	<net.osmand.plus.settings.preferences.SwitchPreferenceEx
 		android:key="cyd_ble_enabled"
 		android:layout="@layout/preference_with_descr_dialog_and_switch"
 		android:summaryOff="@string/shared_string_disabled"

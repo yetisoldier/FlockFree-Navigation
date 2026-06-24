@@ -6927,11 +6927,12 @@ Download tile maps directly, or copy them as SQLite database files to OsmAnd\'s 
     <string name="flockfree_camera_details">Camera Details</string>
     <string name="flockfree_add_camera">Add ALPR Camera</string>
     <string name="flockfree_avoidance_enabled">Camera Avoidance</string>
+    <string name="flockfree_avoidance_disabled">Camera avoidance disabled for this route</string>
     <string name="flockfree_settings">FlockFree Settings</string>
     <string name="flockfree_widget_camera_proximity">Route cameras</string>
     <string name="flockfree_widget_camera_proximity_desc">Shows known ALPR cameras remaining on the active navigation route.</string>
-    <string name="flockfree_widget_no_route_cameras_left">cams left</string>
-    <string name="flockfree_widget_route_cameras_left">cams left</string>
+    <string name="flockfree_widget_no_route_cameras_left">enroute</string>
+    <string name="flockfree_widget_route_cameras_left">enroute</string>
     <string name="flockfree_traffic_widget_off">Traffic off</string>
     <string name="flockfree_traffic_widget_no_provider">No traffic provider</string>
     <string name="flockfree_traffic_widget_waiting">Waiting for route</string>

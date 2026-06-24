@@ -73,7 +73,6 @@ public class FlockFreePlugin extends OsmandPlugin {
     public final CommonPreference<String> CAMERA_NEAREST_LAST_CHECK_SUMMARY;
     private final CommonPreference<Boolean> RENDERER_MIGRATION_DONE;
     private final CommonPreference<Boolean> VISUAL_DEFAULTS_MIGRATION_DONE;
-    private final CommonPreference<Boolean> CAMERA_AVOIDANCE_DEFAULTS_MIGRATION_DONE;
     private final CommonPreference<Boolean> TRAFFIC_DEFAULTS_MIGRATION_DONE;
     public final OsmandPreference<Boolean> FORCE_NIGHT_MAP;
 
@@ -208,9 +207,6 @@ public class FlockFreePlugin extends OsmandPlugin {
         VISUAL_DEFAULTS_MIGRATION_DONE = registerBooleanPreference(
                 FlockFreePreferences.VISUAL_DEFAULTS_MIGRATION_DONE,
                 FlockFreePreferences.DEFAULT_VISUAL_DEFAULTS_MIGRATION_DONE).makeGlobal().cache();
-        CAMERA_AVOIDANCE_DEFAULTS_MIGRATION_DONE = registerBooleanPreference(
-                FlockFreePreferences.CAMERA_AVOIDANCE_DEFAULTS_MIGRATION_DONE,
-                FlockFreePreferences.DEFAULT_CAMERA_AVOIDANCE_DEFAULTS_MIGRATION_DONE).makeGlobal().cache();
         TRAFFIC_DEFAULTS_MIGRATION_DONE = registerBooleanPreference(
                 FlockFreePreferences.TRAFFIC_DEFAULTS_MIGRATION_DONE,
                 FlockFreePreferences.DEFAULT_TRAFFIC_DEFAULTS_MIGRATION_DONE).makeGlobal().cache();
@@ -230,7 +226,6 @@ public class FlockFreePlugin extends OsmandPlugin {
 
         migrateDefaultRendererToFlockFree();
         applyFlockFreeVisualDefaults();
-        applyFlockFreeAvoidanceDefaults();
         applyFlockFreeTrafficDefaults();
         registerForceNightMapThemeProvider();
         registerDebugAlertReceiver();
@@ -310,17 +305,6 @@ public class FlockFreePlugin extends OsmandPlugin {
             TRAFFIC_ROUTING_ENABLED.setModeValue(mode, true);
         }
         TRAFFIC_DEFAULTS_MIGRATION_DONE.set(true);
-    }
-
-    private void applyFlockFreeAvoidanceDefaults() {
-        CAMERA_AVOIDANCE_ENABLED.setDefaultValue(true);
-        if (Boolean.TRUE.equals(CAMERA_AVOIDANCE_DEFAULTS_MIGRATION_DONE.get())) {
-            return;
-        }
-        for (ApplicationMode mode : ApplicationMode.allPossibleValues()) {
-            CAMERA_AVOIDANCE_ENABLED.setModeValue(mode, true);
-        }
-        CAMERA_AVOIDANCE_DEFAULTS_MIGRATION_DONE.set(true);
     }
 
     private void migrateCydBleEnabledToGlobal(@NonNull CommonPreference<Boolean> preference) {
@@ -512,7 +496,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     public boolean isCameraAvoidanceActive() {
         return cameraAvoidanceRuntimeOverride != null
                 ? cameraAvoidanceRuntimeOverride
-                : CAMERA_AVOIDANCE_ENABLED.get();
+                : true;
     }
 
     public void clearCameraAvoidanceOverride() {

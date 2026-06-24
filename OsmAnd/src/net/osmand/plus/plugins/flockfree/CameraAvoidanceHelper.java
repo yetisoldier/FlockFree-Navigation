@@ -78,7 +78,7 @@ public class CameraAvoidanceHelper {
     }
 
     public boolean isAvoidanceEnabled() {
-        return plugin.CAMERA_AVOIDANCE_ENABLED.get();
+        return plugin.isCameraAvoidanceActive();
     }
 
     public int getAvoidanceRadius() {

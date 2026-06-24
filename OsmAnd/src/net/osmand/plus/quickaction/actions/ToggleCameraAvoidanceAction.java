@@ -40,7 +40,11 @@ public class ToggleCameraAvoidanceAction extends QuickAction {
     public void execute(@NonNull MapActivity mapActivity, @Nullable Bundle params) {
         FlockFreePlugin plugin = PluginsHelper.getPlugin(FlockFreePlugin.class);
         if (plugin != null) {
-            plugin.CAMERA_AVOIDANCE_ENABLED.set(!plugin.CAMERA_AVOIDANCE_ENABLED.get());
+            // Camera avoidance is now always on; toggle runtime override for current route
+            boolean current = plugin.isCameraAvoidanceActive();
+            plugin.setCameraAvoidanceEnabled(!current);
+            mapActivity.getApp().showShortToastMessage(
+                    !current ? R.string.flockfree_avoidance_enabled : R.string.flockfree_avoidance_disabled);
         }
     }
 
@@ -62,6 +66,6 @@ public class ToggleCameraAvoidanceAction extends QuickAction {
     @Override
     public boolean isActionWithSlash(@NonNull OsmandApplication app) {
         FlockFreePlugin plugin = PluginsHelper.getPlugin(FlockFreePlugin.class);
-        return plugin != null && plugin.CAMERA_AVOIDANCE_ENABLED.get();
+        return plugin != null && plugin.isCameraAvoidanceActive();
     }
 }
