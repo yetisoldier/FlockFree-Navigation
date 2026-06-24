@@ -233,6 +233,31 @@ public class NavigationReportButton implements IRouteInformationListener {
 				TypedValue.COMPLEX_UNIT_DIP, value, app.getResources().getDisplayMetrics());
 	}
 
+	/**
+	 * Detach listeners and stop periodic updates.
+	 * Called when the plugin is disabled.
+	 */
+	public static void unregister() {
+		if (instance != null) {
+			instance.doUnregister();
+		}
+	}
+
+	private void doUnregister() {
+		if (listenerRegistered) {
+			routingHelper.removeListener(this);
+			listenerRegistered = false;
+		}
+		updateHandler.removeCallbacksAndMessages(null);
+		if (fabView != null && fabView.getParent() instanceof ViewGroup) {
+			((ViewGroup) fabView.getParent()).removeView(fabView);
+		}
+		fabView = null;
+		mapActivity = null;
+		visible = false;
+		instance = null;
+	}
+
 	// --- IRouteInformationListener ---
 
 	@Override

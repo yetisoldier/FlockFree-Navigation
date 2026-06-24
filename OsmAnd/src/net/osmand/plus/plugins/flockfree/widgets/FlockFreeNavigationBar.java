@@ -457,6 +457,28 @@ public class FlockFreeNavigationBar implements IRouteInformationListener {
 		}
 	}
 
+	/**
+	 * Detach listeners and stop periodic updates.
+	 * Called when the plugin is disabled.
+	 */
+	public static void unregister() {
+		if (instance != null) {
+			instance.doUnregister();
+		}
+	}
+
+	private void doUnregister() {
+		registered = false;
+		if (listenerRegistered) {
+			routingHelper.removeListener(this);
+			listenerRegistered = false;
+		}
+		updateHandler.removeCallbacksAndMessages(null);
+		hide();
+		mapActivity = null;
+		instance = null;
+	}
+
 	// --- IRouteInformationListener ---
 
 	@Override

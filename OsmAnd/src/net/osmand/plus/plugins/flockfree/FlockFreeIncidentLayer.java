@@ -59,6 +59,13 @@ public class FlockFreeIncidentLayer extends OsmandMapLayer implements ContextMen
     private final Paint textPaint;
     private final Paint iconPaint;
     private final Paint clusterTextPaint;
+    private final Path iconPath = new Path();
+    private final Path wavePath = new Path();
+    private final Path trianglePath = new Path();
+    private final Path swirlPath = new Path();
+    private final Path conePath = new Path();
+    private final RectF carBodyRect = new RectF();
+    private final RectF roadClosedBarRect = new RectF();
 
     private List<TrafficIncident> visibleIncidents = new ArrayList<>();
     private List<IncidentCluster> visibleClusters = new ArrayList<>();
@@ -329,9 +336,9 @@ public class FlockFreeIncidentLayer extends OsmandMapLayer implements ContextMen
     private void drawCarIcon(@NonNull Canvas canvas, float x, float y, float radius, boolean brokenDown) {
         float size = radius * 1.12f;
         iconPaint.setStyle(Paint.Style.FILL);
-        RectF body = new RectF(x - size * 0.48f, y - size * 0.12f,
+        carBodyRect.set(x - size * 0.48f, y - size * 0.12f,
                 x + size * 0.48f, y + size * 0.25f);
-        canvas.drawRoundRect(body, radius * 0.12f, radius * 0.12f, iconPaint);
+        canvas.drawRoundRect(carBodyRect, radius * 0.12f, radius * 0.12f, iconPaint);
         canvas.drawCircle(x - size * 0.28f, y + size * 0.31f, radius * 0.12f, iconPaint);
         canvas.drawCircle(x + size * 0.28f, y + size * 0.31f, radius * 0.12f, iconPaint);
         if (brokenDown) {
@@ -346,33 +353,33 @@ public class FlockFreeIncidentLayer extends OsmandMapLayer implements ContextMen
     private void drawJamIcon(@NonNull Canvas canvas, float x, float y, float radius) {
         float size = radius * 1.05f;
         iconPaint.setStyle(Paint.Style.STROKE);
-        Path path = new Path();
-        path.moveTo(x - size * 0.38f, y - size * 0.38f);
-        path.lineTo(x + size * 0.25f, y - size * 0.38f);
-        path.lineTo(x - size * 0.18f, y);
-        path.lineTo(x + size * 0.38f, y);
-        path.lineTo(x - size * 0.25f, y + size * 0.38f);
-        path.lineTo(x + size * 0.38f, y + size * 0.38f);
-        canvas.drawPath(path, iconPaint);
+        iconPath.reset();
+        iconPath.moveTo(x - size * 0.38f, y - size * 0.38f);
+        iconPath.lineTo(x + size * 0.25f, y - size * 0.38f);
+        iconPath.lineTo(x - size * 0.18f, y);
+        iconPath.lineTo(x + size * 0.38f, y);
+        iconPath.lineTo(x - size * 0.25f, y + size * 0.38f);
+        iconPath.lineTo(x + size * 0.38f, y + size * 0.38f);
+        canvas.drawPath(iconPath, iconPaint);
     }
 
     private void drawRoadClosedIcon(@NonNull Canvas canvas, float x, float y, float radius) {
         float width = radius * 1.15f;
         float height = radius * 0.26f;
         iconPaint.setStyle(Paint.Style.FILL);
-        RectF bar = new RectF(x - width / 2f, y - height / 2f, x + width / 2f, y + height / 2f);
-        canvas.drawRoundRect(bar, height / 2f, height / 2f, iconPaint);
+        roadClosedBarRect.set(x - width / 2f, y - height / 2f, x + width / 2f, y + height / 2f);
+        canvas.drawRoundRect(roadClosedBarRect, height / 2f, height / 2f, iconPaint);
     }
 
     private void drawRoadworksIcon(@NonNull Canvas canvas, float x, float y, float radius) {
         float size = radius * 1.18f;
         iconPaint.setStyle(Paint.Style.FILL);
-        Path cone = new Path();
-        cone.moveTo(x, y - size * 0.45f);
-        cone.lineTo(x - size * 0.38f, y + size * 0.42f);
-        cone.lineTo(x + size * 0.38f, y + size * 0.42f);
-        cone.close();
-        canvas.drawPath(cone, iconPaint);
+        conePath.reset();
+        conePath.moveTo(x, y - size * 0.45f);
+        conePath.lineTo(x - size * 0.38f, y + size * 0.42f);
+        conePath.lineTo(x + size * 0.38f, y + size * 0.42f);
+        conePath.close();
+        canvas.drawPath(conePath, iconPaint);
     }
 
     private void drawLaneClosedIcon(@NonNull Canvas canvas, float x, float y, float radius) {
@@ -393,24 +400,24 @@ public class FlockFreeIncidentLayer extends OsmandMapLayer implements ContextMen
 
     private void drawWave(@NonNull Canvas canvas, float x, float y, float radius) {
         float size = radius * 1.12f;
-        Path wave = new Path();
-        wave.moveTo(x - size * 0.5f, y);
-        wave.cubicTo(x - size * 0.25f, y - size * 0.25f,
+        wavePath.reset();
+        wavePath.moveTo(x - size * 0.5f, y);
+        wavePath.cubicTo(x - size * 0.25f, y - size * 0.25f,
                 x - size * 0.1f, y + size * 0.25f, x + size * 0.1f, y);
-        wave.cubicTo(x + size * 0.25f, y - size * 0.25f,
+        wavePath.cubicTo(x + size * 0.25f, y - size * 0.25f,
                 x + size * 0.35f, y + size * 0.25f, x + size * 0.5f, y);
-        canvas.drawPath(wave, iconPaint);
+        canvas.drawPath(wavePath, iconPaint);
     }
 
     private void drawDangerIcon(@NonNull Canvas canvas, float x, float y, float radius) {
         float size = radius * 1.2f;
         iconPaint.setStyle(Paint.Style.STROKE);
-        Path triangle = new Path();
-        triangle.moveTo(x, y - size * 0.5f);
-        triangle.lineTo(x - size * 0.46f, y + size * 0.38f);
-        triangle.lineTo(x + size * 0.46f, y + size * 0.38f);
-        triangle.close();
-        canvas.drawPath(triangle, iconPaint);
+        trianglePath.reset();
+        trianglePath.moveTo(x, y - size * 0.5f);
+        trianglePath.lineTo(x - size * 0.46f, y + size * 0.38f);
+        trianglePath.lineTo(x + size * 0.46f, y + size * 0.38f);
+        trianglePath.close();
+        canvas.drawPath(trianglePath, iconPaint);
     }
 
     private void drawFogIcon(@NonNull Canvas canvas, float x, float y, float radius) {
@@ -442,13 +449,13 @@ public class FlockFreeIncidentLayer extends OsmandMapLayer implements ContextMen
     private void drawWindIcon(@NonNull Canvas canvas, float x, float y, float radius) {
         float size = radius * 1.12f;
         iconPaint.setStyle(Paint.Style.STROKE);
-        Path swirl = new Path();
-        swirl.moveTo(x - size * 0.5f, y - size * 0.18f);
-        swirl.cubicTo(x - size * 0.05f, y - size * 0.55f, x + size * 0.48f, y - size * 0.28f,
+        swirlPath.reset();
+        swirlPath.moveTo(x - size * 0.5f, y - size * 0.18f);
+        swirlPath.cubicTo(x - size * 0.05f, y - size * 0.55f, x + size * 0.48f, y - size * 0.28f,
                 x + size * 0.18f, y + size * 0.04f);
-        swirl.cubicTo(x - size * 0.1f, y + size * 0.34f, x + size * 0.38f, y + size * 0.46f,
+        swirlPath.cubicTo(x - size * 0.1f, y + size * 0.34f, x + size * 0.38f, y + size * 0.46f,
                 x + size * 0.5f, y + size * 0.18f);
-        canvas.drawPath(swirl, iconPaint);
+        canvas.drawPath(swirlPath, iconPaint);
     }
 
     private void drawUnknownIcon(@NonNull Canvas canvas, float x, float y, float radius) {

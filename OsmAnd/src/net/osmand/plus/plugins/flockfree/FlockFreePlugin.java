@@ -813,6 +813,9 @@ public class FlockFreePlugin extends OsmandPlugin {
             buildingTransparencyController.unregister();
             buildingTransparencyController = null;
         }
+        net.osmand.plus.plugins.flockfree.widgets.FlockFreeNavigationBar.unregister();
+        net.osmand.plus.plugins.flockfree.widgets.NavigationReportButton.unregister();
+        net.osmand.plus.plugins.flockfree.widgets.SearchAlongRouteChips.unregister();
     }
 
     @Override

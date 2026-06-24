@@ -47,6 +47,33 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private static final float CONE_HALF_ANGLE_DEG = 30f; // half-angle of the view cone on each side
     private static final float CONE_LENGTH_DP = 22f;     // screen-space cone length in dp
 
+    // Cached pixel dimensions — computed once in constructor to avoid per-frame dpToPx() calls
+    private final float cameraOuterRadiusPx;
+    private final float cameraInnerRadiusPx;
+    private final float markerStrokeWidthPx;
+    private final float cameraGlyphWidthPx;
+    private final float cameraGlyphHeightPx;
+    private final float cameraLensRadiusPx;
+    private final float cameraLabelOffsetPx;
+    private final float coneLengthPx;
+    private final float detectionRadiusPx;
+    private final float detectionLabelOffsetPx;
+    private final float clusterCellSizePx;
+    private final float clusterBaseRadiusPx;
+    private final float clusterRadiusIncrementPx;
+    private final float clusterMaxRadiusPx;
+    private final float textPaintSizePx;
+    private final float coneStrokeWidthPx;
+
+    // Reusable Path objects — avoid per-frame allocation
+    private final Path conePath = new Path();
+    private final Path diamondPath = new Path();
+
+    // Reusable collections for clustering — avoid per-frame allocation
+    private final Map<Long, List<CameraData.CameraPoint>> clusterGrid = new HashMap<>();
+    private final Map<Long, float[]> clusterScreenCenter = new HashMap<>();
+    private final Map<String, Integer> brandCountsMap = new HashMap<>();
+
     private List<CameraData.CameraPoint> visibleCameras = new ArrayList<>();
     private List<CydDetectionCandidate> visibleDetections = new ArrayList<>();
     private List<CameraCluster> visibleClusters = new ArrayList<>();
@@ -79,18 +106,36 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         super(context);
         this.plugin = plugin;
 
+        // Cache all dp-to-px conversions once — never call dpToPx() in onDraw/draw methods
+        cameraOuterRadiusPx = dpToPx(7);
+        cameraInnerRadiusPx = dpToPx(5);
+        markerStrokeWidthPx = dpToPx(2);
+        cameraGlyphWidthPx = dpToPx(3);
+        cameraGlyphHeightPx = dpToPx(2);
+        cameraLensRadiusPx = dpToPx(0.8f);
+        cameraLabelOffsetPx = dpToPx(3);
+        coneLengthPx = dpToPx(CONE_LENGTH_DP);
+        detectionRadiusPx = dpToPx(8);
+        detectionLabelOffsetPx = dpToPx(2);
+        clusterCellSizePx = dpToPx(CLUSTER_CELL_SIZE_DP);
+        clusterBaseRadiusPx = dpToPx(CLUSTER_BASE_RADIUS_DP);
+        clusterRadiusIncrementPx = dpToPx(CLUSTER_RADIUS_INCREMENT_DP);
+        clusterMaxRadiusPx = dpToPx(CLUSTER_MAX_RADIUS_DP);
+        textPaintSizePx = dpToPx(10);
+        coneStrokeWidthPx = dpToPx(1.5f);
+
         markerPaint = new Paint();
         markerPaint.setStyle(Paint.Style.FILL);
         markerPaint.setAntiAlias(true);
-        markerPaint.setStrokeWidth(dpToPx(2));
+        markerPaint.setStrokeWidth(markerStrokeWidthPx);
 
         candidatePaint = new Paint();
         candidatePaint.setAntiAlias(true);
-        candidatePaint.setStrokeWidth(dpToPx(2));
+        candidatePaint.setStrokeWidth(markerStrokeWidthPx);
 
         textPaint = new Paint();
         textPaint.setAntiAlias(true);
-        textPaint.setTextSize(dpToPx(10));
+        textPaint.setTextSize(textPaintSizePx);
         textPaint.setColor(Color.WHITE);
         textPaint.setTextAlign(Paint.Align.CENTER);
 
@@ -101,7 +146,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         coneStrokePaint = new Paint();
         coneStrokePaint.setStyle(Paint.Style.STROKE);
         coneStrokePaint.setAntiAlias(true);
-        coneStrokePaint.setStrokeWidth(dpToPx(1.5f));
+        coneStrokePaint.setStrokeWidth(coneStrokeWidthPx);
     }
 
     @Override
@@ -111,13 +156,14 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         }
 
         QuadRect screenArea = tileBox.getLatLonBounds();
-        visibleClusters = new ArrayList<>();
+        visibleClusters.clear();
         if (tileBox.getZoom() >= MIN_ZOOM_TO_SHOW) {
             CameraData cameraData = plugin.getCameraData();
             if (cameraData.isDataLoaded()) {
                 List<CameraData.CameraPoint> cameras = cameraData.getCamerasInBoundingBox(
                         screenArea.top, screenArea.left, screenArea.bottom, screenArea.right);
-                visibleCameras = cameras;
+                visibleCameras.clear();
+                visibleCameras.addAll(cameras);
                 if (tileBox.getZoom() >= CLUSTER_MIN_ZOOM) {
                     // Show individual markers
                     for (CameraData.CameraPoint camera : cameras) {
@@ -128,13 +174,13 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
                     drawClusters(canvas, tileBox, cameras);
                 }
             } else {
-                visibleCameras = new ArrayList<>();
+                visibleCameras.clear();
             }
         } else {
-            visibleCameras = new ArrayList<>();
+            visibleCameras.clear();
         }
 
-        visibleDetections = getVisibleDetections(screenArea);
+        fillVisibleDetections(screenArea);
         for (CydDetectionCandidate detection : visibleDetections) {
             drawCydDetection(canvas, tileBox, detection);
         }
@@ -146,11 +192,11 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
      */
     private void drawClusters(@NonNull Canvas canvas, @NonNull RotatedTileBox tileBox,
                               @NonNull List<CameraData.CameraPoint> cameras) {
-        float cellSize = dpToPx(CLUSTER_CELL_SIZE_DP);
+        float cellSize = clusterCellSizePx;
 
-        // Use a map keyed by grid cell coordinates
-        Map<Long, List<CameraData.CameraPoint>> grid = new HashMap<>();
-        Map<Long, float[]> cellScreenCenter = new HashMap<>(); // store [sumX, sumY] for averaging
+        // Reuse class-level maps — clear at start of each call instead of allocating new ones
+        clusterGrid.clear();
+        clusterScreenCenter.clear();
 
         for (CameraData.CameraPoint camera : cameras) {
             float x = tileBox.getPixXFromLatLon(camera.lat, camera.lon);
@@ -159,17 +205,26 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
             int cellY = (int) (y / cellSize);
             long key = ((long) cellX << 32) | (cellY & 0xFFFFFFFFL);
 
-            grid.computeIfAbsent(key, k -> new ArrayList<>()).add(camera);
-            float[] sums = cellScreenCenter.computeIfAbsent(key, k -> new float[2]);
+            List<CameraData.CameraPoint> cellCameras = clusterGrid.get(key);
+            if (cellCameras == null) {
+                cellCameras = new ArrayList<>();
+                clusterGrid.put(key, cellCameras);
+            }
+            cellCameras.add(camera);
+            float[] sums = clusterScreenCenter.get(key);
+            if (sums == null) {
+                sums = new float[2];
+                clusterScreenCenter.put(key, sums);
+            }
             sums[0] += x;
             sums[1] += y;
         }
 
-        for (Map.Entry<Long, List<CameraData.CameraPoint>> entry : grid.entrySet()) {
+        for (Map.Entry<Long, List<CameraData.CameraPoint>> entry : clusterGrid.entrySet()) {
             List<CameraData.CameraPoint> cellCameras = entry.getValue();
             int count = cellCameras.size();
 
-            float[] sums = cellScreenCenter.get(entry.getKey());
+            float[] sums = clusterScreenCenter.get(entry.getKey());
             float centerX = sums[0] / count;
             float centerY = sums[1] / count;
 
@@ -198,8 +253,8 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
      * Draw a cluster badge: filled circle with count text.
      */
     private void drawClusterBadge(@NonNull Canvas canvas, @NonNull CameraCluster cluster) {
-        float radius = dpToPx(Math.min(CLUSTER_BASE_RADIUS_DP + CLUSTER_RADIUS_INCREMENT_DP * (cluster.count - 1),
-                CLUSTER_MAX_RADIUS_DP));
+        float radius = Math.min(clusterBaseRadiusPx + clusterRadiusIncrementPx * (cluster.count - 1),
+                clusterMaxRadiusPx);
 
         // Fill with dominant brand color
         markerPaint.setStyle(Paint.Style.FILL);
@@ -222,14 +277,14 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
      * Find the most common brand color among a group of cameras.
      */
     private int getDominantBrandColor(@NonNull List<CameraData.CameraPoint> cameras) {
-        Map<String, Integer> brandCounts = new HashMap<>();
+        brandCountsMap.clear();
         for (CameraData.CameraPoint cam : cameras) {
             String key = cam.brand != null ? cam.brand.toLowerCase() : "";
-            brandCounts.merge(key, 1, Integer::sum);
+            brandCountsMap.merge(key, 1, Integer::sum);
         }
         String dominantBrand = "";
         int maxCount = 0;
-        for (Map.Entry<String, Integer> entry : brandCounts.entrySet()) {
+        for (Map.Entry<String, Integer> entry : brandCountsMap.entrySet()) {
             if (entry.getValue() > maxCount) {
                 maxCount = entry.getValue();
                 dominantBrand = entry.getKey();
@@ -250,7 +305,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         if (!visibleClusters.isEmpty()) {
             CameraCluster closestCluster = null;
             float closestClusterDist = Float.MAX_VALUE;
-            float tapRadius = dpToPx(CLUSTER_MAX_RADIUS_DP);
+            float tapRadius = clusterMaxRadiusPx;
             for (CameraCluster cluster : visibleClusters) {
                 float dx = cluster.screenX - point.x;
                 float dy = cluster.screenY - point.y;
@@ -395,17 +450,15 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         return closest;
     }
 
-    @NonNull
-    private List<CydDetectionCandidate> getVisibleDetections(@NonNull QuadRect screenArea) {
-        List<CydDetectionCandidate> detections = new java.util.ArrayList<>();
+    private void fillVisibleDetections(@NonNull QuadRect screenArea) {
+        visibleDetections.clear();
         for (CydDetectionCandidate detection : plugin.getCydHardwareManager().getRecentDetections()) {
             Double lat = detection.getLatitude();
             Double lon = detection.getLongitude();
             if (lat != null && lon != null && isInBounds(screenArea, lat, lon)) {
-                detections.add(detection);
+                visibleDetections.add(detection);
             }
         }
-        return detections;
     }
 
     private boolean isInBounds(@NonNull QuadRect screenArea, double lat, double lon) {
@@ -426,8 +479,6 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         float x = tileBox.getPixXFromLatLon(camera.lat, camera.lon);
         float y = tileBox.getPixYFromLatLon(camera.lat, camera.lon);
         int color = getBrandColor(camera.brand);
-        float outerRadius = dpToPx(7);
-        float innerRadius = dpToPx(5);
 
         // Draw orientation cone when direction is available and zoom is high enough
         if (tileBox.getZoom() >= 15) {
@@ -440,29 +491,24 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         // Outer ring: brand-color stroked circle (POI pin style)
         markerPaint.setStyle(Paint.Style.STROKE);
         markerPaint.setColor(color);
-        markerPaint.setStrokeWidth(dpToPx(2));
-        canvas.drawCircle(x, y, outerRadius, markerPaint);
+        markerPaint.setStrokeWidth(markerStrokeWidthPx);
+        canvas.drawCircle(x, y, cameraOuterRadiusPx, markerPaint);
 
-        // Inner white filled circle
+        // Inner white filled circle (switch to FILL once — stays for rest of method)
         markerPaint.setStyle(Paint.Style.FILL);
         markerPaint.setColor(Color.WHITE);
-        canvas.drawCircle(x, y, innerRadius, markerPaint);
+        canvas.drawCircle(x, y, cameraInnerRadiusPx, markerPaint);
 
         // Tiny camera glyph in brand color: rectangle body + circular lens
         markerPaint.setColor(color);
-        float camW = dpToPx(3);
-        float camH = dpToPx(2);
-        float camLeft = x - camW / 2f;
-        float camTop = y - camH / 2f;
-        canvas.drawRect(camLeft, camTop, camLeft + camW, camTop + camH, markerPaint);
-        canvas.drawCircle(x, y, dpToPx(0.8f), markerPaint);
-
-        // Restore markerPaint to default FILL state for other callers
-        markerPaint.setStyle(Paint.Style.FILL);
+        float camLeft = x - cameraGlyphWidthPx / 2f;
+        float camTop = y - cameraGlyphHeightPx / 2f;
+        canvas.drawRect(camLeft, camTop, camLeft + cameraGlyphWidthPx, camTop + cameraGlyphHeightPx, markerPaint);
+        canvas.drawCircle(x, y, cameraLensRadiusPx, markerPaint);
 
         if (tileBox.getZoom() >= 15) {
             String label = getShortBrandName(camera.brand);
-            canvas.drawText(label, x, y - outerRadius - dpToPx(3), textPaint);
+            canvas.drawText(label, x, y - cameraOuterRadiusPx - cameraLabelOffsetPx, textPaint);
         }
     }
 
@@ -488,16 +534,15 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         // then apply the map rotation already used by RotatedTileBox projection.
         float screenAngle = (float) Math.toRadians(compassBearing - 90f + tileBox.getRotate());
 
-        float coneLength = dpToPx(CONE_LENGTH_DP);
         float halfAngle = (float) Math.toRadians(CONE_HALF_ANGLE_DEG);
 
-        // Build the cone as a triangle: camera position -> two points at the wide end
-        Path conePath = new Path();
+        // Reuse class-level conePath — reset before each use instead of allocating
+        conePath.reset();
         conePath.moveTo(x, y);
-        float endX1 = x + (float) (coneLength * Math.cos(screenAngle - halfAngle));
-        float endY1 = y + (float) (coneLength * Math.sin(screenAngle - halfAngle));
-        float endX2 = x + (float) (coneLength * Math.cos(screenAngle + halfAngle));
-        float endY2 = y + (float) (coneLength * Math.sin(screenAngle + halfAngle));
+        float endX1 = x + (float) (coneLengthPx * Math.cos(screenAngle - halfAngle));
+        float endY1 = y + (float) (coneLengthPx * Math.sin(screenAngle - halfAngle));
+        float endX2 = x + (float) (coneLengthPx * Math.cos(screenAngle + halfAngle));
+        float endY2 = y + (float) (coneLengthPx * Math.sin(screenAngle + halfAngle));
         conePath.lineTo(endX1, endY1);
         conePath.lineTo(endX2, endY2);
         conePath.close();
@@ -522,24 +567,26 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         }
         float x = tileBox.getPixXFromLatLon(lat, lon);
         float y = tileBox.getPixYFromLatLon(lat, lon);
-        float radius = dpToPx(8);
-        Path diamond = new Path();
-        diamond.moveTo(x, y - radius);
-        diamond.lineTo(x + radius, y);
-        diamond.lineTo(x, y + radius);
-        diamond.lineTo(x - radius, y);
-        diamond.close();
+        float radius = detectionRadiusPx;
+
+        // Reuse class-level diamondPath — reset before each use instead of allocating
+        diamondPath.reset();
+        diamondPath.moveTo(x, y - radius);
+        diamondPath.lineTo(x + radius, y);
+        diamondPath.lineTo(x, y + radius);
+        diamondPath.lineTo(x - radius, y);
+        diamondPath.close();
 
         candidatePaint.setStyle(Paint.Style.FILL);
         candidatePaint.setColor(Color.parseColor("#00ACC1"));
-        canvas.drawPath(diamond, candidatePaint);
+        canvas.drawPath(diamondPath, candidatePaint);
         candidatePaint.setStyle(Paint.Style.STROKE);
         candidatePaint.setColor(Color.parseColor("#004D60"));
-        canvas.drawPath(diamond, candidatePaint);
+        canvas.drawPath(diamondPath, candidatePaint);
         candidatePaint.setStyle(Paint.Style.FILL);
 
         if (tileBox.getZoom() >= 14) {
-            canvas.drawText("CYD", x, y - radius - dpToPx(2), textPaint);
+            canvas.drawText("CYD", x, y - radius - detectionLabelOffsetPx, textPaint);
         }
     }
 
