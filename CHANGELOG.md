@@ -4,6 +4,16 @@ All notable changes to FlockFree Navigation are documented here.
 
 ## [Unreleased]
 
+## [v1.6.1] — 2026-06-24
+
+### Fixed
+- Camera and incident marker positions now use the OpenGL renderer's own screen-space projection (NativeUtilities.getPixelFromLatLon) instead of 2D getPixXFromLatLon — markers stay fixed to their geographic positions during map rotation
+- Tap handlers also updated to use NativeUtilities.getLatLonFromElevatedPixel for accurate screen-to-lat/lon conversion with OpenGL renderer
+
+### Changed
+- Camera Proximity and Traffic Status widgets moved from TOP panel to RIGHT panel — now appear as small side widgets instead of being hidden behind the search bar
+- Default app profiles cleaned up — removed Public Transport, Boat, Aircraft, Skiing, Train, and Horseback Riding as not relevant to FlockFree's use case
+
 ## [v1.6.0] — 2026-06-23
 
 ### Added
