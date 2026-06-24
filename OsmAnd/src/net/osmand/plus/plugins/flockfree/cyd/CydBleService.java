@@ -193,7 +193,23 @@ public class CydBleService extends Service {
 	public static void start(@NonNull Context context) {
 		Intent intent = new Intent(context, CydBleService.class);
 		intent.putExtra(EXTRA_ACTION, ACTION_START);
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+			// Android 14+ restricts foreground service starts to when the app is in a
+			// foreground state. If the activity isn't fully resumed yet, the system
+			// throws ForegroundServiceStartNotAllowedException. Guard with a try/catch
+			// and fall back to a plain startService (the service's onStartCommand
+			// already has its own try/catch around startForeground()).
+			try {
+				context.startForegroundService(intent);
+			} catch (Exception e) {
+				LOG.warn("Foreground service start not allowed, trying background start", e);
+				try {
+					context.startService(intent);
+				} catch (Exception ex) {
+					LOG.error("Failed to start CydBleService", ex);
+				}
+			}
+		} else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 			context.startForegroundService(intent);
 		} else {
 			context.startService(intent);
