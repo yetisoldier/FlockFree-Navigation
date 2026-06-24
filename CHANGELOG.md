@@ -4,6 +4,14 @@ All notable changes to FlockFree Navigation are documented here.
 
 ## [Unreleased]
 
+## [v1.6.3] — 2026-06-24
+
+### Changed
+- Removed the Traffic Status widget from FlockFree widget creation and availability while keeping TomTom traffic routing, route coloring, and navigation traffic summaries active in the background.
+- Camera widget now hides while browsing the map and only appears during active navigation.
+- Camera widget now reports the number of known ALPR cameras remaining on the active route instead of nearby cameras around the current map position.
+- Traffic routing is enabled by default again for FlockFree profiles when a TomTom API key is configured.
+
 ## [v1.6.2] — 2026-06-24
 
 ### Fixed

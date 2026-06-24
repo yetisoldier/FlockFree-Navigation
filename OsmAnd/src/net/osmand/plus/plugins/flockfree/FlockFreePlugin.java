@@ -22,7 +22,6 @@ import net.osmand.plus.routing.RouteCalculationResult;
 import net.osmand.plus.plugins.flockfree.widgets.CameraProximityWidget;
 import net.osmand.plus.plugins.flockfree.widgets.BuildingTransparencyController;
 import net.osmand.plus.plugins.flockfree.widgets.NavigationTiltController;
-import net.osmand.plus.plugins.flockfree.widgets.TrafficStatusWidget;
 import net.osmand.plus.quickaction.QuickActionType;
 import net.osmand.plus.quickaction.actions.ShowHideCamerasAction;
 import net.osmand.plus.quickaction.actions.ToggleCameraAvoidanceAction;
@@ -74,6 +73,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     public final CommonPreference<String> CAMERA_NEAREST_LAST_CHECK_SUMMARY;
     private final CommonPreference<Boolean> RENDERER_MIGRATION_DONE;
     private final CommonPreference<Boolean> VISUAL_DEFAULTS_MIGRATION_DONE;
+    private final CommonPreference<Boolean> TRAFFIC_DEFAULTS_MIGRATION_DONE;
     public final OsmandPreference<Boolean> FORCE_NIGHT_MAP;
 
     // Navigation 3D tilt preferences
@@ -180,6 +180,9 @@ public class FlockFreePlugin extends OsmandPlugin {
         VISUAL_DEFAULTS_MIGRATION_DONE = registerBooleanPreference(
                 FlockFreePreferences.VISUAL_DEFAULTS_MIGRATION_DONE,
                 FlockFreePreferences.DEFAULT_VISUAL_DEFAULTS_MIGRATION_DONE).makeGlobal().cache();
+        TRAFFIC_DEFAULTS_MIGRATION_DONE = registerBooleanPreference(
+                FlockFreePreferences.TRAFFIC_DEFAULTS_MIGRATION_DONE,
+                FlockFreePreferences.DEFAULT_TRAFFIC_DEFAULTS_MIGRATION_DONE).makeGlobal().cache();
 
         FORCE_NIGHT_MAP = registerBooleanPreference(
                 FlockFreePreferences.FORCE_NIGHT_MAP,
@@ -196,6 +199,7 @@ public class FlockFreePlugin extends OsmandPlugin {
 
         migrateDefaultRendererToFlockFree();
         applyFlockFreeVisualDefaults();
+        applyFlockFreeTrafficDefaults();
         registerForceNightMapThemeProvider();
         registerDebugAlertReceiver();
         incidentProvider = new TomTomIncidentProvider();
@@ -263,6 +267,17 @@ public class FlockFreePlugin extends OsmandPlugin {
             app.getSettings().SHOW_SPEEDOMETER.setModeValue(ApplicationMode.CAR, true);
         }
         VISUAL_DEFAULTS_MIGRATION_DONE.set(true);
+    }
+
+    private void applyFlockFreeTrafficDefaults() {
+        TRAFFIC_ROUTING_ENABLED.setDefaultValue(true);
+        if (Boolean.TRUE.equals(TRAFFIC_DEFAULTS_MIGRATION_DONE.get())) {
+            return;
+        }
+        for (ApplicationMode mode : ApplicationMode.allPossibleValues()) {
+            TRAFFIC_ROUTING_ENABLED.setModeValue(mode, true);
+        }
+        TRAFFIC_DEFAULTS_MIGRATION_DONE.set(true);
     }
 
     private void migrateCydBleEnabledToGlobal(@NonNull CommonPreference<Boolean> preference) {
@@ -617,11 +632,6 @@ public class FlockFreePlugin extends OsmandPlugin {
             widgetInfos.add(creator.createWidgetInfo(cameraWidget));
         }
 
-        // Traffic status widget — RIGHT side panel
-        MapWidget trafficWidget = createMapWidgetForParams(activity, WidgetType.TRAFFIC_STATUS);
-        if (trafficWidget != null) {
-            widgetInfos.add(creator.createWidgetInfo(trafficWidget));
-        }
     }
 
     @Nullable
@@ -630,9 +640,6 @@ public class FlockFreePlugin extends OsmandPlugin {
                                                   @Nullable String customId, @Nullable WidgetsPanel widgetsPanel) {
         if (widgetType == WidgetType.CAMERA_PROXIMITY) {
             return new CameraProximityWidget(mapActivity, customId, widgetsPanel);
-        }
-        if (widgetType == WidgetType.TRAFFIC_STATUS) {
-            return new TrafficStatusWidget(mapActivity, customId, widgetsPanel);
         }
         return null;
     }
@@ -1005,7 +1012,8 @@ public class FlockFreePlugin extends OsmandPlugin {
 
     @Override
     public void newRouteIsCalculated(boolean newRoute) {
-        if (!newRoute || (!CAMERA_AVOIDANCE_ENABLED.get() && !TRAFFIC_ROUTING_ENABLED.get())) {
+        boolean trafficEnabled = TRAFFIC_ROUTING_ENABLED.get() && !Algorithms.isEmpty(TOMTOM_API_KEY.get());
+        if (!newRoute || (!CAMERA_AVOIDANCE_ENABLED.get() && !trafficEnabled)) {
             return;
         }
         boolean cameraAvoidanceEnabled = CAMERA_AVOIDANCE_ENABLED.get();
@@ -1049,7 +1057,7 @@ public class FlockFreePlugin extends OsmandPlugin {
         }
         setLastRouteTradeoffSummary(routeTradeoffSummary);
         TrafficRoutingHelper trafficHelper = getTrafficRoutingHelper();
-        if (TRAFFIC_ROUTING_ENABLED.get() && route.getOriginalRoute() != null && !route.getOriginalRoute().isEmpty()) {
+        if (trafficEnabled && route.getOriginalRoute() != null && !route.getOriginalRoute().isEmpty()) {
             trafficHelper.getTrafficColorsForRoute(route.getOriginalRoute());
             setLastTrafficRouteCheckSummary(trafficHelper.getTrafficColorLegendSummary());
         }

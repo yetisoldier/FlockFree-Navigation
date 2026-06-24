@@ -111,7 +111,6 @@ public enum WidgetType {
 	AIDL_WIDGET("aidl_widget", R.string.map_widget_parking, R.string.parking_widget_desc, R.drawable.widget_parking_day, R.drawable.widget_parking_night, R.string.docs_widget_parking, null, RIGHT),
 
 	CAMERA_PROXIMITY("camera_proximity", R.string.flockfree_widget_camera_proximity, R.string.flockfree_widget_camera_proximity_desc, R.drawable.widget_gps_info_day, R.drawable.widget_gps_info_night, R.string.docs_widget_gps_info, NAVIGATION_POINTS, RIGHT),
-	TRAFFIC_STATUS("traffic_status", R.string.flockfree_widget_traffic_status, R.string.flockfree_widget_traffic_status_desc, R.drawable.widget_route_info_day, R.drawable.widget_route_info_night, 0, NAVIGATION_POINTS, RIGHT),
 
 	OBD_SPEED("obd_speed", R.string.obd_widget_vehicle_speed, R.string.obd_speed_desc, R.drawable.widget_obd_speed_day, R.drawable.widget_obd_speed_night, 0, VEHICLE_METRICS, RIGHT),
 	OBD_RPM("obd_rpm", R.string.obd_widget_engine_speed, R.string.obd_rpm_desc, R.drawable.widget_obd_engine_speed_day, R.drawable.widget_obd_engine_speed_night, 0, VEHICLE_METRICS, RIGHT),

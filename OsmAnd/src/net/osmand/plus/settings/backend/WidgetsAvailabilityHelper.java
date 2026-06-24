@@ -42,7 +42,6 @@ import static net.osmand.plus.views.mapwidgets.WidgetType.SUNSET;
 import static net.osmand.plus.views.mapwidgets.WidgetType.SUN_POSITION;
 import static net.osmand.plus.views.mapwidgets.WidgetType.TIME_TO_DESTINATION;
 import static net.osmand.plus.views.mapwidgets.WidgetType.TIME_TO_INTERMEDIATE;
-import static net.osmand.plus.views.mapwidgets.WidgetType.TRAFFIC_STATUS;
 import static net.osmand.plus.views.mapwidgets.WidgetType.TRUE_BEARING;
 
 import androidx.annotation.NonNull;
@@ -100,13 +99,11 @@ public class WidgetsAvailabilityHelper {
 		regWidgetVisibility(SMALL_NEXT_TURN, smallNextTurnSet);
 		regWidgetVisibility(SECOND_NEXT_TURN, secondNextTurnSet);
 		regWidgetVisibility(CAMERA_PROXIMITY, flockFreeNavigationSet);
-		regWidgetVisibility(TRAFFIC_STATUS, flockFreeNavigationSet);
 		
 		regWidgetAvailability(NEXT_TURN, exceptDefault);
 		regWidgetAvailability(SMALL_NEXT_TURN, exceptDefault);
 		regWidgetAvailability(SECOND_NEXT_TURN, exceptDefault);
 		regWidgetAvailability(CAMERA_PROXIMITY, all);
-		regWidgetAvailability(TRAFFIC_STATUS, all);
 
 		if (!enableWidgetsV2) {
 			regWidgetVisibility(INTERMEDIATE_DESTINATION, legacyNavigationPointSet);

@@ -30,6 +30,7 @@ public final class FlockFreePreferences {
     public static final String CAMERA_NEAREST_LAST_CHECK_SUMMARY = "camera_nearest_last_check_summary";
     public static final String RENDERER_MIGRATION_DONE = "renderer_migration_done";
     public static final String VISUAL_DEFAULTS_MIGRATION_DONE = "visual_defaults_migration_done";
+    public static final String TRAFFIC_DEFAULTS_MIGRATION_DONE = "traffic_defaults_migration_done";
     public static final String INCIDENTS_SHOW_LAYER = "incidents_show_layer";
     public static final String INCIDENTS_ALERTS_ENABLED = "incidents_alerts_enabled";
     public static final String ROUTE_COLOR_MIGRATION_DONE = "route_color_migration_done";
@@ -44,7 +45,7 @@ public final class FlockFreePreferences {
     public static final boolean DEFAULT_INCIDENTS_ALERTS_ENABLED = true;
     public static final boolean DEFAULT_CAMERA_AVOIDANCE_ENABLED = false;
     public static final boolean DEFAULT_CAMERA_ALERTS_ENABLED = true;
-    public static final boolean DEFAULT_TRAFFIC_ROUTING_ENABLED = false;
+    public static final boolean DEFAULT_TRAFFIC_ROUTING_ENABLED = true;
     public static final String DEFAULT_TOMTOM_API_KEY = "";
     public static final int DEFAULT_CAMERA_AVOIDANCE_RADIUS = 100;     // meters
     public static final int DEFAULT_CAMERA_ALERT_DISTANCE = 300;        // meters
@@ -53,6 +54,7 @@ public final class FlockFreePreferences {
     public static final boolean DEFAULT_WIFI_SCAN_ENABLED = false;
     public static final boolean DEFAULT_RENDERER_MIGRATION_DONE = false;
     public static final boolean DEFAULT_VISUAL_DEFAULTS_MIGRATION_DONE = false;
+    public static final boolean DEFAULT_TRAFFIC_DEFAULTS_MIGRATION_DONE = false;
     public static final boolean DEFAULT_ROUTE_COLOR_MIGRATION_DONE = false;
     public static final boolean DEFAULT_FORCE_NIGHT_MAP = false;
     public static final boolean DEFAULT_NAVIGATION_TILT_ENABLED = true;
