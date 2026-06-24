@@ -4,6 +4,11 @@ All notable changes to FlockFree Navigation are documented here.
 
 ## [Unreleased]
 
+## [v1.6.2] — 2026-06-24
+
+### Fixed
+- Removed Public Transport, Train, Boat, Aircraft, Skiing, and Horseback Riding from the FlockFree profile catalogue, including the drawer profile switcher, App profiles settings list, and New profile base-profile picker.
+
 ## [v1.6.1] — 2026-06-24
 
 ### Fixed

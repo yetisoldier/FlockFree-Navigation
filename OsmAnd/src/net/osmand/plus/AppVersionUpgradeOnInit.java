@@ -172,8 +172,10 @@ public class AppVersionUpgradeOnInit {
 	public static final int VERSION_5_3_04 = 5304;
 	public static final int VERSION_5_3_05 = 5305;
 	public static final int VERSION_5_3_06 = 5306;
+	public static final int VERSION_5_4_00 = 5400; // FlockFree: clean up app profile defaults
+	public static final int VERSION_5_4_01 = 5401; // FlockFree: remove irrelevant app profiles from existing installs
 
-	public static final int LAST_APP_VERSION = VERSION_5_3_06;
+	public static final int LAST_APP_VERSION = VERSION_5_4_01;
 
 	private static final String VERSION_INSTALLED = "VERSION_INSTALLED";
 
@@ -345,6 +347,9 @@ public class AppVersionUpgradeOnInit {
 				}
 				if (prevAppVersion < VERSION_5_3_06) {
 					migrateCoordinateFormatSettings(settings);
+				}
+				if (prevAppVersion < VERSION_5_4_01) {
+					migrateFlockFreeAppProfiles(settings);
 				}
 				startPrefs.edit().putInt(VERSION_INSTALLED_NUMBER, lastVersion).commit();
 				startPrefs.edit().putString(VERSION_INSTALLED, Version.getFullVersion(app)).commit();
@@ -1227,6 +1232,19 @@ public class AppVersionUpgradeOnInit {
 			} catch (JSONException e) {
 				SettingsHelper.LOG.error("Error migrating route recalculation JSON values", e);
 			}
+		}
+	}
+
+	private void migrateFlockFreeAppProfiles(@NonNull OsmandSettings settings) {
+		// FlockFree: remove profiles not relevant to our use case
+		String current = settings.AVAILABLE_APP_MODES.get();
+		if (current.contains("public_transport")
+				|| current.contains("boat")
+				|| current.contains("aircraft")
+				|| current.contains("ski")
+				|| current.contains("train")
+				|| current.contains("horse")) {
+			settings.AVAILABLE_APP_MODES.set("car,truck,motorcycle,moped,bicycle,pedestrian,");
 		}
 	}
 }

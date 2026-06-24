@@ -13,6 +13,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import net.osmand.StateChangedListener;
+import net.osmand.plus.BuildConfig;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
 import net.osmand.plus.profiles.ProfileIconColors;
@@ -33,6 +34,8 @@ public class ApplicationMode {
 	private static final List<ApplicationMode> defaultValues = new ArrayList<>();
 	private static final List<ApplicationMode> values = new ArrayList<>();
 	private static List<ApplicationMode> cachedFilteredValues = new ArrayList<>();
+	private static final Set<String> FLOCKFREE_HIDDEN_PROFILE_KEYS = new HashSet<>(
+			Arrays.asList("public_transport", "train", "boat", "aircraft", "ski", "horse"));
 
 	private static StateChangedListener<String> listener;
 	private static StateChangedListener<String> iconNameListener;
@@ -116,7 +119,7 @@ public class ApplicationMode {
 			String available = settings.AVAILABLE_APP_MODES.get();
 			cachedFilteredValues = new ArrayList<>();
 			for (ApplicationMode v : values) {
-				if (available.contains(v.getStringKey() + ",") || v == DEFAULT) {
+				if (!isHiddenInFlockFree(v) && (available.contains(v.getStringKey() + ",") || v == DEFAULT)) {
 					cachedFilteredValues.add(v);
 				}
 			}
@@ -523,6 +526,11 @@ public class ApplicationMode {
 		}
 	}
 
+	private static boolean isHiddenInFlockFree(@NonNull ApplicationMode mode) {
+		return BuildConfig.APPLICATION_ID.startsWith("com.yetiwurks.flockfree")
+				&& FLOCKFREE_HIDDEN_PROFILE_KEYS.contains(mode.getStringKey());
+	}
+
 	private static void initCustomModes(OsmandApplication app) {
 		OsmandSettings settings = app.getSettings();
 		for (String appModeKey : settings.getCustomAppModesKeys()) {
@@ -720,8 +728,10 @@ public class ApplicationMode {
 		}
 
 		private ApplicationMode reg() {
-			values.add(applicationMode);
-			defaultValues.add(applicationMode);
+			if (!isHiddenInFlockFree(applicationMode)) {
+				values.add(applicationMode);
+				defaultValues.add(applicationMode);
+			}
 			return applicationMode;
 		}
 
