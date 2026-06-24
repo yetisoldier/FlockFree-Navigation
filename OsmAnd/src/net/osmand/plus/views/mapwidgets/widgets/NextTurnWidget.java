@@ -19,6 +19,7 @@ import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.routing.CurrentStreetName;
 import net.osmand.plus.routing.NextDirectionInfo;
+import net.osmand.plus.routing.RoutingHelperUtils;
 import net.osmand.plus.views.layers.base.OsmandMapLayer.DrawSettings;
 import net.osmand.plus.views.layers.MapInfoLayer.TextState;
 import net.osmand.plus.views.mapwidgets.WidgetsPanel;

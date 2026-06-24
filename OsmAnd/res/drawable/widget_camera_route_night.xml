@@ -12,11 +12,11 @@
       android:fillColor="#ffffff"/>
   <path
       android:pathData="M12,16C14.2091,16 16,14.2091 16,12C16,9.7909 14.2091,8 12,8C9.7909,8 8,9.7909 8,12C8,14.2091 9.7909,16 12,16Z"
-      android:fillColor="#FFC107"/>
+      android:fillColor="#aaaaaa"/>
   <path
       android:pathData="M12,14C13.1046,14 14,13.1046 14,12C14,10.8954 13.1046,10 12,10C10.8954,10 10,10.8954 10,12C10,13.1046 10.8954,14 12,14Z"
       android:fillColor="#ffffff"/>
   <path
       android:pathData="M18,8C18.5523,8 19,7.5523 19,7C19,6.4477 18.5523,6 18,6C17.4477,6 17,6.4477 17,7C17,7.5523 17.4477,8 18,8Z"
-      android:fillColor="#FFC107"/>
+      android:fillColor="#aaaaaa"/>
 </vector>

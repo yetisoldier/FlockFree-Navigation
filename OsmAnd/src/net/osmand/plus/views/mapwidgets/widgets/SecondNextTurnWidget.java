@@ -20,6 +20,7 @@ import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.routing.CurrentStreetName;
 import net.osmand.plus.routing.NextDirectionInfo;
+import net.osmand.plus.routing.RoutingHelperUtils;
 import net.osmand.plus.views.layers.base.OsmandMapLayer.DrawSettings;
 import net.osmand.plus.views.layers.MapInfoLayer.TextState;
 import net.osmand.plus.views.mapwidgets.OutlinedTextContainer;
@@ -149,6 +150,9 @@ public class SecondNextTurnWidget extends NextTurnBaseWidget {
 				if (verticalWidget && Algorithms.isEmpty(streetName.text)) {
 					streetName.text = info.directionInfo.getDescriptionRoutePart(app, true);
 				}
+				if (!Algorithms.isEmpty(streetName.text)) {
+					streetName.text = RoutingHelperUtils.abbreviateStreetName(streetName.text);
+				}
 				turnType = info.directionInfo.getTurnType();
 				turnImminent = info.imminent;
 				nextTurnDistance = info.distanceTo;
@@ -159,4 +163,5 @@ public class SecondNextTurnWidget extends NextTurnBaseWidget {
 		setTurnImminent(turnImminent, deviatedFromRoute);
 		setTurnDistance(nextTurnDistance);
 	}
+
 }

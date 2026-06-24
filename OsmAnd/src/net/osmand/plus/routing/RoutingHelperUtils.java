@@ -333,4 +333,46 @@ public class RoutingHelperUtils {
 		predictedPoint.setBearing(pointA.bearingTo(pointB));
 		return predictedPoint;
 	}
+
+	private static final String[][] STREET_NAME_ABBREVIATIONS = {
+		{"Avenue", "Ave"},
+		{"Street", "St"},
+		{"Boulevard", "Blvd"},
+		{"Drive", "Dr"},
+		{"Road", "Rd"},
+		{"Lane", "Ln"},
+		{"Court", "Ct"},
+		{"Place", "Pl"},
+		{"Circle", "Cir"},
+		{"Trail", "Trl"},
+		{"Parkway", "Pkwy"},
+		{"Highway", "Hwy"},
+		{"Expressway", "Expy"},
+		{"Freeway", "Fwy"},
+		{"Interstate", "I"},
+		{"Northeast", "NE"},
+		{"Northwest", "NW"},
+		{"Southeast", "SE"},
+		{"Southwest", "SW"},
+		{"North", "N"},
+		{"South", "S"},
+		{"East", "E"},
+		{"West", "W"},
+		{"Saint", "St"},
+		{"Mount", "Mt"},
+		{"Fort", "Ft"},
+		{"Square", "Sq"},
+		{"Terrace", "Ter"},
+		{"Plaza", "Plz"},
+		{"Extension", "Ext"},
+	};
+
+	@NonNull
+	public static String abbreviateStreetName(@NonNull String name) {
+		String result = name;
+		for (String[] pair : STREET_NAME_ABBREVIATIONS) {
+			result = result.replaceAll("\\b" + pair[0] + "\\b", pair[1]);
+		}
+		return result;
+	}
 }
