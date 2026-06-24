@@ -18,6 +18,7 @@ import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.routing.IRouteInformationListener;
 import net.osmand.plus.routing.RoutingHelper;
 import net.osmand.plus.settings.enums.ThemeUsageContext;
+import net.osmand.plus.utils.ColorUtilities;
 import net.osmand.plus.views.OsmandMapTileView;
 
 /**
@@ -34,9 +35,7 @@ public class NavigationReportButton implements IRouteInformationListener {
 
 	private static final long UPDATE_INTERVAL_MS = 1000L;
 	private static final long REATTACH_INTERVAL_MS = 2000L;
-	private static final int FAB_SIZE_DP = 48;
-	private static final int FAB_SIDE_MARGIN_DP = 16;
-	private static final int FAB_NAV_BAR_GAP_DP = 16;
+	private static final int FAB_ICON_PADDING_DP = 10;
 	private static final int FAB_FALLBACK_BOTTOM_MARGIN_DP = 112;
 
 	@Nullable
@@ -136,10 +135,12 @@ public class NavigationReportButton implements IRouteInformationListener {
 		fabView.setImageResource(R.drawable.ic_action_device_camera);
 		fabView.setContentDescription(app.getString(R.string.flockfree_report_sheet_title));
 		fabView.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-		int fabSize = dp(FAB_SIZE_DP);
+		int iconPadding = dp(FAB_ICON_PADDING_DP);
+		fabView.setPadding(iconPadding, iconPadding, iconPadding, iconPadding);
+		int fabSize = getMapButtonSize();
 		FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(fabSize, fabSize);
 		lp.gravity = Gravity.END | Gravity.BOTTOM;
-		lp.setMargins(0, 0, dp(FAB_SIDE_MARGIN_DP), dp(FAB_FALLBACK_BOTTOM_MARGIN_DP));
+		lp.setMargins(0, 0, getMapButtonMargin(), dp(FAB_FALLBACK_BOTTOM_MARGIN_DP));
 
 		fabView.setLayoutParams(lp);
 		fabView.setElevation(6f);
@@ -196,11 +197,12 @@ public class NavigationReportButton implements IRouteInformationListener {
 				app.getSettings().getApplicationMode(), ThemeUsageContext.MAP);
 
 		int bgRes = nightMode
-				? R.drawable.flockfree_report_fab_bg_night
-				: R.drawable.flockfree_report_fab_bg;
+				? R.drawable.btn_circle_night
+				: R.drawable.btn_circle;
 		fabView.setBackgroundResource(bgRes);
 
-		fabView.setColorFilter(0xFFFFFFFF, android.graphics.PorterDuff.Mode.SRC_ATOP);
+		fabView.setColorFilter(ColorUtilities.getMapButtonIconColor(app, nightMode),
+				android.graphics.PorterDuff.Mode.SRC_ATOP);
 	}
 
 	private void updatePosition() {
@@ -208,24 +210,56 @@ public class NavigationReportButton implements IRouteInformationListener {
 			return;
 		}
 		View root = mapActivity.findViewById(android.R.id.content);
+		View zoomInButton = mapActivity.findViewById(R.id.map_zoom_in_button);
 		View navBar = mapActivity.findViewById(R.id.flockfree_nav_bar);
 		int bottomMargin = dp(FAB_FALLBACK_BOTTOM_MARGIN_DP);
-		if (root != null && navBar != null && navBar.getVisibility() == View.VISIBLE) {
+		int endMargin = getMapButtonMargin();
+		if (root != null && zoomInButton != null && zoomInButton.isShown()
+				&& root.getHeight() > 0 && root.getWidth() > 0
+				&& zoomInButton.getHeight() > 0 && zoomInButton.getWidth() > 0) {
+			int[] rootLocation = new int[2];
+			int[] zoomLocation = new int[2];
+			root.getLocationOnScreen(rootLocation);
+			zoomInButton.getLocationOnScreen(zoomLocation);
+			int zoomTop = zoomLocation[1] - rootLocation[1];
+			int zoomRight = zoomLocation[0] - rootLocation[0] + zoomInButton.getWidth();
+			if (zoomTop > 0 && zoomTop < root.getHeight()) {
+				bottomMargin = root.getHeight() - zoomTop + getMapButtonSpacing();
+			}
+			if (zoomRight > 0 && zoomRight <= root.getWidth()) {
+				endMargin = Math.max(0, root.getWidth() - zoomRight);
+			}
+		} else if (root != null && navBar != null && navBar.getVisibility() == View.VISIBLE) {
 			int[] rootLocation = new int[2];
 			int[] navBarLocation = new int[2];
 			root.getLocationOnScreen(rootLocation);
 			navBar.getLocationOnScreen(navBarLocation);
 			int navBarTop = navBarLocation[1] - rootLocation[1];
 			if (root.getHeight() > 0 && navBarTop > 0 && navBarTop < root.getHeight()) {
-				bottomMargin = root.getHeight() - navBarTop + dp(FAB_NAV_BAR_GAP_DP);
+				bottomMargin = root.getHeight() - navBarTop + getMapButtonSpacing();
 			}
 		}
 		ViewGroup.LayoutParams params = fabView.getLayoutParams();
 		if (params instanceof FrameLayout.LayoutParams) {
 			FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) params;
-			lp.setMargins(0, 0, dp(FAB_SIDE_MARGIN_DP), bottomMargin);
+			int fabSize = getMapButtonSize();
+			lp.width = fabSize;
+			lp.height = fabSize;
+			lp.setMargins(0, 0, endMargin, bottomMargin);
 			fabView.setLayoutParams(lp);
 		}
+	}
+
+	private int getMapButtonSize() {
+		return app.getResources().getDimensionPixelSize(R.dimen.map_button_size);
+	}
+
+	private int getMapButtonSpacing() {
+		return app.getResources().getDimensionPixelSize(R.dimen.map_button_spacing);
+	}
+
+	private int getMapButtonMargin() {
+		return app.getResources().getDimensionPixelSize(R.dimen.map_button_margin);
 	}
 
 	private int dp(float value) {
