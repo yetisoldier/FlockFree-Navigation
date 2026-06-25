@@ -271,20 +271,43 @@ public class RouteProvider {
 		try {
 			RouteCalculationResult avoided = findVectorMapsRoute(avoidedParams, calcGPXRoute);
 			if (avoided.isCalculated()) {
+				// Count cameras on the avoidance route before accepting it
+				int avoidedCameraCount = avoidanceHelper.findCamerasNearRouteLocations(
+						avoided.getImmutableAllLocations(), plugin.CAMERA_AVOIDANCE_RADIUS.get()).size();
+				log.info("FlockFree full avoidance route has " + avoidedCameraCount
+						+ " cameras (original had " + totalCameraCount + ")");
 				// Multi-pass: check if the avoidance route itself passes near cameras
 				RouteCalculationResult multiPassResult = applyMultiPassAvoidance(
 						params, avoided, blockedIds, calcGPXRoute, plugin,
 						originalRouteTimeSeconds, originalRouteDistanceMeters,
 						totalCameraCount, totalCameraRoadCount);
 				if (multiPassResult != null) {
-					return new FlockFreeRouteVariant(multiPassResult, 
-							copyParamsForFlockFreeAvoidance(params, blockedIds).temporaryImpassableRoadIds);
+					// Verify the multi-pass result is actually better than the original
+					int multiPassCameraCount = avoidanceHelper.findCamerasNearRouteLocations(
+							multiPassResult.getImmutableAllLocations(),
+							plugin.CAMERA_AVOIDANCE_RADIUS.get()).size();
+					if (multiPassCameraCount < totalCameraCount) {
+						return new FlockFreeRouteVariant(multiPassResult, 
+								copyParamsForFlockFreeAvoidance(params, blockedIds).temporaryImpassableRoadIds);
+					} else {
+						log.info("FlockFree multi-pass result has " + multiPassCameraCount
+								+ " cameras — not better than original (" + totalCameraCount
+								+ "); falling through to relaxation");
+					}
 				}
-				log.info("FlockFree recalculated route with " + blockedIds.size()
-						+ " temporary avoid road ids (full avoidance)");
-				avoidanceHelper.recordAvoidanceApplied(blockedIds.size(),
-						totalCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters);
-				return new FlockFreeRouteVariant(avoided, avoidedParams.temporaryImpassableRoadIds);
+				// Only accept the avoidance route if it actually has fewer cameras
+				if (avoidedCameraCount < totalCameraCount) {
+					log.info("FlockFree recalculated route with " + blockedIds.size()
+							+ " temporary avoid road ids (full avoidance, "
+							+ avoidedCameraCount + " cameras vs " + totalCameraCount + " original)");
+					avoidanceHelper.recordAvoidanceApplied(blockedIds.size(),
+							totalCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters);
+					return new FlockFreeRouteVariant(avoided, avoidedParams.temporaryImpassableRoadIds);
+				} else {
+					log.info("FlockFree full avoidance route has " + avoidedCameraCount
+							+ " cameras — not better than original (" + totalCameraCount
+							+ "); falling through to relaxation");
+				}
 			}
 		} catch (IOException e) {
 			log.warn("FlockFree temporary camera avoidance threw; returning original route", e);
@@ -316,18 +339,38 @@ public class RouteProvider {
 			try {
 				RouteCalculationResult avoided = findVectorMapsRoute(avoidedParams, calcGPXRoute);
 				if (avoided.isCalculated()) {
+					// Count cameras on the relaxed route before accepting it
+					int relaxedCameraCount = avoidanceHelper.findCamerasNearRouteLocations(
+							avoided.getImmutableAllLocations(),
+							plugin.CAMERA_AVOIDANCE_RADIUS.get()).size();
 					// Multi-pass: check if the relaxed route still passes near cameras
 					RouteCalculationResult multiPassResult = applyMultiPassAvoidance(
 							params, avoided, blockedIds, calcGPXRoute, plugin,
 							originalRouteTimeSeconds, originalRouteDistanceMeters,
 							totalCameraCount, totalCameraRoadCount);
 					if (multiPassResult != null) {
-						return new FlockFreeRouteVariant(multiPassResult,
-								copyParamsForFlockFreeAvoidance(params, blockedIds).temporaryImpassableRoadIds);
+						int multiPassCameraCount = avoidanceHelper.findCamerasNearRouteLocations(
+								multiPassResult.getImmutableAllLocations(),
+								plugin.CAMERA_AVOIDANCE_RADIUS.get()).size();
+						if (multiPassCameraCount < totalCameraCount) {
+							return new FlockFreeRouteVariant(multiPassResult,
+									copyParamsForFlockFreeAvoidance(params, blockedIds).temporaryImpassableRoadIds);
+						} else {
+							log.info("FlockFree relaxation multi-pass has " + multiPassCameraCount
+									+ " cameras — not better than original (" + totalCameraCount + ")");
+						}
+					}
+					// Only accept the relaxed route if it actually has fewer cameras
+					if (relaxedCameraCount >= totalCameraCount) {
+						log.info("FlockFree relaxation iteration " + (i + 1)
+								+ " route has " + relaxedCameraCount + " cameras — not better than original ("
+								+ totalCameraCount + "); continuing");
+						continue;  // Try next relaxation iteration
 					}
 					log.info("FlockFree relaxation succeeded after " + (i + 1)
 							+ " iteration(s); blocked " + blockedIds.size()
 							+ " of " + totalCameraRoadCount + " camera roads"
+							+ ", cameras on route=" + relaxedCameraCount
 							+ ", remaining cameras on unblocked roads=" + remainingCameraCount);
 					avoidanceHelper.recordAvoidancePartial(blockedIds.size(),
 							totalCameraRoadCount, remainingCameraCount,
