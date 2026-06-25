@@ -5,18 +5,18 @@
 	android:id="@+id/widget_bg"
 	android:layout_width="wrap_content"
 	android:layout_height="wrap_content"
+	android:minHeight="40dp"
 	android:layout_gravity="start"
 	android:layout_marginStart="14dp"
 	android:layout_marginTop="2dp"
 	android:layout_marginBottom="2dp"
-	android:background="@drawable/bg_flockfree_navigation_card"
-	android:elevation="4dp"
+	android:background="@drawable/bg_flockfree_second_next_turn_chip"
+	android:elevation="3dp"
 	android:gravity="center_vertical"
-	android:minHeight="42dp"
 	android:orientation="horizontal"
 	android:paddingStart="12dp"
-	android:paddingEnd="14dp"
-	android:paddingVertical="7dp">
+	android:paddingEnd="16dp"
+	android:paddingVertical="6dp">
 
 	<LinearLayout
 		android:id="@+id/container"
@@ -25,47 +25,40 @@
 		android:gravity="center_vertical"
 		android:orientation="horizontal">
 
-		<TextView
-			android:id="@+id/flockfree_then_label"
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:layout_gravity="center"
-			android:layout_marginEnd="8dp"
-			android:includeFontPadding="false"
-			android:text="@string/flockfree_then_turn"
-			android:textColor="@color/card_and_list_background_light"
-			android:textSize="18sp"
-			android:textStyle="bold" />
-
 		<androidx.appcompat.widget.AppCompatImageView
 			android:id="@+id/arrow_icon"
 			android:layout_width="24dp"
 			android:layout_height="24dp"
 			android:layout_gravity="center"
+			android:layout_marginEnd="8dp"
 			android:gravity="center"
-			app:srcCompat="@drawable/ic_action_remove_dark"
-			tools:tint="@color/card_and_list_background_light" />
+			app:srcCompat="@drawable/ic_action_remove_dark" />
 
 		<net.osmand.plus.views.mapwidgets.OutlinedTextContainer
 			android:id="@+id/distance_text"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
+			android:layout_gravity="center_vertical|start"
+			android:layout_marginEnd="2dp"
+			android:gravity="start|center"
 			android:includeFontPadding="false"
 			android:maxLines="1"
-			android:textColor="@color/card_and_list_background_light"
-			android:textSize="1sp"
-			android:visibility="gone"
+			android:textColor="@color/google_maps_text_primary"
+			android:textSize="16sp"
+			android:textStyle="bold"
 			tools:text="500" />
 
 		<net.osmand.plus.views.mapwidgets.OutlinedTextContainer
 			android:id="@+id/distance_sub_text"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
+			android:layout_gravity="center_vertical|start"
+			android:layout_marginEnd="4dp"
+			android:gravity="center"
 			android:includeFontPadding="false"
 			android:maxLines="1"
-			android:textColor="@color/card_and_list_background_light"
-			android:textSize="1sp"
-			android:visibility="gone"
+			android:textColor="@color/google_maps_text_secondary"
+			android:textSize="14sp"
 			tools:text="ft" />
 
 		<TextView
@@ -73,7 +66,7 @@
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:layout_gravity="center"
-			android:layout_marginStart="8dp"
+			android:layout_marginStart="6dp"
 			android:background="@drawable/bg_navigation_widget_exit"
 			android:includeFontPadding="false"
 			android:lines="1"
@@ -91,7 +84,7 @@
 			android:layout_width="wrap_content"
 			android:layout_height="match_parent"
 			android:layout_gravity="center"
-			android:layout_marginStart="8dp"
+			android:layout_marginStart="6dp"
 			android:orientation="horizontal"
 			android:visibility="gone"
 			tools:visibility="visible" />
@@ -100,12 +93,14 @@
 			android:id="@+id/street_text"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
+			android:layout_gravity="center_vertical|start"
 			android:ellipsize="end"
+			android:gravity="center"
 			android:includeFontPadding="false"
 			android:maxLines="1"
-			android:textColor="@color/card_and_list_background_light"
-			android:textSize="1sp"
-			android:visibility="gone"
+			android:maxWidth="160dp"
+			android:textColor="@color/google_maps_text_secondary"
+			android:textSize="14sp"
 			tools:text="Main St" />
 
 	</LinearLayout>

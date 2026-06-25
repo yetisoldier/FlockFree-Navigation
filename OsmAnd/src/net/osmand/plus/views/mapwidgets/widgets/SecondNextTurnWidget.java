@@ -73,27 +73,17 @@ public class SecondNextTurnWidget extends NextTurnBaseWidget {
 			boolean landscape = isFlockFreeLandscape();
 			LinearLayout bg = getView().findViewById(R.id.widget_bg);
 			if (bg != null) {
-				if (landscape) {
-					bg.setBackgroundResource(isNightMode()
-							? R.drawable.bg_flockfree_navigation_card_night
-							: R.drawable.bg_flockfree_navigation_card);
-				} else {
-					bg.setBackgroundResource(isNightMode()
-							? R.drawable.bg_flockfree_second_next_turn_chip_night
-							: R.drawable.bg_flockfree_second_next_turn_chip);
-				}
+				bg.setBackgroundResource(isNightMode()
+					? R.drawable.bg_flockfree_second_next_turn_chip_night
+					: R.drawable.bg_flockfree_second_next_turn_chip);
 			}
 
-			int primaryTextColor = ContextCompat.getColor(app, landscape
-					? R.color.card_and_list_background_light
-					: (isNightMode()
+			int primaryTextColor = ContextCompat.getColor(app, isNightMode()
 					? R.color.google_maps_nav_bar_text_night
-					: R.color.google_maps_text_primary));
-			int secondaryTextColor = ContextCompat.getColor(app, landscape
-					? R.color.card_and_list_background_light
-					: (isNightMode()
+					: R.color.google_maps_text_primary);
+			int secondaryTextColor = ContextCompat.getColor(app, isNightMode()
 					? R.color.google_maps_nav_bar_text_secondary_night
-					: R.color.google_maps_text_secondary));
+					: R.color.google_maps_text_secondary);
 
 			OutlinedTextContainer distanceView = getView().findViewById(R.id.distance_text);
 			if (distanceView != null) {
@@ -111,10 +101,6 @@ public class SecondNextTurnWidget extends NextTurnBaseWidget {
 			TextView exitView = getView().findViewById(R.id.map_exit_ref);
 			if (exitView != null) {
 				exitView.setTextColor(ContextCompat.getColor(app, android.R.color.white));
-			}
-			TextView thenView = getView().findViewById(R.id.flockfree_then_label);
-			if (thenView != null) {
-				thenView.setTextColor(primaryTextColor);
 			}
 			ImageView arrowView = getView().findViewById(R.id.arrow_icon);
 			if (arrowView != null) {
