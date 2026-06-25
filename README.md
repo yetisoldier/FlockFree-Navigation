@@ -7,7 +7,7 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 ## Features
 
 ### Camera Awareness
-- **105,000+ camera database** — Bundled seed of 104,902 ALPR cameras with direction data, stored in SQLite for fast spatial queries
+- **105,000+ camera database** — Bundled seed of 106,283 ALPR cameras with direction data, stored in SQLite for fast spatial queries
 - **Camera orientation cones** — Translucent view cones rendered on the map at zoom 15+ showing camera heading
 - **Nearby camera alerts** — Toast alerts with vibration when approaching known cameras; cooldown logic prevents repeat alerts for the same camera
 - **WiFi Flock detection** — Passively scans for Flock Safety camera WiFi beacons and triggers alerts + CYD auto-pause when detected
@@ -26,7 +26,11 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 - **Auto-pause on Flock detection** — When WiFi Flock detection triggers, the CYD companion is automatically paused
 
 ### Route Avoidance
-- **Iterative relaxation avoidance** — Identifies camera-adjacent roads, blocks them, and recalculates. If full avoidance fails, progressively unblocks the least-camera-impactful roads (up to 4 iterations) until a viable route is found.
+- **Wide corridor road blocking** — For each camera within the route corridor radius (default 100m), blocks ALL route segments within the radius, not just the single nearest road. This prevents the router from using adjacent roads in the same corridor and still passing near cameras.
+- **Multi-pass avoidance** — After calculating an avoidance route, scans it for new cameras and re-blocks with expanded road sets (up to 5 passes) to catch cameras that moved onto the new route.
+- **Iterative relaxation avoidance** — If full avoidance fails (no route exists with all roads blocked), progressively unblocks the least-camera-impactful roads (up to 4 iterations) until a viable route is found.
+- **Camera count validation** — Only accepts an avoidance route if it has strictly fewer cameras than the original route. Prevents the inverted "privacy route has more cameras" bug.
+- **Route comparison card** — Shows fastest vs privacy route side-by-side with camera counts, distance, time, and percentage fewer cameras.
 - **Partial avoidance reporting** — When full avoidance isn't possible, reports how many camera roads were blocked and how many cameras remain on the route.
 - **Status persistence** — Route check results persist across app restarts
 
@@ -134,6 +138,14 @@ The APK will be at:
 OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-debug.apk
 ```
 
+For release builds:
+```bash
+./gradlew :OsmAnd:assembleGplayFreeLegacyFatRelease
+```
+Release APK: `OsmAnd/build/outputs/apk/gplayFreeLegacyFat/release/OsmAnd-gplayFree-legacy-fat-release.apk`
+
+Both debug and release are signed with the flockfree-release.keystore.
+
 Install to a connected device:
 ```bash
 adb install -r OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-debug.apk
@@ -152,7 +164,7 @@ This builds, signs, installs over Wi-Fi ADB, launches FlockFree, and runs a read
 1. **Launch FlockFree** — The app opens to the map. The FlockFree plugin is enabled by default.
 2. **Grant permissions** — Allow location when prompted. Bluetooth is only needed if you use the optional CYD companion hardware. Nearby location is needed for WiFi Flock scanning.
 3. **Download offline maps** (optional but recommended) — Go to Menu → Maps & Resources → Download maps → choose your region. Route avoidance requires offline vector maps.
-4. **Camera data loads automatically** — The bundled seed (104,902 cameras) is available immediately. A network refresh updates from `data.dontgetflocked.com` weekly.
+4. **Camera data loads automatically** — The bundled seed (106,283 cameras) is available immediately. A network refresh updates from `data.dontgetflocked.com` weekly.
 5. **Optional traffic setup** — Create your own TomTom API key, then open Menu → FlockFree → **TomTom API key**. Leave the key blank if you do not want live traffic routing.
 
 ![Navigation Drawer](docs/screenshots/ff-drawer.png)
@@ -251,13 +263,14 @@ For developers and field testers:
 - **Package:** `com.yetiwurks.flockfree`
 - **Min Android:** API 21 (Android 5.0)
 - **Target:** Android 14 (API 34)
-- **Camera seed:** 104,902 points (bundled, offline-first)
+- **Camera seed:** 106,283 points (bundled, offline-first)
 - **Camera data source:** [DeFlock](https://deflock.org) / [OpenStreetMap](https://openstreetmap.org)
 
 ## Known Limitations
 
 - Route avoidance is offline-only (requires downloaded vector maps)
 - Iterative relaxation caps at 4 retries to limit recalculation latency; very dense camera areas may still fall back to the original route
+- Multi-pass avoidance caps at 5 passes; extremely camera-dense corridors may not reach zero cameras
 - Optional CYD detection to camera submission is a manual review flow (no auto-upload)
 - Reporting flow opens the editor but does not verify end-to-end OSM upload
 - No live RF drive test completed yet (WiFi detection and bench simulation verified only)
