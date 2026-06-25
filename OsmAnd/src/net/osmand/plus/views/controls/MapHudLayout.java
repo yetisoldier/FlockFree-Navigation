@@ -26,6 +26,8 @@ import net.osmand.StateChangedListener;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
 import net.osmand.plus.helpers.AndroidUiHelper;
+import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.settings.backend.OsmandSettings;
 import net.osmand.plus.settings.backend.preferences.CommonPreference;
 import net.osmand.plus.settings.enums.PanelsLayoutMode;
@@ -52,6 +54,8 @@ public class MapHudLayout extends FrameLayout {
 	private static final int UI_REFRESH_INTERVAL_MILLIS = 100;
 	private static final float TOP_BAR_MAX_WIDTH_PERCENTAGE_PORTRAIT = 0.5f;
 	private static final float TOP_BAR_MAX_WIDTH_PERCENTAGE_LANDSCAPE = 0.6f;
+	private static final float FLOCKFREE_TOP_BAR_MAX_WIDTH_PERCENTAGE_LANDSCAPE = 0.36f;
+	private static final int FLOCKFREE_TOP_BAR_START_MARGIN_DP = 88;
 
 	private static final Log LOG = PlatformUtil.getLog(MapHudLayout.class);
 
@@ -641,24 +645,35 @@ public class MapHudLayout extends FrameLayout {
 			int leftMargin = 0;
 			int rightMargin = 0;
 
-			if (shouldCenterVerticalPanels()) {
-				float percentage = portrait ? TOP_BAR_MAX_WIDTH_PERCENTAGE_PORTRAIT : TOP_BAR_MAX_WIDTH_PERCENTAGE_LANDSCAPE;
-
+			if (shouldUseFlockFreeLandscapeTopPanel(panel)) {
 				int panelsMargin = defaultMargin * 2;
-				int defaultWidth = (int) (totalWidth * percentage);
-				int defaultMargin = (totalWidth - defaultWidth) / 2;
+				int rightWidth = rightWidgetsPanel.getVisibility() == VISIBLE ? rightWidgetsPanel.getWidth() : 0;
 
+				int targetWidth = (int) (totalWidth * FLOCKFREE_TOP_BAR_MAX_WIDTH_PERCENTAGE_LANDSCAPE);
+				leftMargin = (int) (dpToPx * FLOCKFREE_TOP_BAR_START_MARGIN_DP);
+				int minRightMargin = Math.max(defaultMargin, rightWidth > 0 ? rightWidth + panelsMargin : 0);
+				rightMargin = Math.max(minRightMargin, totalWidth - leftMargin - targetWidth);
+			} else if (shouldCenterVerticalPanels()) {
+				int panelsMargin = defaultMargin * 2;
 				int leftWidth = leftWidgetsPanel.getVisibility() == VISIBLE ? leftWidgetsPanel.getWidth() : 0;
 				int rightWidth = rightWidgetsPanel.getVisibility() == VISIBLE ? rightWidgetsPanel.getWidth() : 0;
 
 				if (panel.isTopPanel()) {
-					leftMargin = Math.max(defaultMargin, leftWidth > 0 ? leftWidth + panelsMargin : 0);
-					rightMargin = Math.max(defaultMargin, rightWidth > 0 ? rightWidth + panelsMargin : 0);
+					float percentage = portrait ? TOP_BAR_MAX_WIDTH_PERCENTAGE_PORTRAIT : TOP_BAR_MAX_WIDTH_PERCENTAGE_LANDSCAPE;
+					int defaultWidth = (int) (totalWidth * percentage);
+					int centeredMargin = (totalWidth - defaultWidth) / 2;
+
+					leftMargin = Math.max(centeredMargin, leftWidth > 0 ? leftWidth + panelsMargin : 0);
+					rightMargin = Math.max(centeredMargin, rightWidth > 0 ? rightWidth + panelsMargin : 0);
 
 					leftMargin = Math.max(leftMargin, topButtonsMargin);
 				} else {
-					leftMargin = Math.max(defaultMargin, bottomButtonsMargin);
-					rightMargin = Math.max(defaultMargin, bottomButtonsMargin);
+					float percentage = portrait ? TOP_BAR_MAX_WIDTH_PERCENTAGE_PORTRAIT : TOP_BAR_MAX_WIDTH_PERCENTAGE_LANDSCAPE;
+					int defaultWidth = (int) (totalWidth * percentage);
+					int centeredMargin = (totalWidth - defaultWidth) / 2;
+
+					leftMargin = Math.max(centeredMargin, bottomButtonsMargin);
+					rightMargin = Math.max(centeredMargin, bottomButtonsMargin);
 				}
 			}
 			if (params.leftMargin != leftMargin || params.rightMargin != rightMargin) {
@@ -667,6 +682,12 @@ public class MapHudLayout extends FrameLayout {
 				panel.setLayoutParams(params);
 			}
 		}
+	}
+
+	private boolean shouldUseFlockFreeLandscapeTopPanel(@NonNull VerticalWidgetPanel panel) {
+		return !portrait
+				&& panel.isTopPanel()
+				&& PluginsHelper.getEnabledPlugin(FlockFreePlugin.class) != null;
 	}
 
 	@Override

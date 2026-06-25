@@ -14,6 +14,7 @@
 		<item quantity="one">Avoids %1$d camera</item>
 		<item quantity="other">Avoids %1$d cameras</item>
 	</plurals>
+	<string name="flockfree_then_turn">Then</string>
 	<string name="flockfree_route_tradeoff_delay_minutes">%1$s &#183; +%2$d min</string>
 	<string name="flockfree_route_tradeoff_no_delay">%1$s &#183; no delay</string>
 	<string name="flockfree_route_tradeoff_none">No camera-avoidance tradeoff recorded yet.</string>

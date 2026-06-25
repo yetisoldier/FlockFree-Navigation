@@ -5,16 +5,19 @@
 	android:id="@+id/street_name_widget"
 	android:layout_width="match_parent"
 	android:layout_height="wrap_content"
-	android:background="@drawable/btn_round"
-	android:minHeight="@dimen/map_address_height">
+	android:layout_gravity="bottom">
 
 	<LinearLayout
 		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
 		android:layout_gravity="center"
-		android:layout_marginHorizontal="@dimen/measurement_tool_menu_title_padding_bottom"
+		android:background="@drawable/bg_flockfree_second_next_turn_chip"
+		android:elevation="3dp"
 		android:gravity="center"
-		android:orientation="horizontal">
+		android:minHeight="36dp"
+		android:orientation="horizontal"
+		android:paddingStart="8dp"
+		android:paddingEnd="14dp">
 
 		<net.osmand.plus.widgets.TextViewEx
 			android:id="@+id/map_exit_ref"
@@ -31,8 +34,8 @@
 
 		<androidx.appcompat.widget.AppCompatImageView
 			android:id="@+id/map_turn_icon"
-			android:layout_width="@dimen/map_widget_height"
-			android:layout_height="@dimen/map_widget_height"
+			android:layout_width="28dp"
+			android:layout_height="28dp"
 			android:scaleType="fitCenter" />
 
 		<LinearLayout
@@ -56,9 +59,10 @@
 				android:ellipsize="end"
 				android:importantForAccessibility="no"
 				android:maxLines="1"
+				android:maxWidth="180dp"
 				android:singleLine="true"
 				android:textColor="@color/activity_background_color_dark"
-				android:textSize="@dimen/map_widget_text_size"
+				android:textSize="14sp"
 				tools:text="Long Street Name" />
 
 			<net.osmand.plus.widgets.TextViewEx
@@ -68,9 +72,10 @@
 				android:layout_gravity="center"
 				android:ellipsize="end"
 				android:maxLines="1"
+				android:maxWidth="180dp"
 				android:singleLine="true"
 				android:textColor="@color/activity_background_color_dark"
-				android:textSize="@dimen/map_widget_text_size"
+				android:textSize="14sp"
 				tools:text="Long Street Name" />
 
 		</FrameLayout>
@@ -81,7 +86,8 @@
 		android:id="@+id/waypoint_info_bar"
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
-		android:orientation="horizontal">
+		android:orientation="horizontal"
+		android:visibility="gone">
 
 		<androidx.appcompat.widget.AppCompatImageView
 			android:id="@+id/waypoint_icon"

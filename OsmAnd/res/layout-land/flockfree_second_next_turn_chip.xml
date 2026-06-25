@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/widget_bg"
+	android:layout_width="wrap_content"
+	android:layout_height="wrap_content"
+	android:layout_gravity="start"
+	android:layout_marginStart="14dp"
+	android:layout_marginTop="2dp"
+	android:layout_marginBottom="2dp"
+	android:background="@drawable/bg_flockfree_navigation_card"
+	android:elevation="4dp"
+	android:gravity="center_vertical"
+	android:minHeight="42dp"
+	android:orientation="horizontal"
+	android:paddingStart="12dp"
+	android:paddingEnd="14dp"
+	android:paddingVertical="7dp">
+
+	<LinearLayout
+		android:id="@+id/container"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:gravity="center_vertical"
+		android:orientation="horizontal">
+
+		<TextView
+			android:id="@+id/flockfree_then_label"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_gravity="center"
+			android:layout_marginEnd="8dp"
+			android:includeFontPadding="false"
+			android:text="@string/flockfree_then_turn"
+			android:textColor="@color/card_and_list_background_light"
+			android:textSize="18sp"
+			android:textStyle="bold" />
+
+		<androidx.appcompat.widget.AppCompatImageView
+			android:id="@+id/arrow_icon"
+			android:layout_width="24dp"
+			android:layout_height="24dp"
+			android:layout_gravity="center"
+			android:gravity="center"
+			app:srcCompat="@drawable/ic_action_remove_dark"
+			tools:tint="@color/card_and_list_background_light" />
+
+		<net.osmand.plus.views.mapwidgets.OutlinedTextContainer
+			android:id="@+id/distance_text"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:includeFontPadding="false"
+			android:maxLines="1"
+			android:textColor="@color/card_and_list_background_light"
+			android:textSize="1sp"
+			android:visibility="gone"
+			tools:text="500" />
+
+		<net.osmand.plus.views.mapwidgets.OutlinedTextContainer
+			android:id="@+id/distance_sub_text"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:includeFontPadding="false"
+			android:maxLines="1"
+			android:textColor="@color/card_and_list_background_light"
+			android:textSize="1sp"
+			android:visibility="gone"
+			tools:text="ft" />
+
+		<TextView
+			android:id="@+id/map_exit_ref"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_gravity="center"
+			android:layout_marginStart="8dp"
+			android:background="@drawable/bg_navigation_widget_exit"
+			android:includeFontPadding="false"
+			android:lines="1"
+			android:minWidth="@dimen/map_widget_height"
+			android:paddingHorizontal="6dp"
+			android:scrollbars="none"
+			android:textColor="@color/card_and_list_background_light"
+			android:textSize="12sp"
+			android:visibility="gone"
+			tools:text="Exit 8"
+			tools:visibility="visible" />
+
+		<LinearLayout
+			android:id="@+id/map_shields_container"
+			android:layout_width="wrap_content"
+			android:layout_height="match_parent"
+			android:layout_gravity="center"
+			android:layout_marginStart="8dp"
+			android:orientation="horizontal"
+			android:visibility="gone"
+			tools:visibility="visible" />
+
+		<net.osmand.plus.views.mapwidgets.OutlinedTextContainer
+			android:id="@+id/street_text"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:ellipsize="end"
+			android:includeFontPadding="false"
+			android:maxLines="1"
+			android:textColor="@color/card_and_list_background_light"
+			android:textSize="1sp"
+			android:visibility="gone"
+			tools:text="Main St" />
+
+	</LinearLayout>
+
+</LinearLayout>

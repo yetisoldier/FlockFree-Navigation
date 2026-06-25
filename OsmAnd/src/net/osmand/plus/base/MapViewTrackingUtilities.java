@@ -27,12 +27,14 @@ import net.osmand.plus.OsmAndTaskManager;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
 import net.osmand.plus.dashboard.DashboardOnMap;
+import net.osmand.plus.helpers.AndroidUiHelper;
 import net.osmand.plus.helpers.MapDisplayPositionManager;
 import net.osmand.plus.mapcontextmenu.MapContextMenu;
 import net.osmand.plus.mapmarkers.MapMarker;
 import net.osmand.plus.mapmarkers.MapMarkersHelper.MapMarkerChangedListener;
 import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.plugins.development.OsmandDevelopmentPlugin;
+import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.resources.DetectRegionTask;
 import net.osmand.plus.routepreparationmenu.MapRouteInfoMenu;
 import net.osmand.plus.routing.NextDirectionInfo;
@@ -61,6 +63,7 @@ public class MapViewTrackingUtilities implements OsmAndLocationListener, IMapLoc
 	private static final int COMPASS_REQUEST_TIME_INTERVAL_MS = 5000;
 	private static final int AUTO_FOLLOW_MSG_ID = OsmAndConstants.UI_HANDLER_LOCATION_SERVICE + 4;
 	private static final long MOVE_ANIMATION_TIME = 500;
+	private static final float FLOCKFREE_LANDSCAPE_NAVIGATION_MAP_RATIO_X = 0.65f;
 	public static final int AUTO_ZOOM_DEFAULT_CHANGE_ZOOM = 4500;
 	private static final float DELAY_TO_ROTATE_AFTER_RESET_ROTATION = 1000f;
 	public static final long KEEP_VIEWPOINT_AFTER_SURFACE_HIT = 5000;
@@ -152,6 +155,7 @@ public class MapViewTrackingUtilities implements OsmAndLocationListener, IMapLoc
 			app.getLocationProvider().updateScreenOrientation(orientation);
 			mapView.addMapLocationListener(this);
 		}
+		updateFlockFreeLandscapeNavigationMapRatio();
 	}
 
 	public Float getHeading() {
@@ -215,6 +219,7 @@ public class MapViewTrackingUtilities implements OsmAndLocationListener, IMapLoc
 
 	public void setContextMenu(MapContextMenu contextMenu) {
 		this.contextMenu = contextMenu;
+		updateFlockFreeLandscapeNavigationMapRatio();
 	}
 
 	public void detectDrivingRegion(@NonNull LatLon latLon) {
@@ -319,6 +324,7 @@ public class MapViewTrackingUtilities implements OsmAndLocationListener, IMapLoc
 			if (routePlanningMode != routingHelper.isRoutePlanningMode()) {
 				switchRoutePlanningMode();
 			}
+			updateFlockFreeLandscapeNavigationMapRatio();
 			// When location is changed we need to refresh map in order to show movement!
 			mapView.refreshMap();
 		}
@@ -438,6 +444,7 @@ public class MapViewTrackingUtilities implements OsmAndLocationListener, IMapLoc
 	}
 
 	private void updateSettings(boolean updateRotationByCompass) {
+		updateFlockFreeLandscapeNavigationMapRatio();
 		if (isMapLinkedToLocation) {
 			mapDisplayPositionManager.updateMapDisplayPosition();
 		}
@@ -576,6 +583,7 @@ public class MapViewTrackingUtilities implements OsmAndLocationListener, IMapLoc
 			movingToMyLocation = false;
 		}
 		settings.MAP_LINKED_TO_LOCATION.set(isMapLinkedToLocation);
+		updateFlockFreeLandscapeNavigationMapRatio();
 		if (!isMapLinkedToLocation) {
 			int autoFollow = settings.AUTO_FOLLOW_ROUTE.get();
 			if (autoFollow > 0 && routingHelper.isFollowingMode() && !routePlanningMode) {
@@ -584,6 +592,22 @@ public class MapViewTrackingUtilities implements OsmAndLocationListener, IMapLoc
 		} else {
 			updateSettings(false);
 		}
+	}
+
+	private void updateFlockFreeLandscapeNavigationMapRatio() {
+		float ratioX = shouldUseFlockFreeLandscapeNavigationMapRatio()
+				? FLOCKFREE_LANDSCAPE_NAVIGATION_MAP_RATIO_X : 0;
+		mapDisplayPositionManager.setHorizontalMapRatioOverride(ratioX);
+	}
+
+	private boolean shouldUseFlockFreeLandscapeNavigationMapRatio() {
+		return mapView != null
+				&& contextMenu == null
+				&& isMapLinkedToLocation
+				&& routingHelper.isFollowingMode()
+				&& !routingHelper.isRoutePlanningMode()
+				&& PluginsHelper.getEnabledPlugin(FlockFreePlugin.class) != null
+				&& !AndroidUiHelper.isOrientationPortrait(app);
 	}
 
 	public boolean isMovingToMyLocation() {

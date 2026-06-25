@@ -127,7 +127,8 @@ public class VerticalWidgetPanel extends LinearLayoutEx implements WidgetsContai
 		boolean isTransparentWidgets = app.getSettings().getTransparentMapThemePreference(layoutMode).get();
 		setClipToPadding(false);
 		setOutlineProvider(ViewOutlineProvider.BOUNDS);
-		ViewCompat.setElevation(this, isAnyRowVisible() && !isTransparentWidgets? 5f : 0);
+		boolean flockFreeLandscapeBottomPanel = isFlockFreeLandscapeBottomPanel();
+		ViewCompat.setElevation(this, isAnyRowVisible() && !isTransparentWidgets && !flockFreeLandscapeBottomPanel ? 5f : 0);
 	}
 
 	private void updateVisibility() {
@@ -140,12 +141,19 @@ public class VerticalWidgetPanel extends LinearLayoutEx implements WidgetsContai
 		if (InsetsUtils.isEdgeToEdgeSupported() && !topPanel) {
 			ScreenLayoutMode layoutMode = ScreenLayoutMode.getDefault(getContext());
 			boolean transparentWidgets = app.getSettings().getTransparentMapThemePreference(layoutMode).get();
-			if (isAnyRowVisible && !transparentWidgets) {
+			boolean flockFreeLandscapeBottomPanel = isFlockFreeLandscapeBottomPanel();
+			if (isAnyRowVisible && !transparentWidgets && !flockFreeLandscapeBottomPanel) {
 				setBackgroundColor(ColorUtilities.getWidgetBackgroundColor(app, nightMode));
 			} else {
 				setBackgroundColor(Color.TRANSPARENT);
 			}
 		}
+	}
+
+	private boolean isFlockFreeLandscapeBottomPanel() {
+		return !topPanel
+				&& PluginsHelper.getEnabledPlugin(FlockFreePlugin.class) != null
+				&& !AndroidUiHelper.isOrientationPortrait(getContext());
 	}
 
 	public void update(@Nullable DrawSettings drawSettings) {

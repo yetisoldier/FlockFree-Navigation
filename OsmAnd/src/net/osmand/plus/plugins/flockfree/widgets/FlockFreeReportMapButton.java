@@ -6,10 +6,13 @@ import android.util.AttributeSet;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import net.osmand.plus.plugins.flockfree.FlockFreeReportButtonState;
 import net.osmand.plus.views.controls.maphudbuttons.MapButton;
 import net.osmand.plus.views.mapwidgets.configure.buttons.MapButtonState;
 
 public class FlockFreeReportMapButton extends MapButton {
+
+	private final FlockFreeReportButtonState buttonState;
 
 	public FlockFreeReportMapButton(@NonNull Context context) {
 		this(context, null);
@@ -21,6 +24,7 @@ public class FlockFreeReportMapButton extends MapButton {
 
 	public FlockFreeReportMapButton(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
 		super(context, attrs, defStyleAttr);
+		buttonState = new FlockFreeReportButtonState(app);
 
 		setOnClickListener(v -> {
 			if (mapActivity != null && !mapActivity.isDestroyed()) {
@@ -32,7 +36,7 @@ public class FlockFreeReportMapButton extends MapButton {
 	@Nullable
 	@Override
 	public MapButtonState getButtonState() {
-		return null;
+		return buttonState;
 	}
 
 	@Override

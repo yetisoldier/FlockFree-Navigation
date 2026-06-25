@@ -20,12 +20,14 @@ import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -1359,6 +1361,9 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 	private OutlinedTextContainer flockFreeCameraText;
 	private OutlinedTextContainer flockFreeCameraSubText;
 	private ImageView flockFreeCameraIcon;
+	private static final int FLOCKFREE_CAMERA_WIDGET_PORTRAIT_TOP_MARGIN_DP = 88;
+	private static final int FLOCKFREE_CAMERA_WIDGET_LANDSCAPE_TOP_MARGIN_DP = 8;
+	private static final int FLOCKFREE_CAMERA_WIDGET_END_MARGIN_DP = 14;
 
 	public void updateFlockFreeCameraWidget() {
 		if (flockFreeCameraWidget == null) {
@@ -1370,6 +1375,7 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 			}
 		}
 		if (flockFreeCameraWidget == null) return;
+		updateFlockFreeCameraWidgetPosition();
 		FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
 		if (plugin == null || !plugin.CAMERA_SHOW_LAYER.get()) {
 			flockFreeCameraWidget.setVisibility(View.GONE);
@@ -1413,6 +1419,24 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 					? R.drawable.widget_camera_route_night : R.drawable.widget_camera_route_day);
 		}
 		flockFreeCameraWidget.setVisibility(View.VISIBLE);
+	}
+
+	private void updateFlockFreeCameraWidgetPosition() {
+		if (!(flockFreeCameraWidget.getLayoutParams() instanceof FrameLayout.LayoutParams params)) {
+			return;
+		}
+		boolean portrait = AndroidUiHelper.isOrientationPortrait(this);
+		int topMargin = AndroidUtils.dpToPx(this, portrait
+				? FLOCKFREE_CAMERA_WIDGET_PORTRAIT_TOP_MARGIN_DP
+				: FLOCKFREE_CAMERA_WIDGET_LANDSCAPE_TOP_MARGIN_DP);
+		int endMargin = AndroidUtils.dpToPx(this, FLOCKFREE_CAMERA_WIDGET_END_MARGIN_DP);
+		int gravity = Gravity.TOP | Gravity.END;
+		if (params.gravity != gravity || params.topMargin != topMargin || params.getMarginEnd() != endMargin) {
+			params.gravity = gravity;
+			params.topMargin = topMargin;
+			params.setMarginEnd(endMargin);
+			flockFreeCameraWidget.setLayoutParams(params);
+		}
 	}
 
 	private int findNearestRouteIndex(@NonNull Location location, @NonNull List<Location> routeLocations) {

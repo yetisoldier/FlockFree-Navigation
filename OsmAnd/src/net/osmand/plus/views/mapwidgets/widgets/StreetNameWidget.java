@@ -8,12 +8,14 @@ import static java.lang.Math.min;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.util.DisplayMetrics;
 import android.util.TypedValue;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -37,6 +39,8 @@ import net.osmand.plus.helpers.CurrentPositionHelper;
 import net.osmand.plus.helpers.LocationPointWrapper;
 import net.osmand.plus.helpers.WaypointDialogHelper;
 import net.osmand.plus.helpers.WaypointHelper;
+import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.render.RendererRegistry;
 import net.osmand.plus.render.TextDrawInfo;
 import net.osmand.plus.render.TextRenderer;
@@ -383,9 +387,25 @@ public class StreetNameWidget extends MapWidget {
 		shadowRadius = textState.textShadowRadius;
 
 		View view = getView();
-		view.setBackgroundResource(isNightMode()
-				? textState.widgetBackgroundId
-				: R.drawable.bg_white_rounded_card);
+		boolean flockFreeLandscape = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class) != null
+				&& !AndroidUiHelper.isOrientationPortrait(mapActivity);
+		if (flockFreeLandscape) {
+			view.setBackgroundColor(Color.TRANSPARENT);
+			// Shift street-name pill to center under the vehicle position (0.65 of screen width)
+			int screenWidth = AndroidUtils.getScreenWidth(mapActivity);
+			float vehicleRatioX = 0.65f;
+			int vehicleX = (int) (screenWidth * vehicleRatioX);
+			// The inner LinearLayout is wrap_content centered in a match_parent FrameLayout.
+			// We add equal left/right padding to shift its center toward the vehicle.
+			int halfWidth = screenWidth / 2;
+			int shift = vehicleX - halfWidth; // positive = shift right
+			view.setPadding(shift, 0, Math.max(0, -shift), 0);
+		} else {
+			view.setBackgroundResource(isNightMode()
+					? textState.widgetBackgroundId
+					: R.drawable.bg_white_rounded_card);
+			view.setPadding(0, 0, 0, 0);
+		}
 
 		TextView waypointText = view.findViewById(R.id.waypoint_text);
 		TextView waypointTextShadow = view.findViewById(R.id.waypoint_text_shadow);

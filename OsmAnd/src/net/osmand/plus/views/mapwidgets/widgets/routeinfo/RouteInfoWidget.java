@@ -26,6 +26,8 @@ import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.base.containers.PaintedText;
 import net.osmand.plus.helpers.AndroidUiHelper;
+import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.settings.backend.ApplicationMode;
 import net.osmand.plus.settings.backend.preferences.OsmandPreference;
 import net.osmand.plus.settings.enums.ScreenLayoutMode;
@@ -198,7 +200,14 @@ public class RouteInfoWidget extends MapWidget implements ISupportVerticalPanel,
 
 	protected boolean shouldHide() {
 		return visibilityHelper.shouldHideVerticalWidgets()
-				|| panel == BOTTOM && visibilityHelper.shouldHideBottomWidgets();
+				|| panel == BOTTOM && visibilityHelper.shouldHideBottomWidgets()
+				|| shouldHideForFlockFreeLandscape();
+	}
+
+	private boolean shouldHideForFlockFreeLandscape() {
+		return panel == BOTTOM
+				&& !AndroidUiHelper.isOrientationPortrait(mapActivity)
+				&& PluginsHelper.getEnabledPlugin(FlockFreePlugin.class) != null;
 	}
 
 	private void updateRouteInformation() {

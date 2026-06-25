@@ -17,6 +17,7 @@ import net.osmand.data.ValueHolder;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
+import net.osmand.plus.helpers.AndroidUiHelper;
 import net.osmand.plus.helpers.DayNightHelper;
 import net.osmand.plus.settings.enums.ThemeUsageContext;
 import net.osmand.plus.plugins.PluginsHelper;
@@ -99,9 +100,7 @@ public class FlockFreeNavigationBar implements IRouteInformationListener {
 				updateHandler.postDelayed(this, REATTACH_INTERVAL_MS);
 				return;
 			}
-			if (!isVisible()) {
-				updateVisibility();
-			}
+			updateVisibility();
 			if (isVisible()) {
 				updateInfo();
 			}
@@ -187,10 +186,7 @@ public class FlockFreeNavigationBar implements IRouteInformationListener {
 				return;
 			}
 		}
-		boolean shouldShow = routingHelper.isFollowingMode()
-				&& routingHelper.isRouteCalculated()
-				&& routingHelper.getRoute() != null
-				&& routingHelper.getRoute().isCalculated();
+		boolean shouldShow = shouldShowBar();
 		if (shouldShow && !visible) {
 			show();
 		} else if (!shouldShow && visible) {
@@ -201,7 +197,23 @@ public class FlockFreeNavigationBar implements IRouteInformationListener {
 		}
 	}
 
+	private boolean shouldShowBar() {
+		return !isLandscapeLayout()
+				&& routingHelper.isFollowingMode()
+				&& routingHelper.isRouteCalculated()
+				&& routingHelper.getRoute() != null
+				&& routingHelper.getRoute().isCalculated();
+	}
+
+	private boolean isLandscapeLayout() {
+		return mapActivity != null && !AndroidUiHelper.isOrientationPortrait(mapActivity);
+	}
+
 	private void show() {
+		if (isLandscapeLayout()) {
+			hide();
+			return;
+		}
 		visible = true;
 		updateColors();
 		updateInfo();

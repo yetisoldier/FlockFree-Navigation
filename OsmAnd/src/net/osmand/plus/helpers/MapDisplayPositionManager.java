@@ -34,6 +34,7 @@ public class MapDisplayPositionManager implements ViewportListener {
 	private PointF actualMapRatio;
 	private float customMapRatioX;
 	private float customMapRatioY;
+	private float horizontalMapRatioOverride;
 	private boolean shiftedX;
 
 	@Nullable
@@ -64,6 +65,13 @@ public class MapDisplayPositionManager implements ViewportListener {
 		customMapRatioX = ratioX;
 		customMapRatioY = ratioY;
 		updateMapDisplayPosition();
+	}
+
+	public void setHorizontalMapRatioOverride(float ratioX) {
+		if (Float.compare(horizontalMapRatioOverride, ratioX) != 0) {
+			horizontalMapRatioOverride = ratioX;
+			updateMapDisplayPosition();
+		}
 	}
 
 	public void setMapPositionShiftedX(boolean shifted) {
@@ -275,11 +283,15 @@ public class MapDisplayPositionManager implements ViewportListener {
 			float ratioX = customMapRatioX != 0 ? customMapRatioX : mapPosition.getRatioX(shiftedX, isRtl());
 			float ratioY = customMapRatioY != 0 ? customMapRatioY : mapPosition.getRatioY();
 			return new PointF(ratioX, ratioY);
-		} else if (projectedMapRatio != null) {
-			return projectedMapRatio;
-		} else {
-			return mapPosition.getRatio(shiftedX, isRtl());
 		}
+
+		PointF ratio = projectedMapRatio != null
+				? new PointF(projectedMapRatio.x, projectedMapRatio.y)
+				: mapPosition.getRatio(shiftedX, isRtl());
+		if (horizontalMapRatioOverride != 0) {
+			ratio.x = isRtl() ? 1f - horizontalMapRatioOverride : horizontalMapRatioOverride;
+		}
+		return ratio;
 	}
 
 	private void clearVisibleMapRectData() {

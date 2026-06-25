@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/widget_bg"
+	android:layout_width="match_parent"
+	android:layout_height="72dp"
+	android:layout_marginStart="8dp"
+	android:layout_marginTop="8dp"
+	android:layout_marginEnd="8dp"
+	android:background="@drawable/bg_flockfree_navigation_card"
+	android:elevation="4dp"
+	android:orientation="vertical"
+	android:paddingVertical="2dp"
+	android:paddingStart="10dp"
+	android:paddingEnd="14dp">
+
+	<LinearLayout
+		android:id="@+id/container"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:orientation="horizontal"
+		tools:ignore="UselessParent">
+
+		<androidx.appcompat.widget.AppCompatImageView
+			android:id="@+id/arrow_icon"
+			android:layout_width="48dp"
+			android:layout_height="48dp"
+			android:layout_gravity="center"
+			android:layout_marginEnd="10dp"
+			android:gravity="center"
+			app:srcCompat="@drawable/ic_action_remove_dark" />
+
+		<FrameLayout
+			android:layout_width="match_parent"
+			android:layout_height="match_parent">
+
+			<LinearLayout
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_gravity="top"
+				android:orientation="horizontal">
+
+				<LinearLayout
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_gravity="top"
+					android:layout_weight="1"
+					android:orientation="horizontal">
+
+					<net.osmand.plus.views.mapwidgets.OutlinedTextContainer
+						android:id="@+id/distance_text"
+						android:layout_width="wrap_content"
+						android:layout_height="wrap_content"
+						android:layout_gravity="center_vertical|start"
+						android:layout_marginEnd="3dp"
+						android:gravity="start|center"
+						android:includeFontPadding="false"
+						android:maxLines="1"
+						android:textColor="@color/card_and_list_background_light"
+						android:textSize="26sp"
+						tools:text="200" />
+
+					<net.osmand.plus.views.mapwidgets.OutlinedTextContainer
+						android:id="@+id/distance_sub_text"
+						android:layout_width="wrap_content"
+						android:layout_height="wrap_content"
+						android:gravity="start|center"
+						android:includeFontPadding="false"
+						android:maxLines="1"
+						android:textColor="@color/card_and_list_background_light"
+						android:textSize="26sp"
+						tools:text="m" />
+
+				</LinearLayout>
+
+				<TextView
+					android:id="@+id/map_exit_ref"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_gravity="center"
+					android:background="@drawable/bg_navigation_widget_exit"
+					android:gravity="center"
+					android:foregroundGravity="center"
+					android:includeFontPadding="false"
+					android:lines="1"
+					android:minWidth="@dimen/map_widget_height"
+					android:paddingHorizontal="8dp"
+					android:scrollbars="none"
+					android:textColor="@color/card_and_list_background_light"
+					android:textSize="17sp"
+					android:visibility="gone"
+					tools:text="Exit 8"
+					tools:visibility="visible" />
+
+			</LinearLayout>
+
+			<LinearLayout
+				android:id="@+id/street_name_container"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_gravity="bottom"
+				android:minHeight="28dp"
+				android:orientation="horizontal">
+
+				<LinearLayout
+					android:id="@+id/map_shields_container"
+					android:layout_width="wrap_content"
+					android:layout_height="32dp"
+					android:layout_gravity="center"
+					android:layout_marginEnd="6dp"
+					android:gravity="center"
+					android:orientation="horizontal" />
+
+				<net.osmand.plus.views.mapwidgets.OutlinedTextContainer
+					android:id="@+id/street_text"
+					android:layout_width="wrap_content"
+					android:layout_height="28dp"
+					android:layout_gravity="center_vertical"
+					android:ellipsize="end"
+					android:gravity="start|center"
+					android:includeFontPadding="false"
+					android:maxLines="1"
+					android:textColor="@color/card_and_list_background_light"
+					android:textSize="21sp"
+					tools:text="Street" />
+
+			</LinearLayout>
+
+		</FrameLayout>
+
+	</LinearLayout>
+
+</LinearLayout>
