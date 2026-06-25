@@ -127,8 +127,8 @@ public class VerticalWidgetPanel extends LinearLayoutEx implements WidgetsContai
 		boolean isTransparentWidgets = app.getSettings().getTransparentMapThemePreference(layoutMode).get();
 		setClipToPadding(false);
 		setOutlineProvider(ViewOutlineProvider.BOUNDS);
-		boolean flockFreeLandscapeBottomPanel = isFlockFreeLandscapeBottomPanel();
-		ViewCompat.setElevation(this, isAnyRowVisible() && !isTransparentWidgets && !flockFreeLandscapeBottomPanel ? 5f : 0);
+		boolean flockFreeLandscapePanel = isFlockFreeLandscapePanel();
+		ViewCompat.setElevation(this, isAnyRowVisible() && !isTransparentWidgets && !flockFreeLandscapePanel ? 5f : 0);
 	}
 
 	private void updateVisibility() {
@@ -138,11 +138,13 @@ public class VerticalWidgetPanel extends LinearLayoutEx implements WidgetsContai
 		for (VerticalPanelVisibilityListener listener : visibilityListeners) {
 			listener.isVisible(isAnyRowVisible);
 		}
-		if (InsetsUtils.isEdgeToEdgeSupported() && !topPanel) {
+		if (isFlockFreeLandscapePanel() && topPanel) {
+			setBackgroundColor(Color.TRANSPARENT);
+		} else if (InsetsUtils.isEdgeToEdgeSupported() && !topPanel) {
 			ScreenLayoutMode layoutMode = ScreenLayoutMode.getDefault(getContext());
 			boolean transparentWidgets = app.getSettings().getTransparentMapThemePreference(layoutMode).get();
-			boolean flockFreeLandscapeBottomPanel = isFlockFreeLandscapeBottomPanel();
-			if (isAnyRowVisible && !transparentWidgets && !flockFreeLandscapeBottomPanel) {
+			boolean flockFreeLandscapePanel = isFlockFreeLandscapePanel();
+			if (isAnyRowVisible && !transparentWidgets && !flockFreeLandscapePanel) {
 				setBackgroundColor(ColorUtilities.getWidgetBackgroundColor(app, nightMode));
 			} else {
 				setBackgroundColor(Color.TRANSPARENT);
@@ -150,9 +152,8 @@ public class VerticalWidgetPanel extends LinearLayoutEx implements WidgetsContai
 		}
 	}
 
-	private boolean isFlockFreeLandscapeBottomPanel() {
-		return !topPanel
-				&& PluginsHelper.getEnabledPlugin(FlockFreePlugin.class) != null
+	private boolean isFlockFreeLandscapePanel() {
+		return PluginsHelper.getEnabledPlugin(FlockFreePlugin.class) != null
 				&& !AndroidUiHelper.isOrientationPortrait(getContext());
 	}
 
