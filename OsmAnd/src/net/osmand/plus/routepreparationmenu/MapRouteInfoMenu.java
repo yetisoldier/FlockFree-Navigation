@@ -81,6 +81,7 @@ import net.osmand.plus.measurementtool.MeasurementToolFragment;
 import net.osmand.plus.myplaces.favorites.FavoritesListener;
 import net.osmand.plus.poi.PoiUIFilter;
 import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.CameraAvoidanceHelper;
 import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.profiles.ConfigureAppModesBottomSheetDialogFragment;
 import net.osmand.plus.routepreparationmenu.cards.*;
@@ -539,7 +540,24 @@ public class MapRouteInfoMenu implements IRouteInformationListener, CardListener
 			FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
 			if (plugin != null) {
 				FlockFreePlugin.RouteComparisonInfo comparisonInfo = plugin.getLastRouteComparisonInfo();
-				if (comparisonInfo != null && comparisonInfo.getAvoidedCameraCount() > 0) {
+				if (comparisonInfo == null) {
+					// Always show the comparison card — use current route stats
+					// for both options when no avoidance comparison exists
+					RouteCalculationResult currentRoute = routingHelper.getRoute();
+					if (currentRoute != null && currentRoute.isCalculated()) {
+						int routeDistance = Math.round(currentRoute.getWholeDistance());
+						int routeTime = currentRoute.getLeftTime(null);
+						CameraAvoidanceHelper helper = plugin.getAvoidanceHelper();
+						int cameraCount = helper != null
+								? helper.findCamerasNearRouteLocations(
+										currentRoute.getImmutableAllLocations(),
+										helper.getAvoidanceRadius()).size()
+								: 0;
+						comparisonInfo = FlockFreePlugin.RouteComparisonInfo.fromCurrentRoute(
+								routeDistance, routeTime, cameraCount);
+					}
+				}
+				if (comparisonInfo != null) {
 					FlockFreeRouteComparisonCard card = new FlockFreeRouteComparisonCard(mapActivity, comparisonInfo,
 							plugin.isPrivacyRouteActive());
 					card.setListener(this);
