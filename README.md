@@ -41,6 +41,9 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 - **Traffic route colors and widget** — Optional route-line coloring and the Traffic widget show live-data coverage, stale/no-data status, and refresh state.
 
 ### Map and Navigation Experience
+
+![Navigation HUD](docs/screenshots/ff-nav-options.png)
+
 - **Google Maps-inspired map styling** — Refined land (#F5F5F0), water (#AECDF0), and park (#C8E6C9) colors with reduced POI clutter, subtler road casing, and cleaner route colors. Night-mode palette tuned to match Google Maps dark theme.
 - **Modern navigation HUD** — Search bar, layer button, circular map controls, compact ETA/speed presentation, and a simplified blue location puck.
 - **Google Maps-style turn indicators** — Main turn card uses a teal background with a bold white arrow. The second-next-turn preview appears as a compact white chip below the main indicator with a blue arrow, dark distance text, and grey street name — matching Google Maps' layered turn guidance layout.
