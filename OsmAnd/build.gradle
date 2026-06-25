@@ -159,7 +159,7 @@ android {
 
 	buildTypes {
 		debug {
-			signingConfig signingConfigs.development
+			signingConfig signingConfigs.publishing
 		}
 		release {
 			signingConfig signingConfigs.publishing
