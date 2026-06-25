@@ -142,6 +142,7 @@ public class MapControlsLayer extends OsmandMapLayer {
 
 		addMapButton(createMapButton(inflater, R.layout.map_zoom_out_button));
 		addMapButton(createMapButton(inflater, R.layout.map_zoom_in_button));
+		addMapButton(createMapButton(inflater, R.layout.flockfree_report_map_button));
 		addMapButton(createMapButton(inflater, R.layout.my_location_button));
 
 		addMapButton(createMapButton(inflater, R.layout.drawer_menu_button));
