@@ -117,12 +117,13 @@ public class QuickSearchHistoryListFragment extends QuickSearchListFragment impl
 	@Nullable
 	private HistoryEntry getEntryFromSearchItem(@NonNull QuickSearchListItem item) {
 		SearchResult searchResult = item.getSearchResult();
-
-		if (searchResult.object instanceof HistoryEntry historyEntry) {
-			return historyEntry;
-		}
-		if (searchResult.relatedObject instanceof HistoryEntry historyEntry) {
-			return historyEntry;
+		if (searchResult != null) {
+			if (searchResult.object instanceof HistoryEntry historyEntry) {
+				return historyEntry;
+			}
+			if (searchResult.relatedObject instanceof HistoryEntry historyEntry) {
+				return historyEntry;
+			}
 		}
 		return null;
 	}
