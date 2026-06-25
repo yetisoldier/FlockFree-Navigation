@@ -294,19 +294,48 @@ public class CameraAvoidanceHelper {
         }
 
         List<CameraData.CameraPoint> cameras = findCamerasNearRouteLocations(locations, radiusMeters);
+        int px, py;
+        double camDist;
         for (CameraData.CameraPoint camera : cameras) {
-            RouteSegmentSearchResult searchResult = RouteSegmentSearchResult.searchRouteSegment(
-                    camera.lat, camera.lon, radiusMeters, roads);
-            if (searchResult == null) {
-                continue;
+            px = MapUtils.get31TileNumberX(camera.lon);
+            py = MapUtils.get31TileNumberY(camera.lat);
+            boolean matchedAny = false;
+            for (int i = 0; i < roads.size(); i++) {
+                if (i == 0 || i == roads.size() - 1) {
+                    continue;
+                }
+                RouteSegmentResult road = roads.get(i);
+                RouteDataObject obj = road.getObject();
+                if (obj == null) {
+                    continue;
+                }
+                int startPointIndex = Math.min(road.getStartPointIndex(), road.getEndPointIndex());
+                int endPointIndex = Math.max(road.getEndPointIndex(), road.getStartPointIndex());
+                for (int j = startPointIndex; j <= endPointIndex; j++) {
+                    int segX = obj.getPoint31XTile(j);
+                    int segY = obj.getPoint31YTile(j);
+                    camDist = MapUtils.squareRootDist31(segX, segY, px, py);
+                    if (camDist <= radiusMeters) {
+                        result.add(obj.getId());
+                        matchedAny = true;
+                        break;
+                    }
+                }
             }
-            int roadIndex = searchResult.getRoadIndex();
-            if (roadIndex <= 0 || roadIndex >= roads.size() - 1) {
-                continue;
-            }
-            RouteDataObject object = roads.get(roadIndex).getObject();
-            if (object != null) {
-                result.add(object.getId());
+            if (!matchedAny) {
+                RouteSegmentSearchResult searchResult = RouteSegmentSearchResult.searchRouteSegment(
+                        camera.lat, camera.lon, radiusMeters, roads);
+                if (searchResult == null) {
+                    continue;
+                }
+                int roadIndex = searchResult.getRoadIndex();
+                if (roadIndex <= 0 || roadIndex >= roads.size() - 1) {
+                    continue;
+                }
+                RouteDataObject object = roads.get(roadIndex).getObject();
+                if (object != null) {
+                    result.add(object.getId());
+                }
             }
         }
         if (!result.isEmpty()) {
@@ -341,22 +370,57 @@ public class CameraAvoidanceHelper {
 
         List<CameraData.CameraPoint> cameras = findCamerasNearRouteLocations(locations, radiusMeters);
 
-        // Map each road ID to the count of cameras that matched it
+        // Map each road ID to the count of cameras that matched it.
+        // For each camera, block ALL route segments within the radius, not just
+        // the single nearest one. This prevents the router from simply using
+        // an adjacent road in the same corridor and still passing near the camera.
         Map<Long, Integer> roadIdToCameraCount = new HashMap<>();
+        int px, py;
+        double camDist;
         for (CameraData.CameraPoint camera : cameras) {
-            RouteSegmentSearchResult searchResult = RouteSegmentSearchResult.searchRouteSegment(
-                    camera.lat, camera.lon, radiusMeters, roads);
-            if (searchResult == null) {
-                continue;
+            px = MapUtils.get31TileNumberX(camera.lon);
+            py = MapUtils.get31TileNumberY(camera.lat);
+            boolean matchedAny = false;
+            for (int i = 0; i < roads.size(); i++) {
+                if (i == 0 || i == roads.size() - 1) {
+                    continue;  // skip first/last segments
+                }
+                RouteSegmentResult road = roads.get(i);
+                RouteDataObject obj = road.getObject();
+                if (obj == null) {
+                    continue;
+                }
+                int startPointIndex = Math.min(road.getStartPointIndex(), road.getEndPointIndex());
+                int endPointIndex = Math.max(road.getEndPointIndex(), road.getStartPointIndex());
+                // Check if any point on this segment is within radiusMeters of the camera
+                for (int j = startPointIndex; j <= endPointIndex; j++) {
+                    int segX = obj.getPoint31XTile(j);
+                    int segY = obj.getPoint31YTile(j);
+                    camDist = MapUtils.squareRootDist31(segX, segY, px, py);
+                    if (camDist <= radiusMeters) {
+                        Long roadId = obj.getId();
+                        roadIdToCameraCount.merge(roadId, 1, Integer::sum);
+                        matchedAny = true;
+                        break;  // this road is already counted for this camera
+                    }
+                }
             }
-            int roadIndex = searchResult.getRoadIndex();
-            if (roadIndex <= 0 || roadIndex >= roads.size() - 1) {
-                continue;
-            }
-            RouteDataObject object = roads.get(roadIndex).getObject();
-            if (object != null) {
-                Long roadId = object.getId();
-                roadIdToCameraCount.merge(roadId, 1, Integer::sum);
+            // If no segment point was within radius, fall back to nearest-segment search
+            if (!matchedAny) {
+                RouteSegmentSearchResult searchResult = RouteSegmentSearchResult.searchRouteSegment(
+                        camera.lat, camera.lon, radiusMeters, roads);
+                if (searchResult == null) {
+                    continue;
+                }
+                int roadIndex = searchResult.getRoadIndex();
+                if (roadIndex <= 0 || roadIndex >= roads.size() - 1) {
+                    continue;
+                }
+                RouteDataObject object = roads.get(roadIndex).getObject();
+                if (object != null) {
+                    Long roadId = object.getId();
+                    roadIdToCameraCount.merge(roadId, 1, Integer::sum);
+                }
             }
         }
 
