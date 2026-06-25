@@ -395,11 +395,17 @@ public class StreetNameWidget extends MapWidget {
 			int screenWidth = AndroidUtils.getScreenWidth(mapActivity);
 			float vehicleRatioX = 0.65f;
 			int vehicleX = (int) (screenWidth * vehicleRatioX);
-			// The inner LinearLayout is wrap_content centered in a match_parent FrameLayout.
-			// We add equal left/right padding to shift its center toward the vehicle.
 			int halfWidth = screenWidth / 2;
 			int shift = vehicleX - halfWidth; // positive = shift right
-			view.setPadding(shift, 0, Math.max(0, -shift), 0);
+			// Apply translation to the inner LinearLayout (the pill), not the outer FrameLayout
+			if (view instanceof android.view.ViewGroup) {
+				android.view.ViewGroup vg = (android.view.ViewGroup) view;
+				View pill = vg.getChildAt(0);
+				if (pill instanceof android.widget.LinearLayout) {
+					pill.setTranslationX(shift);
+				}
+			}
+			view.setPadding(0, 0, 0, 0);
 		} else {
 			view.setBackgroundResource(isNightMode()
 					? textState.widgetBackgroundId

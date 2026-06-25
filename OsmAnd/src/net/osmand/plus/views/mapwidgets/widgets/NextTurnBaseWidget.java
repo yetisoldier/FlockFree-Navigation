@@ -5,6 +5,7 @@ import static net.osmand.plus.views.mapwidgets.widgets.StreetNameWidget.MAX_SHIE
 import static net.osmand.plus.views.mapwidgets.widgets.StreetNameWidget.setShieldImage;
 import static java.lang.Math.min;
 
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.text.TextPaint;
@@ -25,6 +26,8 @@ import com.github.ksoichiro.android.observablescrollview.ScrollUtils;
 import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.helpers.AndroidUiHelper;
+import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.routing.CurrentStreetName;
 import net.osmand.plus.routing.RoadShield;
 import net.osmand.plus.routing.RouteCalculationResult;
@@ -442,9 +445,14 @@ public class NextTurnBaseWidget extends TextInfoWidget implements IComplexWidget
 		distanceSubView.setTypeface(Typeface.DEFAULT, typefaceStyle);
 
 		turnDrawable.updateColors(isNightMode());
-		bg.setBackgroundResource(isNightMode()
-				? R.drawable.bg_flockfree_navigation_card_night
-				: R.drawable.bg_flockfree_navigation_card);
+		if (PluginsHelper.getEnabledPlugin(FlockFreePlugin.class) != null
+				&& !AndroidUiHelper.isOrientationPortrait(app)) {
+			bg.setBackgroundColor(Color.TRANSPARENT);
+		} else {
+			bg.setBackgroundResource(isNightMode()
+					? R.drawable.bg_flockfree_navigation_card_night
+					: R.drawable.bg_flockfree_navigation_card);
+		}
 
 		updateTextOutline(distanceView, textState);
 		updateTextOutline(distanceSubView, textState);

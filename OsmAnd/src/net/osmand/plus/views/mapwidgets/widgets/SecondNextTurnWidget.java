@@ -2,6 +2,7 @@ package net.osmand.plus.views.mapwidgets.widgets;
 
 import static net.osmand.plus.views.mapwidgets.WidgetType.SECOND_NEXT_TURN;
 
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -73,13 +74,13 @@ public class SecondNextTurnWidget extends NextTurnBaseWidget {
 			boolean landscape = isFlockFreeLandscape();
 			LinearLayout bg = getView().findViewById(R.id.widget_bg);
 			if (bg != null) {
-				bg.setBackgroundResource(landscape
-						? (isNightMode()
-						? R.drawable.bg_flockfree_navigation_card_night
-						: R.drawable.bg_flockfree_navigation_card)
-						: (isNightMode()
-						? R.drawable.bg_flockfree_second_next_turn_chip_night
-						: R.drawable.bg_flockfree_second_next_turn_chip));
+				if (landscape) {
+					bg.setBackgroundColor(Color.TRANSPARENT);
+				} else {
+					bg.setBackgroundResource(isNightMode()
+							? R.drawable.bg_flockfree_second_next_turn_chip_night
+							: R.drawable.bg_flockfree_second_next_turn_chip);
+				}
 			}
 
 			int primaryTextColor = ContextCompat.getColor(app, landscape
