@@ -77,7 +77,6 @@ All notable changes to FlockFree Navigation are documented here.
 
 ### Added
 - Google Maps-inspired map and navigation UI pass with lighter map colors, reduced POI clutter, subtler road casing, circular map controls, search bar, layer button, compact ETA/speed treatment, and a simplified blue location puck
-- Android Auto availability for the FlockFree package through OsmAnd's navigation car app service
 - Optional TomTom traffic setup documentation for users who want to provide their own API key
 - Local map/navigation capabilities including 3D relief/maps, advanced widgets, vehicle metrics/OBD widgets, route and terrain coloring, gradient palette editing, and richer track organization options
 

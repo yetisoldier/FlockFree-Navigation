@@ -30,10 +30,6 @@ FlockFree Navigation is a privacy-first navigation app that helps you make infor
 • Destination arrival preview with side-of-street indication
 • Transparent buildings that hide before turns
 
-**Android Auto**
-• Full Android Auto navigation support
-• Turn-by-turn directions on your car's head unit
-
 **Optional Companion Hardware**
 • CYD-Flock-You companion device support for RF-based camera detection
 • BLE connection to ESP32-based hardware for field detections

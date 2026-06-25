@@ -1,6 +1,6 @@
 # FlockFree Navigation
 
-FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR camera awareness, optional CYD companion hardware integration, traffic-aware routing with user-provided TomTom keys, Android Auto support, and community reporting.
+FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR camera awareness, optional CYD companion hardware integration, traffic-aware routing with user-provided TomTom keys, and community reporting.
 
 ![FlockFree Splash](docs/screenshots/ff-splash-branding.png)
 
@@ -55,7 +55,6 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 - **Search-along-route chips** — Quick-search pill buttons for gas, food, coffee, parking, and EV charging appear above the navigation bar during active navigation, opening OsmAnd's quick search as an intermediate stop.
 - **Camera avoidance tradeoffs** — When camera avoidance reroutes, shows a summary like "Avoids 5 cameras · +2 min" with the last tradeoff visible in FlockFree settings.
 - **Night mode** — Car profile defaults to following the system dark/light theme (APP_THEME) instead of sun position.
-- **Android Auto navigation** — FlockFree registers OsmAnd's Android Auto navigation service for the FlockFree package. Sideloaded builds may require Android Auto developer settings and Unknown sources before appearing on a head unit.
 - **Local map tools** — Includes local 3D relief/maps, route and terrain coloring, gradient palette editing, advanced widgets, vehicle metrics/OBD widgets, and richer track organization options.
 
 ### Performance
@@ -279,7 +278,6 @@ For developers and field testers:
 - No live RF drive test completed yet (WiFi detection and bench simulation verified only)
 - Live traffic routing requires a user-provided TomTom API key and is subject to TomTom's account terms, quotas, and pricing
 - Weather forecast layers are not enabled by FlockFree by default because they rely on OsmAnd-managed forecast tile downloads rather than a user-provided provider key
-- Android Auto for sideloaded builds may require Android Auto developer settings and Unknown sources on the phone before FlockFree appears on the car screen
 
 ## Credits
 

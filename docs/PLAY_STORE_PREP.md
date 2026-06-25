@@ -42,10 +42,7 @@
 | `FOREGROUND_SERVICE_CONNECTED_DEVICE` | CydBleService | ✅ YES — BLE companion | Keep |
 | `FOREGROUND_SERVICE_DATA_SYNC` | DownloadService | ✅ YES — map downloads | Keep |
 | `POST_NOTIFICATIONS` | Android 13+ notification permission | ✅ YES — alerts, navigation notifications | Keep |
-| `MAP_TEMPLATES` (androidx.car.app) | Android Auto | ✅ YES | Keep |
 | `MODIFY_AUDIO_SETTINGS` | Audio routing | ⚠️ MAYBE — used for voice navigation audio routing | Keep (low risk) |
-| `NAVIGATION_TEMPLATES` (androidx.car.app) | Android Auto | ✅ YES | Keep |
-| `ACCESS_SURFACE` (androidx.car.app) | Android Auto surface | ✅ YES | Keep |
 | `BLUETOOTH_SCAN` | CYD BLE scanning | ✅ YES — CYD companion | Keep |
 | `BLUETOOTH_CONNECT` | CYD BLE communication | ✅ YES — CYD companion | Keep |
 | `BLUETOOTH` (maxSdk 30) | Legacy BLE | ✅ YES — backward compat | Keep |
