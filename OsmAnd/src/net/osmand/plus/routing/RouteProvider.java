@@ -228,25 +228,36 @@ public class RouteProvider {
 	private FlockFreeRouteVariant maybeRecalculateWithFlockFreeAvoidance(@NonNull RouteCalculationParams params,
 	                                                                     @NonNull RouteCalculationResult initial,
 	                                                                     boolean calcGPXRoute) throws IOException {
+		FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
+		log.info("FlockFree maybeRecalculateWithFlockFreeAvoidance: cameraAvoidanceApplied="
+				+ params.cameraAvoidanceApplied + ", initialCalculated=" + initial.isCalculated()
+				+ ", plugin=" + (plugin != null) + ", cameraAvoidanceActive="
+				+ (plugin != null && plugin.isCameraAvoidanceActive()));
 		if (params.cameraAvoidanceApplied || !initial.isCalculated()) {
 			return null;
 		}
-		FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
 		if (plugin == null || !plugin.isCameraAvoidanceActive()) {
 			return null;
 		}
 		CameraAvoidanceHelper avoidanceHelper = plugin.getAvoidanceHelper();
 		if (params.previousToRecalculate != null && params.onlyStartPointChanged) {
+			log.info("FlockFree avoidance skipped: only start point changed");
 			avoidanceHelper.recordAvoidanceSkipped(CameraAvoidanceHelper.AvoidanceStatus.SKIPPED_PARTIAL);
 			return null;
 		}
-		if (!plugin.getCameraData().isDataLoaded() && !plugin.getCameraData().ensureCacheLoadedForRouting()) {
+		boolean dataLoaded = plugin.getCameraData().isDataLoaded();
+		if (!dataLoaded) {
+			dataLoaded = plugin.getCameraData().ensureCacheLoadedForRouting();
+		}
+		log.info("FlockFree camera data loaded=" + dataLoaded + ", radius=" + plugin.CAMERA_AVOIDANCE_RADIUS.get());
+		if (!dataLoaded) {
 			avoidanceHelper.recordAvoidanceSkipped(CameraAvoidanceHelper.AvoidanceStatus.SKIPPED_NO_DATA);
 			return null;
 		}
 		List<CameraAvoidanceHelper.RoadWithCameraCount> roadsWithCameras =
 				avoidanceHelper.collectAvoidRoadIdsWithCameraCountForRoute(initial,
 						plugin.CAMERA_AVOIDANCE_RADIUS.get());
+		log.info("FlockFree found " + roadsWithCameras.size() + " camera-adjacent roads on route");
 		if (Algorithms.isEmpty(roadsWithCameras)) {
 			avoidanceHelper.recordAvoidanceSkipped(CameraAvoidanceHelper.AvoidanceStatus.SKIPPED_NO_ROAD_IDS);
 			return null;
