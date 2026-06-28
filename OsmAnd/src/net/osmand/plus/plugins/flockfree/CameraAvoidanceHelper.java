@@ -22,12 +22,13 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Collections;
 
 /**
- * Helps avoid known ALPR camera locations during route calculation.
- * Before route calculation, finds cameras within a configurable radius
+ * Helps avoid known Flock camera locations during route calculation.
+ * Before route calculation, finds Flock cameras within a configurable radius
  * of the route corridor and blocks nearby road segments.
  */
 public class CameraAvoidanceHelper {
@@ -46,7 +47,7 @@ public class CameraAvoidanceHelper {
     }
 
     /**
-     * Pairs a road ID with the count of cameras found on/near that road.
+     * Pairs a road ID with the count of Flock cameras found on/near that road.
      * Used by RouteProvider for iterative relaxation: unblock roads with
      * the fewest cameras first when full avoidance fails.
      */
@@ -137,9 +138,9 @@ public class CameraAvoidanceHelper {
     /**
      * Records that partial (iterative relaxation) avoidance was applied.
      *
-     * @param blockedRoadCount     Number of camera-adjacent roads that remain blocked
-     * @param totalCameraRoadCount Total number of distinct camera-adjacent roads originally identified
-     * @param remainingCameraCount  Number of cameras still on/near the route after partial avoidance
+     * @param blockedRoadCount     Number of Flock-camera-adjacent roads that remain blocked
+     * @param totalCameraRoadCount Total number of distinct Flock-camera-adjacent roads originally identified
+     * @param remainingCameraCount  Number of Flock cameras still on/near the route after partial avoidance
      */
     public synchronized void recordAvoidancePartial(int blockedRoadCount, int totalCameraRoadCount, int remainingCameraCount) {
         recordAvoidancePartial(blockedRoadCount, totalCameraRoadCount, remainingCameraCount,
@@ -345,8 +346,8 @@ public class CameraAvoidanceHelper {
     }
 
     /**
-     * Collects camera-adjacent road IDs paired with the number of cameras that mapped to each road.
-     * The list is sorted by cameraCount DESCENDING (most cameras first), so the RouteProvider
+     * Collects Flock-camera-adjacent road IDs paired with the number of cameras that mapped to each road.
+     * The list is sorted by cameraCount DESCENDING (most Flock cameras first), so the RouteProvider
      * can iteratively unblock the least-impactful roads first when full avoidance fails.
      *
      * @param route        The calculated route
@@ -370,8 +371,8 @@ public class CameraAvoidanceHelper {
 
         List<CameraData.CameraPoint> cameras = findCamerasNearRouteLocations(locations, radiusMeters);
 
-        // Map each road ID to the count of cameras that matched it.
-        // For each camera, block ALL route segments within the radius, not just
+        // Map each road ID to the count of Flock cameras that matched it.
+        // For each Flock camera, block ALL route segments within the radius, not just
         // the single nearest one. This prevents the router from simply using
         // an adjacent road in the same corridor and still passing near the camera.
         Map<Long, Integer> roadIdToCameraCount = new HashMap<>();
@@ -431,7 +432,7 @@ public class CameraAvoidanceHelper {
         result.sort(Collections.reverseOrder(Comparator.comparingInt(r -> r.cameraCount)));
 
         if (!result.isEmpty()) {
-            LOG.info("FlockFree collected " + result.size() + " camera-adjacent road ids with camera counts");
+            LOG.info("FlockFree collected " + result.size() + " Flock-camera-adjacent road ids with camera counts");
         }
         return result;
     }
@@ -484,7 +485,7 @@ public class CameraAvoidanceHelper {
     }
 
     /**
-     * Returns a human-readable summary of cameras near the route.
+     * Returns a human-readable summary of Flock cameras near the route.
      */
     @NonNull
     public String getRouteCameraSummary(@NonNull List<LatLon> routePoints) {
@@ -513,8 +514,9 @@ public class CameraAvoidanceHelper {
         }
         int flock = 0, motorola = 0, genetec = 0, other = 0;
         for (CameraData.CameraPoint cam : cameras) {
-            String brand = cam.brand != null ? cam.brand.toLowerCase() : "";
-            if (brand.contains("flock")) flock++;
+            String brand = cam.brand != null ? cam.brand.toLowerCase(Locale.US) : "";
+            String operator = cam.operator != null ? cam.operator.toLowerCase(Locale.US) : "";
+            if (brand.contains("flock") || operator.contains("flock")) flock++;
             else if (brand.contains("motorola")) motorola++;
             else if (brand.contains("genetec")) genetec++;
             else other++;

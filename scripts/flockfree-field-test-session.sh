@@ -185,8 +185,8 @@ Use these while the timed logcat capture is running:
 
 0. Open test-area-suggestions.txt and use one of the Map anchor coordinates for camera markers, nearby alerts, and route tests.
 1. Open FlockFree settings and confirm the readiness-relevant rows:
-   Camera data, Last route check, Last alert check, Last report draft, Nearby camera alerts, Draft report at map center, CYD status.
-2. Tap Refresh camera data on Wi-Fi and wait for the row to settle.
+   Flock camera data, Last route check, Last alert check, Last report draft, Nearby Flock camera alerts, Draft report at map center, CYD status.
+2. Tap Refresh Flock camera data on Wi-Fi and wait for the row to settle.
 3. Calculate one camera-dense offline route with avoidance enabled.
 4. Reopen settings, restart the app once, and confirm Last route check preserves applied/fallback/skipped status.
 5. Move the map to a suggested camera-dense anchor, tap Check map center alert, then reopen FlockFree settings after a restart and confirm Last alert check explains the trigger/skip state.
@@ -204,7 +204,7 @@ write_manual_results_template() {
 # FlockFree manual test results
 # Edit status to PASS, FAIL, SKIP, or leave TODO. Keep tab separators.
 check_id	status	notes
-camera_data	TODO	Refresh camera data and verify the settings row settles with a source/freshness value.
+camera_data	TODO	Refresh Flock camera data and verify the settings row settles with a source/freshness value.
 route_avoidance	TODO	Calculate a camera-dense offline route with avoidance enabled and capture applied/fallback/skipped status after restart.
 nearby_alerts	TODO	Use Check map center alert or move/navigate near a known camera and confirm nearby alert behavior plus Last alert check status after restart.
 osm_reporting	TODO	Use Draft report at map center or Add ALPR Camera and confirm OsmAnd editor/tag prefill plus Last report draft status after restart.

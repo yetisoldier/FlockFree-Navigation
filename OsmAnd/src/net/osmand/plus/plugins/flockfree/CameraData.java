@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -44,6 +45,7 @@ public class CameraData {
     private static final long WEEK_MS = FlockFreePreferences.REFRESH_INTERVAL_MS;
     private static final long MAX_GEOJSON_BYTES = 128L * 1024 * 1024;
     private static final double SPATIAL_CELL_DEGREES = 0.05d;
+    private static final String FLOCK_MATCH_TOKEN = "flock";
 
     private final OsmandApplication app;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -140,7 +142,7 @@ public class CameraData {
     }
 
     /**
-     * Loads camera data from the SQLite database.
+     * Loads Flock camera data from the SQLite database.
      * This is the fastest path — no GeoJSON parsing needed.
      *
      * @return true if data was loaded from the database
@@ -155,7 +157,7 @@ public class CameraData {
             if (count <= 0) {
                 return false;
             }
-            List<CameraPoint> loaded = databaseHelper.getAllCameras();
+            List<CameraPoint> loaded = filterFlockCameras(databaseHelper.getAllCameras());
             if (loaded.isEmpty()) {
                 return false;
             }
@@ -169,7 +171,7 @@ public class CameraData {
                 databaseReady = true;
             }
             dataLoaded = true;
-            LOG.info("Loaded " + deduped.size() + " cameras from SQLite database (removed " + removed + " duplicates)");
+            LOG.info("Loaded " + deduped.size() + " Flock cameras from SQLite database (removed " + removed + " duplicates)");
             return true;
         } catch (Exception e) {
             LOG.error("Failed to load cameras from database", e);
@@ -209,7 +211,7 @@ public class CameraData {
                     return false;
                 }
                 dataLoaded = true;
-                LOG.info("Loaded " + cameras.size() + " cameras from cache (" + cacheFile.length() + " bytes)");
+                LOG.info("Loaded " + cameras.size() + " Flock cameras from cache (" + cacheFile.length() + " bytes)");
                 return true;
             } catch (Exception e) {
                 LOG.error("Failed to load camera cache", e);
@@ -299,6 +301,7 @@ public class CameraData {
             List<CameraPoint> parsed = new ArrayList<>(features.length());
             Set<String> seenKeys = new HashSet<>();
             int skipped = 0;
+            int nonFlockSkipped = 0;
             int duplicates = 0;
             for (int i = 0; i < features.length(); i++) {
                 JSONObject feature = features.optJSONObject(i);
@@ -343,6 +346,10 @@ public class CameraData {
                 point.mountType = optProperty(props, "mountType", "mount_type");
                 point.surveillanceZone = optProperty(props, "surveillanceZone", "surveillance_zone");
                 point.osmTimestamp = optProperty(props, "osmTimestamp", "osm_timestamp");
+                if (!isFlockCamera(point)) {
+                    nonFlockSkipped++;
+                    continue;
+                }
 
                 // Deduplicate by osm_id+osm_type when available, otherwise by rounded coords+brand+direction
                 String dedupKey = (point.osmId != null && point.osmType != null)
@@ -357,7 +364,8 @@ public class CameraData {
                 parsed.add(point);
             }
             if (parsed.isEmpty()) {
-                LOG.error("Parsed zero camera points from " + source + "; skipped=" + skipped
+                LOG.error("Parsed zero Flock camera points from " + source + "; skipped=" + skipped
+                        + ", nonFlockSkipped=" + nonFlockSkipped
                         + ", duplicates=" + duplicates + ", features=" + features.length());
                 return false;
             }
@@ -368,8 +376,9 @@ public class CameraData {
                 databaseReady = false;
             }
             persistParsedCameras(parsed, source);
-            LOG.info("Parsed " + parsed.size() + " camera points from " + source.logName
-                    + "; skipped=" + skipped + ", duplicates=" + duplicates
+            LOG.info("Parsed " + parsed.size() + " Flock camera points from " + source.logName
+                    + "; skipped=" + skipped + ", nonFlockSkipped=" + nonFlockSkipped
+                    + ", duplicates=" + duplicates
                     + ", features=" + features.length()
                     + ", buckets=" + cameraGrid.size());
             return true;
@@ -386,9 +395,9 @@ public class CameraData {
         boolean persisted = databaseHelper.replaceAllCameras(parsed);
         databaseReady = persisted;
         if (persisted) {
-            LOG.info("Persisted " + parsed.size() + " cameras to SQLite database from " + source.logName);
+            LOG.info("Persisted " + parsed.size() + " Flock cameras to SQLite database from " + source.logName);
         } else {
-            LOG.warn("Failed to persist " + parsed.size() + " cameras to SQLite database from " + source.logName);
+            LOG.warn("Failed to persist " + parsed.size() + " Flock cameras to SQLite database from " + source.logName);
         }
     }
 
@@ -594,6 +603,25 @@ public class CameraData {
 
     private static double clamp(double value, double min, double max) {
         return Math.max(min, Math.min(max, value));
+    }
+
+    @NonNull
+    private static List<CameraPoint> filterFlockCameras(@NonNull List<CameraPoint> input) {
+        List<CameraPoint> result = new ArrayList<>(input.size());
+        for (CameraPoint point : input) {
+            if (isFlockCamera(point)) {
+                result.add(point);
+            }
+        }
+        return result;
+    }
+
+    public static boolean isFlockCamera(@NonNull CameraPoint point) {
+        return containsFlockToken(point.brand) || containsFlockToken(point.operator);
+    }
+
+    private static boolean containsFlockToken(@Nullable String value) {
+        return value != null && value.toLowerCase(Locale.US).contains(FLOCK_MATCH_TOKEN);
     }
 
     private String readGeoJsonFile(@NonNull File file) throws IOException {

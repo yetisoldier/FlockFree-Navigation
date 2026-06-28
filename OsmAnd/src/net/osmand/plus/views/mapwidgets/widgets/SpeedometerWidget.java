@@ -44,6 +44,8 @@ import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.helpers.AndroidUiHelper;
 import net.osmand.plus.helpers.WaypointHelper;
+import net.osmand.plus.plugins.PluginsHelper;
+import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.routing.AlarmInfo;
 import net.osmand.plus.routing.RoutingHelper;
 import net.osmand.plus.settings.backend.ApplicationMode;
@@ -245,7 +247,8 @@ public class SpeedometerWidget {
 		}
 
 		boolean isUsaOrCanada = isUsaOrCanadaRegion();
-		AndroidUiHelper.updateVisibility(speedLimitDescription, isUsaOrCanada);
+		boolean showSpeedLimitCompanion = shouldShowSpeedLimitCompanion();
+		AndroidUiHelper.updateVisibility(speedLimitDescription, isUsaOrCanada && showSpeedLimitCompanion);
 		WidgetSize newWidgetSize = settings.SPEEDOMETER_SIZE.getModeValue(mode);
 		DrivingRegion newDrivingRegion = settings.DRIVING_REGION.getModeValue(mode);
 		if (previousWidgetSize == newWidgetSize && cachedRegion == newDrivingRegion) {
@@ -332,7 +335,8 @@ public class SpeedometerWidget {
 			setSpeedLimitText(String.valueOf(PREVIEW_VALUE));
 			setSpeedLimitDescription();
 			if (speedLimitContainer != null) {
-				boolean show = settings.SHOW_SPEED_LIMIT_WARNING.getModeValue(mode) == ALWAYS;
+				boolean show = shouldShowSpeedLimitCompanion()
+						&& settings.SHOW_SPEED_LIMIT_WARNING.getModeValue(mode) == ALWAYS;
 				speedLimitContainer.setVisibility(show ? View.VISIBLE : View.GONE);
 				speedLimitContainer.setAlpha(show ? 1f : 0f);
 			}
@@ -398,7 +402,7 @@ public class SpeedometerWidget {
 					setSpeedLimitText(speedLimitText);
 				}
 				AndroidUiHelper.updateVisibility(view, true);
-				updateSpeedLimitVisibility(alarm != null);
+				updateSpeedLimitVisibility(alarm != null && shouldShowSpeedLimitCompanion());
 
 				float delta = app.getSettings().SPEED_LIMIT_EXCEED_KMH.get();
 				speedExceed = formattedSpeed.valueSrc > 0 && cachedSpeedLimit > 0 &&
@@ -443,15 +447,20 @@ public class SpeedometerWidget {
 					paint.setMaskFilter(new BlurMaskFilter(40, BlurMaskFilter.Blur.NORMAL));
 					int shadowColor = Color.BLACK;
 					WidgetSize newWidgetSize = settings.SPEEDOMETER_SIZE.getModeValue(mode);
+					boolean showSpeedLimitCompanion = shouldShowSpeedLimitCompanion();
 					int speedometerWidth = (int) ((newWidgetSize == WidgetSize.LARGE ? SPEEDOMETER_WIDTH_AA_L : newWidgetSize == WidgetSize.SMALL ? SPEEDOMETER_WIDTH_AA_S : SPEEDOMETER_WIDTH_M_AA) * density);
 					int speedometerHeight = (int) ((newWidgetSize == WidgetSize.LARGE ? SPEEDOMETER_HEIGHT_AA_L : newWidgetSize == WidgetSize.SMALL ? SPEEDOMETER_HEIGHT_AA_S : SPEEDOMETER_HEIGHT_AA_M) * density);
 					float speedLimitWidth = 0;
 					float speedLimitHeight = 0;
 					Bitmap speedLimitBitmap = null;
-					speedLimitSize = (int) ((newWidgetSize == WidgetSize.LARGE ? SPEED_LIMIT_SIZE_L : newWidgetSize == WidgetSize.SMALL ? SPEED_LIMIT_SIZE_S : SPEED_LIMIT_SIZE_M) * density);
-					speedLimitWidth = speedLimitSize;
-					speedLimitHeight = speedLimitSize;
-					if (cachedSpeedLimitText != null) {
+					speedLimitSize = showSpeedLimitCompanion
+							? (int) ((newWidgetSize == WidgetSize.LARGE ? SPEED_LIMIT_SIZE_L : newWidgetSize == WidgetSize.SMALL ? SPEED_LIMIT_SIZE_S : SPEED_LIMIT_SIZE_M) * density)
+							: 0;
+					if (showSpeedLimitCompanion) {
+						speedLimitWidth = speedLimitSize;
+						speedLimitHeight = speedLimitSize;
+					}
+					if (showSpeedLimitCompanion && cachedSpeedLimitText != null) {
 						Drawable speedLimitDrawable = getSpeedLimitDrawable(nightMode, density);
 						if (speedLimitDrawable != null) {
 							speedLimitBitmap = getDrawableBitmap(speedLimitDrawable, (int) speedLimitWidth, (int) speedLimitHeight);
@@ -925,11 +934,19 @@ public class SpeedometerWidget {
 		float progress = drawBitmap ? speedAlertProgress : speedAlertAnimator.getAnimatedFraction();
 		updateTextColor(progress);
 		if (!drawBitmap) {
-			speedLimitContainer.setBackground(getSpeedLimitDrawable(nightMode, app.getResources().getDisplayMetrics().density));
-			int limitColor = getSpeedLimitColor(nightMode);
-			speedLimitValueView.setTextColor(limitColor);
-			speedLimitDescription.setTextColor(limitColor);
+			if (shouldShowSpeedLimitCompanion()) {
+				speedLimitContainer.setBackground(getSpeedLimitDrawable(nightMode, app.getResources().getDisplayMetrics().density));
+				int limitColor = getSpeedLimitColor(nightMode);
+				speedLimitValueView.setTextColor(limitColor);
+				speedLimitDescription.setTextColor(limitColor);
+			} else {
+				AndroidUiHelper.updateVisibility(speedLimitContainer, false);
+			}
 		}
+	}
+
+	private boolean shouldShowSpeedLimitCompanion() {
+		return PluginsHelper.getEnabledPlugin(FlockFreePlugin.class) == null;
 	}
 
 	private void setDrawableColor(@NonNull GradientDrawable drawable, boolean nightMode) {

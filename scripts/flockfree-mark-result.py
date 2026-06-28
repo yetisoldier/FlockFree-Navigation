@@ -13,7 +13,7 @@ from pathlib import Path
 
 
 VALID_CHECKS = {
-    "camera_data": "Refresh camera data and verify the settings row settles with a source/freshness value.",
+    "camera_data": "Refresh Flock camera data and verify the settings row settles with a source/freshness value.",
     "route_avoidance": "Calculate a camera-dense offline route with avoidance enabled and capture applied/fallback/skipped status.",
     "nearby_alerts": "Move or navigate near a known camera and confirm nearby alert behavior.",
     "osm_reporting": "Open Add ALPR Camera and confirm OsmAnd editor/tag prefill.",

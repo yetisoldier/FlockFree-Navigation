@@ -17,16 +17,17 @@ import androidx.core.content.ContextCompat;
 import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.auto.TripUtils;
-import net.osmand.plus.helpers.AndroidUiHelper;
 import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.plugins.flockfree.FlockFreePlugin;
 import net.osmand.plus.routing.CurrentStreetName;
 import net.osmand.plus.routing.NextDirectionInfo;
+import net.osmand.plus.routing.RouteDirectionInfo;
 import net.osmand.plus.routing.RoutingHelperUtils;
 import net.osmand.plus.views.layers.base.OsmandMapLayer.DrawSettings;
 import net.osmand.plus.views.layers.MapInfoLayer.TextState;
 import net.osmand.plus.views.mapwidgets.OutlinedTextContainer;
 import net.osmand.plus.views.mapwidgets.WidgetsPanel;
+import net.osmand.router.ExitInfo;
 import net.osmand.router.TurnType;
 import net.osmand.util.Algorithms;
 
@@ -40,10 +41,6 @@ public class SecondNextTurnWidget extends NextTurnBaseWidget {
 
 	private boolean isFlockFreeActive() {
 		return PluginsHelper.getEnabledPlugin(FlockFreePlugin.class) != null;
-	}
-
-	private boolean isFlockFreeLandscape() {
-		return isFlockFreeActive() && !AndroidUiHelper.isOrientationPortrait(mapActivity);
 	}
 
 	@Override
@@ -70,7 +67,6 @@ public class SecondNextTurnWidget extends NextTurnBaseWidget {
 	protected void updateVerticalWidgetColors(@NonNull TextState textState) {
 		super.updateVerticalWidgetColors(textState);
 		if (isFlockFreeActive()) {
-			boolean landscape = isFlockFreeLandscape();
 			LinearLayout bg = getView().findViewById(R.id.widget_bg);
 			if (bg != null) {
 				bg.setBackgroundResource(isNightMode()
@@ -109,6 +105,11 @@ public class SecondNextTurnWidget extends NextTurnBaseWidget {
 		}
 	}
 
+	@Override
+	protected boolean shouldShowRoadShields() {
+		return !isFlockFreeActive() && super.shouldShowRoadShields();
+	}
+
 	/**
 	 * Do not delete to have pressed state. Uncomment to test rendering
 	 */
@@ -141,8 +142,11 @@ public class SecondNextTurnWidget extends NextTurnBaseWidget {
 	@Override
 	public void updateNavigationInfo(@Nullable DrawSettings drawSettings) {
 		boolean followingMode = routingHelper.isFollowingMode() || locationProvider.getLocationSimulation().isRouteAnimating();
-		StreetNameWidget.StreetNameWidgetParams params = new StreetNameWidget.StreetNameWidgetParams(mapActivity, true);
-		CurrentStreetName streetName = params.streetName;
+		CurrentStreetName streetName = null;
+		if (!isFlockFreeActive()) {
+			StreetNameWidget.StreetNameWidgetParams params = new StreetNameWidget.StreetNameWidgetParams(mapActivity, true);
+			streetName = params.streetName;
+		}
 		TurnType turnType = null;
 		boolean deviatedFromRoute = false;
 		int turnImminent = 0;
@@ -157,7 +161,9 @@ public class SecondNextTurnWidget extends NextTurnBaseWidget {
 			}
 			if (info != null && info.distanceTo > 0 && info.directionInfo != null) {
 				streetName = TripUtils.getStreetName(info);
-				if (verticalWidget && Algorithms.isEmpty(streetName.text)) {
+				if (isFlockFreeActive()) {
+					setCompactFlockFreeStreetName(streetName, info);
+				} else if (verticalWidget && Algorithms.isEmpty(streetName.text)) {
 					streetName.text = info.directionInfo.getDescriptionRoutePart(app, true);
 				}
 				if (!Algorithms.isEmpty(streetName.text)) {
@@ -172,6 +178,27 @@ public class SecondNextTurnWidget extends NextTurnBaseWidget {
 		setTurnType(turnType);
 		setTurnImminent(turnImminent, deviatedFromRoute);
 		setTurnDistance(nextTurnDistance);
+	}
+
+	private void setCompactFlockFreeStreetName(@NonNull CurrentStreetName streetName,
+			@NonNull NextDirectionInfo info) {
+		if (!Algorithms.isEmpty(streetName.text) || info.directionInfo == null) {
+			return;
+		}
+		RouteDirectionInfo directionInfo = info.directionInfo;
+		ExitInfo exitInfo = directionInfo.getExitInfo();
+		if (exitInfo != null && !Algorithms.isEmpty(exitInfo.getExitStreetName())) {
+			streetName.text = exitInfo.getExitStreetName();
+		} else if (!Algorithms.isEmpty(directionInfo.getStreetName())) {
+			streetName.text = directionInfo.getStreetName();
+		} else if (!Algorithms.isEmpty(directionInfo.getRef())) {
+			streetName.text = directionInfo.getRef();
+		} else {
+			String destination = directionInfo.getDestinationRefAndName();
+			if (!Algorithms.isEmpty(destination)) {
+				streetName.text = destination;
+			}
+		}
 	}
 
 }

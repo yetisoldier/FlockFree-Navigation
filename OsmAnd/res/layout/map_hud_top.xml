@@ -11,9 +11,10 @@
 	<include
 		android:id="@+id/flockfree_search_bar"
 		layout="@layout/flockfree_search_bar"
-		android:layout_width="280dp"
+		android:layout_width="48dp"
 		android:layout_height="48dp"
-		android:layout_gravity="top|center_horizontal"
+		android:layout_gravity="top|start"
+		android:layout_marginStart="68dp"
 		android:layout_marginTop="8dp" />
 
 	<include

@@ -4,17 +4,17 @@
 FlockFree Navigation
 
 ## Short Description (80 char max)
-Navigation with ALPR camera awareness and route avoidance
+Navigation with Flock camera awareness and route avoidance
 
 ## Full Description (4000 char max)
 
-FlockFree Navigation is a privacy-first navigation app that helps you make informed routing decisions with situational awareness of ALPR (Automated License Plate Reader) cameras on your route.
+FlockFree Navigation is a privacy-first navigation app that helps you make informed routing decisions with situational awareness of Flock Safety-style automated license plate reader cameras on your route.
 
 **Camera Awareness**
-• 100,000+ known ALPR camera locations from public OpenStreetMap data
+• 89,000+ Flock-labeled camera records from public map and camera-source data
 • Camera orientation cones showing which direction each camera faces
-• Real-time proximity alerts when approaching known cameras
-• Camera proximity widget showing count and distance to nearest cameras
+• Real-time proximity alerts when approaching known Flock cameras
+• Camera proximity widget showing remaining Flock cameras during active navigation
 • Optional WiFi Flock detection for Flock Safety camera beacons
 
 **Route Avoidance**
@@ -23,8 +23,8 @@ FlockFree Navigation is a privacy-first navigation app that helps you make infor
 • Avoidance tradeoff summary ("Avoids 5 cameras · +2 min")
 
 **Modern Navigation**
-• Google Maps-inspired map styling with day/night themes
-• Turn-by-turn navigation with lane guidance
+• Google Maps-inspired map styling with uncluttered day/night themes
+• Turn-by-turn navigation with route-only lane guidance
 • Automatic 3D tilt during navigation
 • Search-along-route for gas, food, coffee, parking, and EV charging
 • Destination arrival preview with side-of-street indication

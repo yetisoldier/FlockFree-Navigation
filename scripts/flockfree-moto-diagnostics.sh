@@ -199,8 +199,8 @@ import xml.etree.ElementTree as ET
 path = sys.argv[1]
 patterns = [
     "FlockFree",
-    "Camera data",
-    "Refresh camera data",
+    "Flock camera data",
+    "Refresh Flock camera data",
     "Last route check",
     "CYD status",
     "Phone GPS",

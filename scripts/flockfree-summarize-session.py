@@ -13,7 +13,7 @@ from typing import NamedTuple
 EVIDENCE_PATTERNS = {
     "camera data": re.compile(r"CameraData|Camera data|camera cache|camera database|cameras?\.geojson|flockfree_cameras", re.I),
     "route avoidance": re.compile(r"Avoidance|Last route check|route camera|camera-adjacent|reroute", re.I),
-    "nearby alerts": re.compile(r"nearby camera|Nearby camera alerts|Alert distance", re.I),
+    "nearby alerts": re.compile(r"nearby (?:Flock )?camera|Nearby (?:Flock )?camera alerts|Alert distance", re.I),
     "OSM reporting": re.compile(r"Add ALPR Camera|ALPR|surveillance|EditPoi", re.I),
 }
 EVIDENCE_ORDER = list(EVIDENCE_PATTERNS.keys()) + ["CYD"]

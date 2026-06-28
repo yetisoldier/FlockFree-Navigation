@@ -2,7 +2,7 @@ package net.osmand.plus.views.controls.maphudbuttons;
 
 import static androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_CLICK;
 import static androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_LONG_CLICK;
-import static net.osmand.plus.settings.enums.CompassMode.MANUALLY_ROTATED;
+import static net.osmand.plus.settings.enums.CompassMode.MOVEMENT_DIRECTION;
 import static net.osmand.plus.settings.enums.CompassMode.NORTH_IS_UP;
 import static net.osmand.plus.settings.enums.CompassVisibility.ALWAYS_HIDDEN;
 import static net.osmand.plus.settings.enums.CompassVisibility.ALWAYS_VISIBLE;
@@ -123,11 +123,7 @@ public class CompassButton extends MapButton {
 						showCompassModeWidgetDialog();
 						return true;
 					}
-					if (settings.getCompassMode() == NORTH_IS_UP) {
-						app.showShortToastMessage(R.string.compass_click_north_is_up);
-					} else {
-						rotateMapToNorth();
-					}
+					toggleNorthAndMovementDirection();
 					return true;
 				}
 
@@ -146,8 +142,8 @@ public class CompassButton extends MapButton {
 
 	private void setupAccessibilityActions() {
 		ViewCompat.replaceAccessibilityAction(this, ACTION_CLICK,
-				app.getString(NORTH_IS_UP.getTitleId()), (view, arguments) -> {
-					rotateMapToNorth();
+				app.getString(R.string.key_event_action_change_map_orientation), (view, arguments) -> {
+					toggleNorthAndMovementDirection();
 					return true;
 				});
 		ViewCompat.replaceAccessibilityAction(this, ACTION_LONG_CLICK,
@@ -157,12 +153,9 @@ public class CompassButton extends MapButton {
 				});
 	}
 
-	private void rotateMapToNorth() {
-		getMapView().resetRotation();
-		app.getMapViewTrackingUtilities().setLastResetRotationToNorth(System.currentTimeMillis());
-		if (settings.getCompassMode() == MANUALLY_ROTATED) {
-			settings.setManuallyMapRotation(0);
-		}
+	private void toggleNorthAndMovementDirection() {
+		CompassMode newMode = settings.getCompassMode() == NORTH_IS_UP ? MOVEMENT_DIRECTION : NORTH_IS_UP;
+		app.getMapViewTrackingUtilities().switchCompassModeTo(newMode);
 	}
 
 	private void showCompassModeWidgetDialog() {

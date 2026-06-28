@@ -230,7 +230,10 @@ public class NextTurnBaseWidget extends TextInfoWidget implements IComplexWidget
 			streetName.text = removeSymbol(streetName.text);
 		}
 		List<RoadShield> shields = streetName.shields;
-		if (!shields.isEmpty() && app.getRendererRegistry().getCurrentSelectedRenderer() != null) {
+		if (!shouldShowRoadShields()) {
+			AndroidUiHelper.updateVisibility(shieldImagesContainer, false);
+			cachedRoadShields = null;
+		} else if (!shields.isEmpty() && app.getRendererRegistry().getCurrentSelectedRenderer() != null) {
 			if (!shields.equals(cachedRoadShields) || (shields.equals(cachedRoadShields) && shieldImagesContainer.getChildCount() == 0)) {
 				setRoadShield(shields);
 			} else {
@@ -249,6 +252,10 @@ public class NextTurnBaseWidget extends TextInfoWidget implements IComplexWidget
 		} else if (!streetName.text.equals(streetView.getText().toString())) {
 			streetView.setText(streetName.text);
 		}
+	}
+
+	protected boolean shouldShowRoadShields() {
+		return true;
 	}
 
 	private void checkShieldOverflow() {

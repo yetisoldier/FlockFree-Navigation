@@ -11,9 +11,6 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import net.osmand.Location;
-import net.osmand.binary.RouteDataObject;
-import net.osmand.plus.OsmAndLocationProvider;
 import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.helpers.AndroidUiHelper;
@@ -30,7 +27,6 @@ import net.osmand.plus.views.layers.base.OsmandMapLayer.DrawSettings;
 import net.osmand.plus.views.mapwidgets.LanesDrawable;
 import net.osmand.plus.views.mapwidgets.MapWidgetInfo;
 import net.osmand.plus.views.mapwidgets.WidgetsPanel;
-import net.osmand.router.RouteResultPreparation;
 import net.osmand.router.TurnType;
 
 import java.util.Arrays;
@@ -85,24 +81,8 @@ public class LanesWidget extends MapWidget {
 		int distance = 0;
 
 		boolean followingMode = routingHelper.isFollowingMode();
-		boolean deviatedFromRoute = routingHelper.isDeviatedFromRoute();
-		boolean notOsmAndGpxRoute = routingHelper.getCurrentGPXRoute() != null && !routingHelper.isCurrentGPXRouteV2();
-		boolean mapLinkedToLocation = mapActivity.getMapViewTrackingUtilities().isMapLinkedToLocation();
 
-		if (mapLinkedToLocation && (!followingMode || deviatedFromRoute || notOsmAndGpxRoute)) {
-			OsmAndLocationProvider locationProvider = app.getLocationProvider();
-			RouteDataObject ro = locationProvider.getLastKnownRouteSegment();
-			if (ro != null) {
-				Location lastKnownLocation = locationProvider.getLastKnownLocation();
-				float degree = lastKnownLocation == null || !lastKnownLocation.hasBearing()
-						? 0
-						: lastKnownLocation.getBearing();
-				lanes = RouteResultPreparation.parseTurnLanes(ro, degree / 180 * Math.PI);
-				if (lanes == null) {
-					lanes = RouteResultPreparation.parseLanes(ro, degree / 180 * Math.PI);
-				}
-			}
-		} else if (routingHelper.isRouteCalculated() && followingMode) {
+		if (routingHelper.isRouteCalculated() && followingMode && !routingHelper.isRoutePlanningMode()) {
 			NextDirectionInfo directionInfo = routingHelper.getNextRouteDirectionInfo(new NextDirectionInfo(), false);
 			RouteDirectionInfo routeDirectionInfo = directionInfo != null ? directionInfo.directionInfo : null;
 			TurnType turnType = routeDirectionInfo != null ? routeDirectionInfo.getTurnType() : null;

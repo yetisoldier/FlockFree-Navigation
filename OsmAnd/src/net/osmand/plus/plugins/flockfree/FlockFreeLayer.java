@@ -49,7 +49,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private final Paint coneStrokePaint;
 
     private static final float CONE_HALF_ANGLE_DEG = 30f; // half-angle of the view cone on each side
-    private static final float CONE_LENGTH_DP = 22f;     // screen-space cone length in dp
+    private static final float CONE_LENGTH_DP = 44f;     // screen-space cone length in dp
 
     // Cached pixel dimensions — computed once in constructor to avoid per-frame dpToPx() calls
     private final float cameraOuterRadiusPx;

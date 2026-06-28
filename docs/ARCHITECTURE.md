@@ -1,6 +1,6 @@
 # FlockFree Navigation — Architecture Document
 
-**Fork of OsmAnd with built-in ALPR/surveillance camera avoidance plugin.**
+**Fork of OsmAnd with built-in Flock camera awareness and avoidance tooling.**
 
 ---
 
@@ -182,7 +182,7 @@ Key `OsmandPlugin` methods to override (signatures from `OsmandPlugin.java`):
 
 - **URL:** `https://data.dontgetflocked.com/cameras.geojson.gz`
 - **Size:** ~28 MB compressed, GeoJSON FeatureCollection
-- **Features:** ~104,902 camera points
+- **Features:** ~89,942 Flock-labeled camera points after source filtering
 - **Properties per feature:**
   ```json
   {
@@ -271,7 +271,7 @@ public class CameraSyncManager {
         // 1. Download to temp file using AndroidNetworkUtils or OkHttp
         // 2. GZIPInputStream wrap FileInputStream
         // 3. Stream-parse with org.json or a streaming JSON parser
-        //    (104k features — org.json is fine if done in background thread)
+        //    (source snapshot is large; org.json is fine if done in background thread)
         // 4. Batch insert into SQLite (1000 per transaction)
         // 5. Call callback.onComplete(count)
     }
@@ -383,7 +383,7 @@ public class FlockFreeLayer extends OsmandMapLayer
 }
 ```
 
-**Performance optimization for 104k markers:**
+**Performance optimization for the Flock camera index:**
 - Only query cameras within the visible bounding box
 - At low zoom (< START_ZOOM), render nothing or density circles
 - Use spatial index in SQLite (the `idx_cameras_latlon` index)
@@ -1082,13 +1082,13 @@ From the actual data file (`/tmp/deflock-cameras.geojson.gz`):
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| 104k markers cause map lag | High | Bounding-box query + render cap (500 max) + spatial index in SQLite |
+| Dense Flock camera areas cause map lag | High | Bounding-box query + render cap (500 max) + spatial index in SQLite |
 | Camera avoidance blocks too many roads | Medium | Limit to cameras within `CAMERA_AVOIDANCE_RADIUS` (default 200m) of route segments |
 | OsmAnd API changes break plugin | Medium | Pin to specific OsmAnd commit; use AIDL API as fallback for routing |
 | 28 MB bundled data inflates APK | Low | Option to download on first run instead of bundling |
 | BLE protocol undocumented/unstable | Medium | Parse defensively; log unparsed messages; make BLE feature opt-in |
 | GeoJSON parsing on main thread | High | All parsing in background `AsyncTask` / `ExecutorService` |
-| Memory pressure from 104k CameraData objects | Medium | Only load cameras for visible bbox; use Cursor-based iteration for DB queries |
+| Memory pressure from camera data objects | Medium | Filter to Flock rows, query by visible bbox, and use Cursor-based iteration for DB queries |
 
 ---
 

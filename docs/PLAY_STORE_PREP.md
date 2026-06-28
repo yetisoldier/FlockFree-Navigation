@@ -161,7 +161,7 @@ IARC questionnaire expected answers:
 - [ ] Feature graphic (1024×500 PNG) — can adapt FlockFree splash branding
 - [ ] 2-8 screenshots (min 320px, max 3840px) — existing screenshots in `screenshots/` can be used
 - [ ] App icon: Already have FlockFree branding in all densities
-- [ ] Short description (80 char max): "Navigation with ALPR camera awareness and route avoidance"
+- [ ] Short description (80 char max): "Navigation with Flock camera awareness and route avoidance"
 - [ ] Full description (4000 char max): Adapt from README, remove build instructions and sideload references
 
 ### Screenshots available
@@ -210,7 +210,7 @@ cd /home/yetisoldier/projects/FlockFree-Navigation
 
 1. **Wi-Fi scanning** — Most likely to trigger manual review. Justification: "App passively scans for specific Wi-Fi beacons (Flock Safety camera devices) to alert users of nearby surveillance cameras for personal safety and situational awareness. No network data is collected or transmitted."
 
-2. **Camera database** — 104K camera locations is surveillance infrastructure data. Defense: Publicly available OpenStreetMap data, bundled in APK (not collected from users), used for safety awareness.
+2. **Camera database** — 89K Flock-labeled camera records is surveillance infrastructure data. Defense: Publicly available OpenStreetMap and DontGetFlocked source data, bundled in APK (not collected from users), used for safety awareness.
 
 3. **App framing** — Store description should emphasize "situational awareness" and "informed routing decisions." Avoid language suggesting evasion of law enforcement.
 

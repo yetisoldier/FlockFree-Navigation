@@ -1,6 +1,6 @@
 # FlockFree Navigation — Privacy Policy
 
-**Effective date:** June 24, 2026
+**Effective date:** June 28, 2026
 
 FlockFree Navigation ("the App") is developed by Yeti Wurks LLC. This privacy policy describes how the App handles data on your device.
 
@@ -21,10 +21,10 @@ FlockFree Navigation ("the App") is developed by Yeti Wurks LLC. This privacy po
 - **Why:** Detects nearby Flock Safety cameras for situational awareness alerts
 - **Where:** On your device only. Wi-Fi scan data is not transmitted off the device.
 
-### Camera Database
-- **What:** A bundled database of approximately 104,902 ALPR camera locations derived from publicly contributed OpenStreetMap data
-- **Why:** Map display, proximity alerts, and route avoidance
-- **Where:** Bundled in the App. Not collected from users. Updated via App updates.
+### Flock Camera Database
+- **What:** A bundled database of approximately 89,942 Flock-labeled camera records derived from publicly contributed OpenStreetMap data and the public DontGetFlocked camera feed
+- **Why:** Map display, proximity alerts, nearest-camera checks, route comparison, and route avoidance
+- **Where:** Bundled in the App and stored in app-private SQLite after first load. Not collected from users. Updated via App updates and optional in-app refreshes.
 
 ### User-Generated Reports
 - **What:** ALPR camera reports you create using the built-in OSM POI editor

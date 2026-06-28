@@ -4,6 +4,26 @@ All notable changes to FlockFree Navigation are documented here.
 
 ## [Unreleased]
 
+## [v1.8.0] — 2026-06-28
+
+### Added
+- Added a dedicated Flock Camera Avoidance Routing document covering Flock-only filtering, route corridor scanning, temporary road blocking, iterative relaxation, route acceptance rules, traffic interaction, known limits, and verification steps.
+
+### Changed
+- Camera awareness now filters the bundled and refreshed source feed to Flock-labeled records only. Map markers, nearest-camera checks, nearby alerts, route avoidance, route comparison counts, and the camera proximity widget now use the same Flock-only data boundary.
+- The on-device SQLite camera database was upgraded and defensively filters reads to Flock rows, with the current bundled snapshot indexing 89,942 Flock camera records.
+- FlockFree map defaults now hide house/building numbers, POI labels, and POI icons to keep the driving map quieter. The normal Configure Map toggles remain available for users who want to turn them back on.
+- Nearby Flock camera warnings now repeat the toast once after a short delay so the alert is visible long enough during a drive.
+- FlockFree wording in settings, route status, route comparison, diagnostics, and documentation now says Flock cameras where the feature is Flock-specific instead of implying all ALPR cameras are routed around.
+
+### Fixed
+- The lanes widget no longer shows free-driving/current-road lane graphics while browsing or casually driving. Route-derived lane guidance remains available during active navigation.
+- FlockFree navigation HUD elements were tightened for the cleaner map layout, including compact search, map HUD, speedometer, ruler, compass, and turn-chip styling.
+
+### Verification
+- Source-only checks passed after the Flock-only and map-cleanup changes.
+- Built and installed a map-cleanup APK on a Moto G Stylus over Wi-Fi ADB; readiness confirmed `MapActivity` focused and the Flock-only camera database populated with 89,942 rows.
+
 ## [v1.7.1] — 2026-06-28
 
 ### Added

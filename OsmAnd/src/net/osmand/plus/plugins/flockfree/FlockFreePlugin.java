@@ -92,10 +92,14 @@ public class FlockFreePlugin extends OsmandPlugin {
     private static final int ADD_CAMERA_ITEM_ORDER = 7900;
     private static final long CAMERA_ALERT_COOLDOWN_MS = 90_000L;
     private static final long SAME_CAMERA_ALERT_COOLDOWN_MS = 10 * 60_000L;
+    private static final long CAMERA_ALERT_TOAST_REPEAT_DELAY_MS = 3_500L;
     private static final float MOVING_ALERT_SPEED_MPS = 2.0f;
     private static final float FLOCKFREE_DEFAULT_TEXT_SCALE = 1.2f;
     private static final float FLOCKFREE_MAX_LEGACY_TEXT_SCALE = 1.3f;
     private static final int MAP_CENTER_CAMERA_SEARCH_RADIUS_METERS = 5_000;
+    private static final String RENDER_HIDE_HOUSE_NUMBERS = "hideHouseNumbers";
+    private static final String RENDER_HIDE_POI_LABELS = "hidePOILabels";
+    private static final String RENDER_HIDE_POI_ICONS = "hideIcons";
 
     public static final class RouteComparisonInfo {
         public final int fastestDistanceMeters;
@@ -272,6 +276,7 @@ public class FlockFreePlugin extends OsmandPlugin {
                 net.osmand.plus.settings.enums.SpeedLimitWarningState.ALWAYS);
         // Ensure speedometer widget is visible for the car profile
         app.getSettings().SHOW_SPEEDOMETER.setModeDefaultValue(ApplicationMode.CAR, true);
+        applyFlockFreeMapDeclutterDefaults();
 
         if (Boolean.TRUE.equals(VISUAL_DEFAULTS_MIGRATION_DONE.get())) {
             return;
@@ -294,6 +299,12 @@ public class FlockFreePlugin extends OsmandPlugin {
             app.getSettings().SHOW_SPEEDOMETER.setModeValue(ApplicationMode.CAR, true);
         }
         VISUAL_DEFAULTS_MIGRATION_DONE.set(true);
+    }
+
+    private void applyFlockFreeMapDeclutterDefaults() {
+        app.getSettings().getCustomRenderBooleanProperty(RENDER_HIDE_HOUSE_NUMBERS).setDefaultValue(true);
+        app.getSettings().getCustomRenderBooleanProperty(RENDER_HIDE_POI_LABELS).setDefaultValue(true);
+        app.getSettings().getCustomRenderBooleanProperty(RENDER_HIDE_POI_ICONS).setDefaultValue(true);
     }
 
     private void applyFlockFreeTrafficDefaults() {
@@ -331,7 +342,7 @@ public class FlockFreePlugin extends OsmandPlugin {
                 String brand = "Flock Safety";
                 int distance = 150;
                 String title = app.getString(R.string.flockfree_nearby_camera_alert, brand, distance);
-                app.showToastMessage(title);
+                showExtendedCameraAlertToast(title);
                 vibrateForCameraAlert();
             }
         };
@@ -1042,8 +1053,13 @@ public class FlockFreePlugin extends OsmandPlugin {
 
         // Toast alert with vibration — no persistent notification
         String title = app.getString(R.string.flockfree_nearby_camera_alert, brand, roundedDistance);
-        app.showToastMessage(title);
+        showExtendedCameraAlertToast(title);
         vibrateForCameraAlert();
+    }
+
+    private void showExtendedCameraAlertToast(@NonNull String title) {
+        app.showToastMessage(title);
+        app.runInUIThread(() -> app.showToastMessage(title), CAMERA_ALERT_TOAST_REPEAT_DELAY_MS);
     }
 
     private void vibrateForCameraAlert() {

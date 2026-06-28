@@ -1,18 +1,18 @@
 # FlockFree Navigation
 
-FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR camera awareness, optional CYD companion hardware integration, traffic-aware routing with user-provided TomTom keys, and community reporting.
+FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for Flock camera awareness, optional CYD companion hardware integration, traffic-aware routing with user-provided TomTom keys, and community reporting.
 
 ![FlockFree Splash](docs/screenshots/ff-splash-branding.png)
 
 ## Features
 
 ### Camera Awareness
-- **105,000+ camera database** — Bundled seed of 106,283 ALPR cameras with direction data, stored in SQLite for fast spatial queries
+- **89,942-camera Flock index** — Bundled public-camera source snapshot filtered to Flock-labeled records, stored in SQLite for fast spatial queries
 - **Camera orientation cones** — Translucent view cones rendered on the map at zoom 15+ showing camera heading
 - **Rotation-stable camera markers** — Camera points use the OpenGL elevated projection path and refresh during rotate, pan, and zoom animations to prevent delayed marker jumps
-- **Nearby camera alerts** — Toast alerts with vibration when approaching known cameras; cooldown logic prevents repeat alerts for the same camera
+- **Nearby Flock camera alerts** — Toast alerts with vibration when approaching known Flock cameras; cooldown logic prevents repeat alerts for the same camera
 - **WiFi Flock detection** — Passively scans for Flock Safety camera WiFi beacons and triggers alerts + CYD auto-pause when detected
-- **Nearest camera inspection** — Map-center query to find the closest camera within 1,000m
+- **Nearest Flock camera inspection** — Map-center query to find the closest Flock camera within 5,000m
 
 ![Map View](docs/screenshots/ff-map.png)
 
@@ -27,13 +27,13 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 - **Auto-pause on Flock detection** — When WiFi Flock detection triggers, the CYD companion is automatically paused
 
 ### Route Avoidance
-- **Wide corridor road blocking** — For each camera within the route corridor radius (default 100m), blocks ALL route segments within the radius, not just the single nearest road. This prevents the router from using adjacent roads in the same corridor and still passing near cameras.
-- **Multi-pass avoidance** — After calculating an avoidance route, scans it for new cameras and re-blocks with expanded road sets (up to 5 passes) to catch cameras that moved onto the new route.
+- **Wide corridor road blocking** — For each Flock camera within the route corridor radius (default 100m), blocks ALL route segments within the radius, not just the single nearest road. This prevents the router from using adjacent roads in the same corridor and still passing near cameras.
 - **Iterative relaxation avoidance** — If full avoidance fails (no route exists with all roads blocked), progressively unblocks the least-camera-impactful roads (up to 4 iterations) until a viable route is found.
-- **Camera count validation** — Only accepts an avoidance route if it has strictly fewer cameras than the original route. Prevents the inverted "privacy route has more cameras" bug.
-- **Route comparison card** — Shows fastest vs privacy route side-by-side with camera counts, distance, time, and percentage fewer cameras.
-- **Partial avoidance reporting** — When full avoidance isn't possible, reports how many camera roads were blocked and how many cameras remain on the route.
+- **Camera count validation** — Only accepts an avoidance route if it has strictly fewer Flock cameras than the original route. Prevents the inverted "privacy route has more cameras" bug.
+- **Route comparison card** — Shows fastest vs privacy route side-by-side with Flock camera counts, distance, time, and percentage fewer cameras.
+- **Partial avoidance reporting** — When full avoidance isn't possible, reports how many Flock camera roads were blocked and how many Flock cameras remain on the route.
 - **Status persistence** — Route check results persist across app restarts
+- **Implementation reference** — See [Flock Camera Avoidance Routing](docs/FLOCK-CAMERA-AVOIDANCE-ROUTING.md) for the detailed algorithm, acceptance gates, and verification checklist.
 
 ### Traffic-Aware Routing (Optional)
 - **Bring your own TomTom key** — FlockFree does not ship with a shared traffic key. Create an account at the [TomTom Developer Portal](https://developer.tomtom.com/), follow TomTom's [API key guide](https://developer.tomtom.com/platform/documentation/my-tomtom/how-to-get-a-tomtom-api-key), and review current usage limits on the [TomTom pricing page](https://developer.tomtom.com/pricing).
@@ -45,11 +45,11 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 
 ![Navigation HUD](docs/screenshots/ff-nav-options.png)
 
-- **Google Maps-inspired map styling** — Refined land (#F5F5F0), water (#AECDF0), and park (#C8E6C9) colors with reduced POI clutter, subtler road casing, and cleaner route colors. Night-mode palette tuned to match Google Maps dark theme.
+- **Google Maps-inspired map styling** — Refined land (#F5F5F0), water (#AECDF0), and park (#C8E6C9) colors with reduced POI clutter, subtler road casing, and cleaner route colors. FlockFree hides house/building numbers, POI labels, and POI icons by default while keeping the normal Configure Map toggles available. Night-mode palette is tuned to match Google Maps dark theme.
 - **Modern navigation HUD** — Search bar, layer button, circular map controls, compact ETA/speed presentation, and a directional blue vehicle arrow.
 - **Road-sticky vehicle tracking** — In car mode, followed-map tracking snaps accurate locations to the nearest road when snap-to-road is enabled, capped at 35m so truly off-road positions are left alone.
 - **Google Maps-style turn indicators** — Main turn card uses a teal background with a bold white arrow. The second-next-turn preview appears as a compact white chip below the main indicator with a blue arrow, dark distance text, and grey street name — matching Google Maps' layered turn guidance layout.
-- **Google Maps-style lane guidance** — Lane arrows show recommended lanes in white with a blue highlight outline and non-recommended lanes in grey, with day/night card backgrounds matching Google Maps.
+- **Google Maps-style lane guidance** — Lane arrows show recommended lanes in white with a blue highlight outline and non-recommended lanes in grey during active navigation, with day/night card backgrounds matching Google Maps. Free-driving lane graphics stay hidden so the map remains uncluttered when no route is active.
 - **Automatic 3D tilt** — Map tilts to a perspective view during navigation and resets when stopped.
 - **Transparent buildings ahead of turns** — 3D buildings automatically hide when approaching a turn (within 300m) and restore after (past 500m) so they don't obstruct the route view.
 - **Navigation workflows** — Route option cards, add-stop chips (gas, coffee, food, parking, EV charging), compact layers sheet, faster-route prompt with undo.
@@ -71,13 +71,13 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 - **Draft persistence** — Report drafts survive app restarts
 
 ### Quick Actions
-- **Show/hide cameras** — Toggle the camera map layer from the quick action menu
-- **Toggle camera avoidance** — Enable or disable route avoidance on the fly
-- **Toggle camera alerts** — Enable or disable proximity alerts
+- **Show/hide cameras** — Toggle the Flock camera map layer from the quick action menu
+- **Toggle camera avoidance** — Enable or disable Flock route avoidance on the fly
+- **Toggle camera alerts** — Enable or disable Flock proximity alerts
 - **Add camera** — Open the ALPR reporting dialog at the current map center
 
 ### Map Widget
-- **Camera proximity widget** — During active navigation, shows the count of known ALPR cameras remaining on the current route. It hides while casually browsing the map.
+- **Camera proximity widget** — During active navigation, shows the count of known Flock cameras remaining on the current route. It hides while casually browsing the map.
 - **Traffic status widget** — Shows current traffic routing status and last refresh time. Also positioned in the TOP panel.
 
 ### Branding
@@ -169,23 +169,23 @@ This builds, signs, installs over Wi-Fi ADB, launches FlockFree, and runs a read
 1. **Launch FlockFree** — The app opens to the map. The FlockFree plugin is enabled by default.
 2. **Grant permissions** — Allow location when prompted. Bluetooth is only needed if you use the optional CYD companion hardware. Nearby location is needed for WiFi Flock scanning.
 3. **Download offline maps** (optional but recommended) — Go to Menu → Maps & Resources → Download maps → choose your region. Route avoidance requires offline vector maps.
-4. **Camera data loads automatically** — The bundled seed (106,283 cameras) is available immediately. A network refresh updates from `data.dontgetflocked.com` weekly.
+4. **Flock camera data loads automatically** — The bundled source snapshot is filtered to Flock-labeled cameras and is available immediately. A network refresh updates from `data.dontgetflocked.com` weekly.
 5. **Optional traffic setup** — Create your own TomTom API key, then open Menu → FlockFree → **TomTom API key**. Leave the key blank if you do not want live traffic routing.
 
 ![Navigation Drawer](docs/screenshots/ff-drawer.png)
 
 ## Usage Guide
 
-### Viewing Cameras
+### Viewing Flock Cameras
 
-Cameras appear on the map at zoom 10+. At zoom 15+, orientation cones show which direction each camera faces. Tap any camera for details (brand, operator, direction, mount type).
+Flock cameras appear on the map at zoom 10+. At zoom 15+, orientation cones show which direction each camera faces. Tap any camera for details (brand, operator, direction, mount type).
 
-### Nearby Camera Alerts
+### Nearby Flock Camera Alerts
 
 1. Open Menu → FlockFree
-2. Enable **Nearby camera alerts**
+2. Enable **Nearby Flock camera alerts**
 3. Set the **Alert distance** (default: 200 meters)
-4. While navigating or moving, you will receive a toast alert with vibration when approaching a known camera
+4. While navigating or moving, you will receive a toast alert with vibration when approaching a known Flock camera
 5. Enable **WiFi Flock scan** to also detect Flock Safety cameras via WiFi beacon scanning
 
 Use **Check map center alert** in settings to bench-test alerts without driving. You can also trigger a test alert via ADB:
@@ -196,9 +196,9 @@ adb shell am broadcast -a net.osmand.flockfree.TEST_ALERT
 ### Route Avoidance
 
 1. Open Menu → FlockFree
-2. Enable **Avoid cameras on routes**
-3. Calculate a route as normal. FlockFree runs a second pass to block roads adjacent to known cameras and reroutes around them.
-4. A toast summary shows how many cameras were found near the route. The result persists in Settings as "Last route check".
+2. Enable **Avoid Flock cameras on routes**
+3. Calculate a route as normal. FlockFree runs a second pass to block roads adjacent to known Flock cameras and reroutes around them.
+4. A toast summary shows how many Flock cameras were found near the route. The result persists in Settings as "Last route check".
 
 Note: Route avoidance works with offline vector maps only.
 
@@ -229,16 +229,16 @@ Nothing uploads automatically. You always review and confirm before submitting.
 
 | Setting | Description |
 |---------|-------------|
-| Show cameras on map | Toggle camera point visibility |
-| Camera data | Shows database status, source, and last refresh |
-| Refresh camera data | Manually refresh from network |
-| Nearest camera at map center | Find the closest camera within 1km |
-| Avoid cameras on routes | Enable experimental route avoidance |
-| Route corridor radius | Distance from route to check for cameras |
+| Show Flock cameras on map | Toggle Flock camera point visibility |
+| Flock camera data | Shows database status, source, and last refresh |
+| Refresh Flock camera data | Manually refresh from network |
+| Nearest Flock camera at map center | Find the closest Flock camera within 5km |
+| Avoid Flock cameras on routes | Enable experimental route avoidance |
+| Route corridor radius | Distance from route to check for Flock cameras |
 | Live traffic routing (experimental) | Use TomTom traffic as a soft route cost when a key is configured |
 | TomTom API key | Device-local traffic API key; blank disables TomTom traffic routing |
 | Last traffic routing check | Shows the last traffic-routing result or skip reason |
-| Nearby camera alerts | Enable proximity toast + vibration alerts |
+| Nearby Flock camera alerts | Enable proximity toast + vibration alerts |
 | Alert distance | Radius for proximity alerts |
 | WiFi Flock scan | Enable WiFi beacon scanning for Flock Safety cameras |
 | Check map center alert | Bench-test alerts from current map position |
@@ -246,9 +246,9 @@ Nothing uploads automatically. You always review and confirm before submitting.
 | CYD BLE hardware | Enable CYD Bluetooth connection |
 | Simulate CYD detection | Create a test detection marker |
 | Request CYD status | Query CYD for telemetry |
-| Camera proximity widget | Add to active navigation for route camera count awareness |
+| Camera proximity widget | Add to active navigation for route Flock camera count awareness |
 | Traffic widget | Add to map screen for live traffic refresh and route color status |
-| Quick actions | Toggle cameras, avoidance, alerts, or add a camera from the quick action menu |
+| Quick actions | Toggle Flock cameras, avoidance, alerts, or add a camera from the quick action menu |
 
 ## Verification Scripts
 
@@ -268,14 +268,14 @@ For developers and field testers:
 - **Package:** `com.yetiwurks.flockfree`
 - **Min Android:** API 21 (Android 5.0)
 - **Target:** Android 14 (API 34)
-- **Camera seed:** 106,283 points (bundled, offline-first)
+- **Flock camera index:** 89,942 Flock-labeled points from the bundled source snapshot (offline-first)
 - **Camera data source:** [DeFlock](https://deflock.org) / [OpenStreetMap](https://openstreetmap.org)
 
 ## Known Limitations
 
 - Route avoidance is offline-only (requires downloaded vector maps)
 - Iterative relaxation caps at 4 retries to limit recalculation latency; very dense camera areas may still fall back to the original route
-- Multi-pass avoidance caps at 5 passes; extremely camera-dense corridors may not reach zero cameras
+- The reserved multi-pass reroute helper is disabled in the current build; active avoidance uses full blocking plus iterative relaxation.
 - Optional CYD detection to camera submission is a manual review flow (no auto-upload)
 - Reporting flow opens the editor but does not verify end-to-end OSM upload
 - No live RF drive test completed yet (WiFi detection and bench simulation verified only)
