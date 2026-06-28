@@ -317,7 +317,7 @@ class RouteRecalculationHelper {
 		RouteCalculationProgress calculationProgress = params.calculationProgress;
 		if (isRouteBeingCalculated()) {
 			if (lastTask != null && lastTask.params == params) {
-				progressRoute.onUpdateCalculationProgress((int) calculationProgress.getLinearProgress());
+				progressRoute.onUpdateCalculationProgress(Math.round(calculationProgress.getDisplayProgress()));
 				if (calculationProgress.requestPrivateAccessRouting) {
 					progressRoute.onRequestPrivateAccessRouting();
 				}
@@ -327,6 +327,7 @@ class RouteRecalculationHelper {
 			if (calculationProgress.requestPrivateAccessRouting) {
 				progressRoute.onRequestPrivateAccessRouting();
 			}
+			progressRoute.onUpdateCalculationProgress(100);
 			progressRoute.onCalculationFinish();
 		}
 		return false;
@@ -334,9 +335,11 @@ class RouteRecalculationHelper {
 
 	private void onRouteCalculationFinish(@NonNull RouteCalculationParams params) {
 		if (params.calculationProgressListener != null) {
+			params.calculationProgressListener.onUpdateCalculationProgress(100);
 			params.calculationProgressListener.onCalculationFinish();
 		} else {
 			for (RouteCalculationProgressListener listener : calculationProgressListeners) {
+				listener.onUpdateCalculationProgress(100);
 				listener.onCalculationFinish();
 			}
 		}

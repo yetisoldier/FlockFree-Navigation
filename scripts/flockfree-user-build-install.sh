@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# User-run helper. Repository AGENTS.md forbids agents from running Gradle build tasks.
+# Build/install helper for local FlockFree test APKs.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PHONE_SERIAL="${PHONE_SERIAL:-192.168.1.139:39183}"
 ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
 ANDROID_SDK="${ANDROID_SDK:-$ANDROID_HOME}"
-GRADLE_TASK="${GRADLE_TASK:-:OsmAnd:assembleGplayFreeLegacyFatDebug}"
-APK_PATH="$ROOT_DIR/OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-debug.apk"
+GRADLE_TASK="${GRADLE_TASK:-:OsmAnd:assembleGplayFreeOpenglFatDebug}"
+APK_PATH="$ROOT_DIR/OsmAnd/build/outputs/apk/gplayFreeOpenglFat/debug/OsmAnd-gplayFree-opengl-fat-debug.apk"
 FLOCKFREE_ARTIFACT_VERSION="${FLOCKFREE_ARTIFACT_VERSION:-local}"
 ARTIFACT_NAME="${ARTIFACT_NAME:-FlockFree-Navigation-${FLOCKFREE_ARTIFACT_VERSION}-sideload.apk}"
 ARTIFACT_PATH="$ROOT_DIR/build-artifacts/$ARTIFACT_NAME"
@@ -33,7 +33,7 @@ Environment:
   ARTIFACT_NAME  Output APK filename, default: $ARTIFACT_NAME
   FIELD_DURATION Timed field-session seconds, default: $FIELD_DURATION
 
-Note: this script runs Gradle. It is for Eric/manual use, not agent execution.
+Note: this script builds the OpenGL flavor so 2D/3D map mode and 3D buildings are available.
 EOF
 }
 

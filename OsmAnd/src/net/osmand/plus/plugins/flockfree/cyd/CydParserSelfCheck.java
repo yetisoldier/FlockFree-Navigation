@@ -1,15 +1,9 @@
 package net.osmand.plus.plugins.flockfree.cyd;
 
-import org.apache.commons.logging.Log;
-
-import net.osmand.PlatformUtil;
-
 import java.io.File;
 import java.util.List;
 
 final class CydParserSelfCheck {
-
-	private static final Log log = PlatformUtil.getLog(CydParserSelfCheck.class);
 
 	private CydParserSelfCheck() {
 	}
@@ -22,7 +16,7 @@ final class CydParserSelfCheck {
 		checkTopLevelDetectionGps();
 		checkMapCenterLocalDetectionGps();
 		checkDetectionStoreRoundTrip();
-		log.info("CydParserSelfCheck passed");
+		System.out.println("CydParserSelfCheck passed");
 	}
 
 	private static void checkPartialLineParsing() {

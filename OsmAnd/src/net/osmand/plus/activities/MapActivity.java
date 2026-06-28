@@ -57,6 +57,7 @@ import net.osmand.data.QuadRect;
 import net.osmand.data.RotatedTileBox;
 import net.osmand.data.ValueHolder;
 import net.osmand.plus.AppInitializeListener;
+import net.osmand.plus.NavigationService;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
 import net.osmand.plus.Version;
@@ -1381,23 +1382,25 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 			flockFreeCameraWidget.setVisibility(View.GONE);
 			return;
 		}
-		RoutingHelper rh = app.getRoutingHelper();
-		if (!rh.isFollowingMode() || rh.isRouteBeingCalculated()) {
+		if (!isFlockFreeActiveNavigationRouteAvailable()) {
 			flockFreeCameraWidget.setVisibility(View.GONE);
 			return;
 		}
-		RouteCalculationResult route = rh.getRoute();
-		if (route == null || !route.isCalculated()) {
-			flockFreeCameraWidget.setVisibility(View.GONE);
-			return;
-		}
-		List<Location> routeLocations = route.getImmutableAllLocations();
-		if (routeLocations == null || routeLocations.isEmpty()) {
+		CameraData cameraData = plugin.getCameraData();
+		if (!cameraData.isDataLoaded()) {
 			flockFreeCameraWidget.setVisibility(View.GONE);
 			return;
 		}
 		Location location = app.getLocationProvider().getLastKnownLocation();
 		if (location == null) {
+			flockFreeCameraWidget.setVisibility(View.GONE);
+			return;
+		}
+		RoutingHelper rh = app.getRoutingHelper();
+		RouteCalculationResult route = rh.getRoute();
+		List<Location> routeLocations = route != null && route.isCalculated()
+				? route.getImmutableAllLocations() : null;
+		if (routeLocations == null || routeLocations.isEmpty()) {
 			flockFreeCameraWidget.setVisibility(View.GONE);
 			return;
 		}
@@ -1419,6 +1422,24 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 					? R.drawable.widget_camera_route_night : R.drawable.widget_camera_route_day);
 		}
 		flockFreeCameraWidget.setVisibility(View.VISIBLE);
+	}
+
+	private boolean isFlockFreeActiveNavigationRouteAvailable() {
+		NavigationService navigationService = app.getNavigationService();
+		if (navigationService == null || !navigationService.isUsedBy(NavigationService.USED_BY_NAVIGATION)) {
+			return false;
+		}
+		RoutingHelper routingHelper = app.getRoutingHelper();
+		if (!routingHelper.isFollowingMode() || routingHelper.isRoutePlanningMode()
+				|| routingHelper.isPauseNavigation() || routingHelper.isRouteBeingCalculated()
+				|| routingHelper.isRouteWasFinished() || routingHelper.getFinalLocation() == null) {
+			return false;
+		}
+		RouteCalculationResult route = routingHelper.getRoute();
+		return route != null && route.isCalculated()
+				&& routingHelper.getLeftDistance() > 0
+				&& route.getImmutableAllLocations() != null
+				&& !route.getImmutableAllLocations().isEmpty();
 	}
 
 	private void updateFlockFreeCameraWidgetPosition() {

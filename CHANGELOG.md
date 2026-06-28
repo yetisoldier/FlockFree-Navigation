@@ -4,6 +4,28 @@ All notable changes to FlockFree Navigation are documented here.
 
 ## [Unreleased]
 
+## [v1.7.1] — 2026-06-28
+
+### Added
+- US street-address detection now routes likely address searches through the US Census geocoder before falling back to broader online search, fixing valid addresses that OsmAnd's local fuzzy search treated as POI queries.
+- Active navigation now uses a Google Maps-style directional vehicle arrow with route and bearing fallbacks so the marker keeps a stable heading through brief GPS gaps or low-speed movement.
+
+### Changed
+- Route calculation progress now reserves its final segment for FlockFree post-route comparison/refinement work and only reaches 100% after route options are ready.
+- Camera proximity widget now appears only during active navigation and reports known ALPR cameras remaining on the active route.
+- Developer build/install docs and helper scripts now target the `gplayFreeOpenglFat` APK flavor so local test builds include the OpenGL renderer, 2D/3D mode, and 3D buildings.
+
+### Fixed
+- Non-navigation car tracking now snaps accurate followed-map positions to the nearest road when snap-to-road is enabled, capped at 35 meters to avoid dragging truly off-road positions onto unrelated streets.
+- Camera markers now redraw during map rotate, pan, and zoom animations and use the elevated OpenGL projection path, preventing delayed marker jumps during animated map movement.
+- Camera viewport queries now use a short-lived padded bounds cache so camera-dense map rotation does not repeatedly re-query and temporarily drop nearby markers.
+- Map tracking animation and prediction windows were tightened to reduce laggy or over-projected vehicle movement on bursty location updates.
+
+### Verification
+- Built the OpenGL debug APK, installed it on a Moto G Stylus, and confirmed FlockFree launches to `MapActivity` without FlockFree fatal or ANR log lines.
+- Bench-tested the road-stick fix with an intentionally off-road mock driving path in South St. Paul; the vehicle marker snapped back onto 9th Avenue South.
+- Camera marker redraw changes are compiled into the release; final confidence still benefits from a real rotate/pan field pass over a camera-dense area.
+
 ## [v1.6.3] — 2026-06-24
 
 ### Changed

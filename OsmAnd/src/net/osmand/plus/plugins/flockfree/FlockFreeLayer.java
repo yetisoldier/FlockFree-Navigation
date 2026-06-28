@@ -38,6 +38,8 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private static final float CLUSTER_BASE_RADIUS_DP = 10f;
     private static final float CLUSTER_RADIUS_INCREMENT_DP = 1f;
     private static final float CLUSTER_MAX_RADIUS_DP = 20f;
+    private static final double CAMERA_QUERY_BOUNDS_PADDING_FACTOR = 0.25;
+    private static final long CAMERA_QUERY_CACHE_TTL_MS = 10_000L;
 
     private final FlockFreePlugin plugin;
     private final Paint markerPaint;
@@ -79,6 +81,11 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private List<CameraData.CameraPoint> visibleCameras = new ArrayList<>();
     private List<CydDetectionCandidate> visibleDetections = new ArrayList<>();
     private List<CameraCluster> visibleClusters = new ArrayList<>();
+    private final List<CameraData.CameraPoint> cachedCameraQuery = new ArrayList<>();
+    @Nullable
+    private QuadRect cachedCameraQueryBounds;
+    private int cachedCameraQueryZoom = -1;
+    private long cachedCameraQueryTimeMs;
 
     /**
      * A cluster of cameras that fall within the same grid cell.
@@ -152,6 +159,20 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     }
 
     @Override
+    public boolean areMapRendererViewEventsAllowed() {
+        return true;
+    }
+
+    @Override
+    public void onUpdateFrame(@NonNull MapRendererView mapRenderer) {
+        super.onUpdateFrame(mapRenderer);
+        if (plugin.CAMERA_SHOW_LAYER.get() && view != null
+                && (view.isAnimatingMapRotation() || view.isAnimatingMapMove() || view.isAnimatingMapZoom())) {
+            view.refreshMap();
+        }
+    }
+
+    @Override
     public void onDraw(Canvas canvas, RotatedTileBox tileBox, DrawSettings drawSettings) {
         if (!plugin.CAMERA_SHOW_LAYER.get()) {
             return;
@@ -162,8 +183,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         if (tileBox.getZoom() >= MIN_ZOOM_TO_SHOW) {
             CameraData cameraData = plugin.getCameraData();
             if (cameraData.isDataLoaded()) {
-                List<CameraData.CameraPoint> cameras = cameraData.getCamerasInBoundingBox(
-                        screenArea.top, screenArea.left, screenArea.bottom, screenArea.right);
+                List<CameraData.CameraPoint> cameras = getCamerasForScreen(cameraData, screenArea, tileBox.getZoom());
                 visibleCameras.clear();
                 visibleCameras.addAll(cameras);
                 if (tileBox.getZoom() >= CLUSTER_MIN_ZOOM) {
@@ -176,6 +196,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
                     drawClusters(canvas, tileBox, cameras);
                 }
             } else {
+                clearCameraQueryCache();
                 visibleCameras.clear();
             }
         } else {
@@ -186,6 +207,63 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         for (CydDetectionCandidate detection : visibleDetections) {
             drawCydDetection(canvas, tileBox, detection);
         }
+    }
+
+    @NonNull
+    private List<CameraData.CameraPoint> getCamerasForScreen(@NonNull CameraData cameraData,
+                                                             @NonNull QuadRect screenArea,
+                                                             int zoom) {
+        long now = System.currentTimeMillis();
+        QuadRect cachedBounds = cachedCameraQueryBounds;
+        if (cachedBounds != null
+                && cachedCameraQueryZoom == zoom
+                && now - cachedCameraQueryTimeMs < CAMERA_QUERY_CACHE_TTL_MS
+                && containsBounds(cachedBounds, screenArea)) {
+            return cachedCameraQuery;
+        }
+
+        QuadRect queryBounds = expandBounds(screenArea);
+        cachedCameraQuery.clear();
+        cachedCameraQuery.addAll(cameraData.getCamerasInBoundingBox(
+                queryBounds.top, queryBounds.left, queryBounds.bottom, queryBounds.right));
+        cachedCameraQueryBounds = queryBounds;
+        cachedCameraQueryZoom = zoom;
+        cachedCameraQueryTimeMs = now;
+        return cachedCameraQuery;
+    }
+
+    private void clearCameraQueryCache() {
+        cachedCameraQuery.clear();
+        cachedCameraQueryBounds = null;
+        cachedCameraQueryZoom = -1;
+        cachedCameraQueryTimeMs = 0;
+    }
+
+    @NonNull
+    private QuadRect expandBounds(@NonNull QuadRect bounds) {
+        double top = Math.max(bounds.top, bounds.bottom);
+        double bottom = Math.min(bounds.top, bounds.bottom);
+        double latPadding = Math.abs(top - bottom) * CAMERA_QUERY_BOUNDS_PADDING_FACTOR;
+        if (bounds.left > bounds.right) {
+            return new QuadRect(bounds.left, top + latPadding, bounds.right, bottom - latPadding);
+        }
+        double lonPadding = Math.abs(bounds.right - bounds.left) * CAMERA_QUERY_BOUNDS_PADDING_FACTOR;
+        return new QuadRect(bounds.left - lonPadding, top + latPadding,
+                bounds.right + lonPadding, bottom - latPadding);
+    }
+
+    private boolean containsBounds(@NonNull QuadRect cached, @NonNull QuadRect screen) {
+        double cachedTop = Math.max(cached.top, cached.bottom);
+        double cachedBottom = Math.min(cached.top, cached.bottom);
+        double screenTop = Math.max(screen.top, screen.bottom);
+        double screenBottom = Math.min(screen.top, screen.bottom);
+        if (screenTop > cachedTop || screenBottom < cachedBottom) {
+            return false;
+        }
+        if (cached.left > cached.right || screen.left > screen.right) {
+            return false;
+        }
+        return screen.left >= cached.left && screen.right <= cached.right;
     }
 
     /**
@@ -468,7 +546,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private PointF getPixelFromLatLon(@NonNull RotatedTileBox tileBox, double lat, double lon) {
         MapRendererView mapRenderer = getMapRenderer();
         if (mapRenderer != null) {
-            return NativeUtilities.getPixelFromLatLon(mapRenderer, tileBox, lat, lon);
+            return NativeUtilities.getElevatedPixelFromLatLon(mapRenderer, tileBox, lat, lon);
         }
         return new PointF(tileBox.getPixXFromLatLon(lat, lon), tileBox.getPixYFromLatLon(lat, lon));
     }

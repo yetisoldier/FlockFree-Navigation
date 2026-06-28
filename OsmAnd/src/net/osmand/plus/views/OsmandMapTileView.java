@@ -709,7 +709,8 @@ public class OsmandMapTileView implements IMapDownloaderCallback {
 			baseZoom = Math.max(MIN_ZOOM_LEVEL_TO_ADJUST_CAMERA_TILT, Math.min(baseZoom, MAX_ZOOM_LIMIT));
 		}
 		int angle = 90 - (baseZoom - 2) * 5;
-		return (int) Math.max(minAllowedElevationAngle, Math.min(angle, DEFAULT_ELEVATION_ANGLE));
+		float minAngle = normalizeMinAllowedElevationAngle();
+		return (int) Math.max(minAngle, Math.min(angle, DEFAULT_ELEVATION_ANGLE));
 	}
 
 	public float getMinAllowedElevationAngle() {
@@ -717,7 +718,9 @@ public class OsmandMapTileView implements IMapDownloaderCallback {
 	}
 
 	public void setMinAllowedElevationAngle(float minAllowedElevationAngle) {
-		this.minAllowedElevationAngle = minAllowedElevationAngle;
+		this.minAllowedElevationAngle = Float.isFinite(minAllowedElevationAngle)
+				? minAllowedElevationAngle
+				: MIN_ALLOWED_ELEVATION_ANGLE;
 	}
 
 	public void setIntZoom(int zoom) {
@@ -1672,7 +1675,24 @@ public class OsmandMapTileView implements IMapDownloaderCallback {
 	}
 
 	public float normalizeElevationAngle(float elevationAngle) {
-		return elevationAngle > 90 ? 90f : Math.max(minAllowedElevationAngle, elevationAngle);
+		if (!Float.isFinite(elevationAngle)) {
+			LOG.warn("Invalid map elevation angle " + elevationAngle
+					+ "; falling back to " + DEFAULT_ELEVATION_ANGLE);
+			elevationAngle = DEFAULT_ELEVATION_ANGLE;
+		}
+		float minAngle = normalizeMinAllowedElevationAngle();
+		return elevationAngle > DEFAULT_ELEVATION_ANGLE
+				? DEFAULT_ELEVATION_ANGLE
+				: Math.max(minAngle, elevationAngle);
+	}
+
+	private float normalizeMinAllowedElevationAngle() {
+		if (!Float.isFinite(minAllowedElevationAngle)) {
+			LOG.warn("Invalid minimum map elevation angle " + minAllowedElevationAngle
+					+ "; falling back to " + MIN_ALLOWED_ELEVATION_ANGLE);
+			minAllowedElevationAngle = MIN_ALLOWED_ELEVATION_ANGLE;
+		}
+		return minAllowedElevationAngle;
 	}
 
 	protected void zoomToAnimate(int zoom, double zoomToAnimate, int centerX, int centerY, boolean notify) {

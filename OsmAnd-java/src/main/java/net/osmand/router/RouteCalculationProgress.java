@@ -60,6 +60,15 @@ public class RouteCalculationProgress implements Serializable {
 
 	private static final float INITIAL_PROGRESS = 0.01f;
 	private static final float FIRST_ITERATION = 0.72f;
+	private static final float ROUTE_DISPLAY_PROGRESS_MAX = 92f;
+	private static final float POST_ROUTE_DISPLAY_PROGRESS_MIN = 92f;
+	private static final float POST_ROUTE_DISPLAY_PROGRESS_MAX = 98f;
+
+	private int postRouteWorkTotalSteps;
+	private int postRouteWorkCompletedSteps;
+	private float postRouteWorkStepProgress;
+	private long postRouteWorkStepStartTimeMs;
+	private long postRouteWorkExpectedStepDurationMs = 3_000L;
 
 	public static RouteCalculationProgress capture(RouteCalculationProgress cp) {
 		RouteCalculationProgress p = new RouteCalculationProgress();
@@ -174,6 +183,65 @@ public class RouteCalculationProgress implements Serializable {
 			progress = (float) ((iteration + Math.min(pr, 0.7)) / totalIterations);
 		}
 		return Math.min(progress * 100f, 99);
+	}
+
+	public float getDisplayProgress() {
+		float routeProgress = Math.min(getLinearProgress(), ROUTE_DISPLAY_PROGRESS_MAX);
+		if (postRouteWorkTotalSteps > 0) {
+			float postRouteProgress = getPostRouteWorkProgress();
+			float displayProgress = POST_ROUTE_DISPLAY_PROGRESS_MIN
+					+ postRouteProgress * (POST_ROUTE_DISPLAY_PROGRESS_MAX - POST_ROUTE_DISPLAY_PROGRESS_MIN);
+			return Math.max(routeProgress, Math.min(displayProgress, POST_ROUTE_DISPLAY_PROGRESS_MAX));
+		}
+		return routeProgress;
+	}
+
+	public void startPostRouteWork(int totalSteps, long expectedStepDurationMs) {
+		if (totalSteps <= 0) {
+			return;
+		}
+		postRouteWorkTotalSteps = totalSteps;
+		postRouteWorkCompletedSteps = 0;
+		postRouteWorkStepProgress = 0;
+		postRouteWorkExpectedStepDurationMs = Math.max(500L, expectedStepDurationMs);
+		postRouteWorkStepStartTimeMs = System.currentTimeMillis();
+	}
+
+	public void beginPostRouteWorkStep(int completedSteps) {
+		if (postRouteWorkTotalSteps <= 0) {
+			return;
+		}
+		postRouteWorkCompletedSteps = Math.max(0, Math.min(completedSteps, postRouteWorkTotalSteps));
+		postRouteWorkStepProgress = 0;
+		postRouteWorkStepStartTimeMs = System.currentTimeMillis();
+	}
+
+	public void completePostRouteWorkStep(int completedSteps) {
+		if (postRouteWorkTotalSteps <= 0) {
+			return;
+		}
+		postRouteWorkCompletedSteps = Math.max(0, Math.min(completedSteps, postRouteWorkTotalSteps));
+		postRouteWorkStepProgress = 0;
+		postRouteWorkStepStartTimeMs = System.currentTimeMillis();
+	}
+
+	public void finishPostRouteWork() {
+		if (postRouteWorkTotalSteps <= 0) {
+			return;
+		}
+		postRouteWorkCompletedSteps = postRouteWorkTotalSteps;
+		postRouteWorkStepProgress = 1f;
+		postRouteWorkStepStartTimeMs = 0;
+	}
+
+	private float getPostRouteWorkProgress() {
+		float stepProgress = postRouteWorkStepProgress;
+		if (postRouteWorkStepStartTimeMs > 0 && postRouteWorkCompletedSteps < postRouteWorkTotalSteps) {
+			long elapsed = Math.max(0, System.currentTimeMillis() - postRouteWorkStepStartTimeMs);
+			float timedProgress = Math.min(0.9f, elapsed / (float) postRouteWorkExpectedStepDurationMs);
+			stepProgress = Math.max(stepProgress, timedProgress);
+		}
+		return Math.min(1f, (postRouteWorkCompletedSteps + stepProgress) / postRouteWorkTotalSteps);
 	}
 
 	public float getApproximationProgress() {

@@ -115,12 +115,6 @@ public class FlockFreePlugin extends OsmandPlugin {
             this.privacyCameraCount = Math.max(0, privacyCameraCount);
         }
 
-        @NonNull
-        public static RouteComparisonInfo fromCurrentRoute(int distanceMeters, int timeSeconds, int cameraCount) {
-            return new RouteComparisonInfo(distanceMeters, timeSeconds, cameraCount,
-                    distanceMeters, timeSeconds, cameraCount);
-        }
-
         public int getAvoidedCameraCount() {
             return Math.max(0, fastestCameraCount - privacyCameraCount);
         }

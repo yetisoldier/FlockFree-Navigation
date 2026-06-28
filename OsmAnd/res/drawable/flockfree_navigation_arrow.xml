@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+	android:width="40dp"
+	android:height="40dp"
+	android:viewportWidth="52"
+	android:viewportHeight="52">
+	<path
+		android:fillColor="#33000000"
+		android:pathData="M15.4,27.6L9.5,38.8C9.4,39 9.3,39.3 9.3,39.5C9.3,40.2 9.9,40.8 10.6,40.8H10.7C10.8,40.8 11,40.8 11.1,40.7L44.5,29.1C45.1,28.9 45.5,28.3 45.5,27.7C45.5,27 45.1,26.5 44.5,26.3L11.1,14.7C11,14.6 10.8,14.6 10.7,14.6H10.6C9.9,14.6 9.3,15.2 9.3,15.9C9.3,16.1 9.4,16.4 9.5,16.6L15.4,27.6Z" />
+	<path
+		android:fillColor="@color/google_maps_blue"
+		android:strokeColor="@android:color/white"
+		android:strokeLineJoin="round"
+		android:strokeWidth="2.4"
+		android:pathData="M14,26L8.1,37.2C8,37.4 8,37.6 8,37.8C8,38.5 8.5,39 9.2,39H9.3C9.4,39 9.6,39 9.7,38.9L43.1,27.3C43.6,27.1 44,26.6 44,26C44,25.4 43.6,24.9 43.1,24.7L9.7,13.1C9.6,13 9.4,13 9.3,13H9.2C8.5,13 8,13.5 8,14.2C8,14.4 8,14.6 8.1,14.8L14,26Z" />
+</vector>

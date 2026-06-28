@@ -41,6 +41,7 @@ import net.osmand.StateChangedListener;
 import net.osmand.binary.GeocodingUtilities.GeocodingResult;
 import net.osmand.binary.RouteDataObject;
 import net.osmand.data.LatLon;
+import net.osmand.data.QuadPointDouble;
 import net.osmand.plus.auto.NavigationSession;
 import net.osmand.plus.helpers.CurrentPositionHelper;
 import net.osmand.plus.helpers.LocationCallback;
@@ -89,6 +90,7 @@ public class OsmAndLocationProvider implements SensorEventListener {
 	private static final int UPCOMING_TUNNEL_DISTANCE = 250;
 
 	public static final float ACCURACY_FOR_GPX_AND_ROUTING = 50;
+	private static final double FLOCKFREE_TRACKING_ROAD_SNAP_MAX_DISTANCE_METERS = 35;
 
 	public static final int NOT_SWITCH_TO_NETWORK_WHEN_GPS_LOST_MS = 12000;
 
@@ -657,8 +659,69 @@ public class OsmAndLocationProvider implements SensorEventListener {
 			routingHelper.setCurrentLocation(location, false);
 		} else if (getLocationSimulation().isRouteAnimating()) {
 			routingHelper.setCurrentLocation(location, false);
+		} else {
+			updatedLocation = snapTrackingLocationToRoad(location, routingHelper);
 		}
 		return updatedLocation;
+	}
+
+	private net.osmand.Location snapTrackingLocationToRoad(@Nullable net.osmand.Location location,
+	                                                       @NonNull RoutingHelper routingHelper) {
+		if (location == null || !app.getSettings().SNAP_TO_ROAD.get()
+				|| routingHelper.isRoutePlanningMode() || routingHelper.isRouteBeingCalculated()
+				|| !app.getMapViewTrackingUtilities().isMapLinkedToLocation()
+				|| !app.getSettings().getApplicationMode().isDerivedRoutingFrom(ApplicationMode.CAR)
+				|| !isPointAccurateForRouting(location)) {
+			return location;
+		}
+		RouteDataObject road = currentPositionHelper.getLastKnownRouteSegment(location);
+		return road != null ? projectLocationToRoad(location, road) : location;
+	}
+
+	@NonNull
+	private net.osmand.Location projectLocationToRoad(@NonNull net.osmand.Location location,
+	                                                  @NonNull RouteDataObject road) {
+		if (road.getPointsLength() < 2) {
+			return location;
+		}
+		int px = MapUtils.get31TileNumberX(location.getLongitude());
+		int py = MapUtils.get31TileNumberY(location.getLatitude());
+		QuadPointDouble nearest = null;
+		int nearestSegment = -1;
+		double nearestDistance = Double.MAX_VALUE;
+		for (int i = 1; i < road.getPointsLength(); i++) {
+			QuadPointDouble projected = MapUtils.getProjectionPoint31(px, py,
+					road.getPoint31XTile(i - 1), road.getPoint31YTile(i - 1),
+					road.getPoint31XTile(i), road.getPoint31YTile(i));
+			double projectedLat = MapUtils.get31LatitudeY((int) projected.y);
+			double projectedLon = MapUtils.get31LongitudeX((int) projected.x);
+			double distance = MapUtils.getDistance(location.getLatitude(), location.getLongitude(),
+					projectedLat, projectedLon);
+			if (distance < nearestDistance) {
+				nearestDistance = distance;
+				nearest = projected;
+				nearestSegment = i;
+			}
+		}
+		if (nearest == null || nearestDistance > FLOCKFREE_TRACKING_ROAD_SNAP_MAX_DISTANCE_METERS) {
+			return location;
+		}
+		net.osmand.Location snapped = new net.osmand.Location(location);
+		snapped.setProvider((location.getProvider() != null ? location.getProvider() : "gps") + "-road");
+		snapped.setLatitude(MapUtils.get31LatitudeY((int) nearest.y));
+		snapped.setLongitude(MapUtils.get31LongitudeX((int) nearest.x));
+		if (!snapped.hasBearing() && nearestSegment > 0) {
+			net.osmand.Location segmentStart = new net.osmand.Location("road");
+			segmentStart.setLatitude(MapUtils.get31LatitudeY(road.getPoint31YTile(nearestSegment - 1)));
+			segmentStart.setLongitude(MapUtils.get31LongitudeX(road.getPoint31XTile(nearestSegment - 1)));
+			net.osmand.Location segmentEnd = new net.osmand.Location("road");
+			segmentEnd.setLatitude(MapUtils.get31LatitudeY(road.getPoint31YTile(nearestSegment)));
+			segmentEnd.setLongitude(MapUtils.get31LongitudeX(road.getPoint31XTile(nearestSegment)));
+			if (!MapUtils.areLatLonEqual(segmentStart, segmentEnd)) {
+				snapped.setBearing(segmentStart.bearingTo(segmentEnd));
+			}
+		}
+		return snapped;
 	}
 
 	public void setLocationFromService(net.osmand.Location location) {

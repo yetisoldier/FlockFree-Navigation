@@ -107,6 +107,9 @@ public class FlockFreeRouteComparisonCard extends MapBaseCard {
 
 	@NonNull
 	private String formatAvoidedCameras(int avoidedCameras) {
+		if (avoidedCameras <= 0) {
+			return app.getString(R.string.flockfree_route_comparison_active_route);
+		}
 		String avoided = app.getResources().getQuantityString(R.plurals.flockfree_route_tradeoff_avoids_cameras,
 				avoidedCameras, avoidedCameras);
 		int fewerPercent = comparisonInfo.fastestCameraCount > 0

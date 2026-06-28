@@ -101,6 +101,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Stack;
 
@@ -118,6 +119,12 @@ public class QuickSearchDialogFragment extends BaseFullScreenDialogFragment impl
 	private static final String QUICK_SEARCH_TOOLBAR_TITLE_KEY = "quick_search_toolbar_title_key";
 	private static final String QUICK_SEARCH_TOOLBAR_VISIBLE_KEY = "quick_search_toolbar_visible_key";
 	private static final String QUICK_SEARCH_FAB_VISIBLE_KEY = "quick_search_fab_visible_key";
+	private static final String[] STREET_ADDRESS_HINTS = {
+			" st ", " street ", " ave ", " avenue ", " rd ", " road ", " dr ", " drive ",
+			" blvd ", " boulevard ", " ln ", " lane ", " ct ", " court ", " pl ", " place ",
+			" ter ", " terrace ", " way ", " hwy ", " highway ", " pkwy ", " parkway ",
+			" cir ", " circle ", " trl ", " trail "
+	};
 
 	private static final String QUICK_SEARCH_RUN_SEARCH_FIRST_TIME_KEY = "quick_search_run_search_first_time_key";
 	private static final String QUICK_SEARCH_PHRASE_DEFINED_KEY = "quick_search_phrase_defined_key";
@@ -1549,12 +1556,35 @@ public class QuickSearchDialogFragment extends BaseFullScreenDialogFragment impl
 	}
 
 	private void runSearch(String text) {
+		maybeStartOnlineAddressSearch(text);
 		showProgressBar();
 		SearchSettings settings = searchUICore.getSearchSettings();
 		if (settings.getRadiusLevel() != 1) {
 			searchUICore.updateSettings(settings.setRadiusLevel(1));
 		}
 		runCoreSearch(text, true, false);
+	}
+
+	private void maybeStartOnlineAddressSearch(@NonNull String text) {
+		if (!searchUICore.isOnlineSearch() && isLikelyStreetAddress(text)
+				&& settings.isInternetConnectionAvailable()) {
+			startOnlineSearch();
+			updateTabBarVisibility(false);
+		}
+	}
+
+	private boolean isLikelyStreetAddress(@NonNull String text) {
+		String trimmed = text.trim();
+		if (trimmed.length() < 8 || !Character.isDigit(trimmed.charAt(0))) {
+			return false;
+		}
+		String normalized = " " + trimmed.toLowerCase(Locale.US).replaceAll("[^a-z0-9]+", " ") + " ";
+		for (String hint : STREET_ADDRESS_HINTS) {
+			if (normalized.contains(hint)) {
+				return true;
+			}
+		}
+		return trimmed.contains(",") && normalized.matches(".* \\d{5}( \\d{4})? .*");
 	}
 
 	private void runCoreSearch(String text, boolean showQuickResult, boolean searchMore) {
@@ -1891,7 +1921,7 @@ public class QuickSearchDialogFragment extends BaseFullScreenDialogFragment impl
 			moreListItem.setInterruptedSearch(interruptedSearch);
 			moreListItem.setEmptySearch(isResultEmpty());
 			moreListItem.setSearchMoreAvailable(searchMoreAvailable);
-			moreListItem.setSecondaryButtonVisible(searchUICore.isOnlineSearch());
+			moreListItem.setSecondaryButtonVisible(!searchUICore.isOnlineSearch());
 			mainSearchFragment.addListItem(moreListItem);
 			updateSendEmptySearchBottomBar(isResultEmpty() && !interruptedSearch);
 		}

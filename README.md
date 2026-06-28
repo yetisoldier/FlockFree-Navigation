@@ -9,6 +9,7 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 ### Camera Awareness
 - **105,000+ camera database** — Bundled seed of 106,283 ALPR cameras with direction data, stored in SQLite for fast spatial queries
 - **Camera orientation cones** — Translucent view cones rendered on the map at zoom 15+ showing camera heading
+- **Rotation-stable camera markers** — Camera points use the OpenGL elevated projection path and refresh during rotate, pan, and zoom animations to prevent delayed marker jumps
 - **Nearby camera alerts** — Toast alerts with vibration when approaching known cameras; cooldown logic prevents repeat alerts for the same camera
 - **WiFi Flock detection** — Passively scans for Flock Safety camera WiFi beacons and triggers alerts + CYD auto-pause when detected
 - **Nearest camera inspection** — Map-center query to find the closest camera within 1,000m
@@ -45,7 +46,8 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 ![Navigation HUD](docs/screenshots/ff-nav-options.png)
 
 - **Google Maps-inspired map styling** — Refined land (#F5F5F0), water (#AECDF0), and park (#C8E6C9) colors with reduced POI clutter, subtler road casing, and cleaner route colors. Night-mode palette tuned to match Google Maps dark theme.
-- **Modern navigation HUD** — Search bar, layer button, circular map controls, compact ETA/speed presentation, and a simplified blue location puck.
+- **Modern navigation HUD** — Search bar, layer button, circular map controls, compact ETA/speed presentation, and a directional blue vehicle arrow.
+- **Road-sticky vehicle tracking** — In car mode, followed-map tracking snaps accurate locations to the nearest road when snap-to-road is enabled, capped at 35m so truly off-road positions are left alone.
 - **Google Maps-style turn indicators** — Main turn card uses a teal background with a bold white arrow. The second-next-turn preview appears as a compact white chip below the main indicator with a blue arrow, dark distance text, and grey street name — matching Google Maps' layered turn guidance layout.
 - **Google Maps-style lane guidance** — Lane arrows show recommended lanes in white with a blue highlight outline and non-recommended lanes in grey, with day/night card backgrounds matching Google Maps.
 - **Automatic 3D tilt** — Map tilts to a perspective view during navigation and resets when stopped.
@@ -59,6 +61,7 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 
 ### Performance
 - **Rendering optimization** — Camera and incident map layers cache dp-to-px conversions and reuse Path/collection objects, eliminating ~3,000-5,000 per-frame allocations in camera-dense areas for smoother panning.
+- **Camera query cache** — Camera viewport lookups use a padded short-lived bounds cache during animated map movement, reducing marker churn in camera-dense areas.
 - **Listener leak fixes** — All navigation widgets (nav bar, report button, search chips, tilt controller, building transparency) properly unregister route listeners and Handler callbacks on plugin disable, preventing MapActivity retention.
 - **Android 14+ compatibility** — CYD BLE foreground service start is guarded against ForegroundServiceStartNotAllowedException with fallback to background service start.
 
@@ -74,7 +77,7 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for ALPR
 - **Add camera** — Open the ALPR reporting dialog at the current map center
 
 ### Map Widget
-- **Camera proximity widget** — Shows the count of known ALPR cameras within 1 km and the distance to the nearest one, updating in real time as you move. Positioned in the TOP panel to avoid overlap with the search bar in portrait mode.
+- **Camera proximity widget** — During active navigation, shows the count of known ALPR cameras remaining on the current route. It hides while casually browsing the map.
 - **Traffic status widget** — Shows current traffic routing status and last refresh time. Also positioned in the TOP panel.
 
 ### Branding
@@ -131,26 +134,26 @@ cd FlockFree-Navigation
 git clone --depth 1 https://github.com/osmandapp/OsmAnd-resources.git ../resources
 
 ANDROID_HOME=$HOME/Android/Sdk ANDROID_SDK=$HOME/Android/Sdk \
-  ./gradlew :OsmAnd:assembleGplayFreeLegacyFatDebug \
+  ./gradlew :OsmAnd:assembleGplayFreeOpenglFatDebug \
   -x test --no-daemon --max-workers=1
 ```
 
 The APK will be at:
 ```
-OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-debug.apk
+OsmAnd/build/outputs/apk/gplayFreeOpenglFat/debug/OsmAnd-gplayFree-opengl-fat-debug.apk
 ```
 
 For release builds:
 ```bash
-./gradlew :OsmAnd:assembleGplayFreeLegacyFatRelease
+./gradlew :OsmAnd:assembleGplayFreeOpenglFatRelease
 ```
-Release APK: `OsmAnd/build/outputs/apk/gplayFreeLegacyFat/release/OsmAnd-gplayFree-legacy-fat-release.apk`
+Release APK: `OsmAnd/build/outputs/apk/gplayFreeOpenglFat/release/OsmAnd-gplayFree-opengl-fat-release.apk`
 
 Both debug and release are signed with the flockfree-release.keystore.
 
 Install to a connected device:
 ```bash
-adb install -r OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-debug.apk
+adb install -r OsmAnd/build/outputs/apk/gplayFreeOpenglFat/debug/OsmAnd-gplayFree-opengl-fat-debug.apk
 ```
 
 ### One-command build + install (for developers)
@@ -243,7 +246,7 @@ Nothing uploads automatically. You always review and confirm before submitting.
 | CYD BLE hardware | Enable CYD Bluetooth connection |
 | Simulate CYD detection | Create a test detection marker |
 | Request CYD status | Query CYD for telemetry |
-| Camera proximity widget | Add to map screen for at-a-glance camera awareness |
+| Camera proximity widget | Add to active navigation for route camera count awareness |
 | Traffic widget | Add to map screen for live traffic refresh and route color status |
 | Quick actions | Toggle cameras, avoidance, alerts, or add a camera from the quick action menu |
 
@@ -276,6 +279,7 @@ For developers and field testers:
 - Optional CYD detection to camera submission is a manual review flow (no auto-upload)
 - Reporting flow opens the editor but does not verify end-to-end OSM upload
 - No live RF drive test completed yet (WiFi detection and bench simulation verified only)
+- Vehicle road-stick tracking and camera marker redraw were bench-tested with mock locations and app/device diagnostics; a real drive and a camera-dense rotate/pan pass are still recommended field checks.
 - Live traffic routing requires a user-provided TomTom API key and is subject to TomTom's account terms, quotas, and pricing
 - Weather forecast layers are not enabled by FlockFree by default because they rely on OsmAnd-managed forecast tile downloads rather than a user-provided provider key
 

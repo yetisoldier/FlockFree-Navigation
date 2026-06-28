@@ -652,7 +652,10 @@ readme = Path("README.md").read_text()
 morning = Path("docs/MORNING-TEST-PLAN.md").read_text()
 handoff = Path("docs/OVERNIGHT-HANDOFF.md").read_text()
 required = [
-    "Repository AGENTS.md forbids agents from running Gradle build tasks.",
+    "Build/install helper for local FlockFree test APKs.",
+    ":OsmAnd:assembleGplayFreeOpenglFatDebug",
+    "OsmAnd-gplayFree-opengl-fat-debug.apk",
+    "builds the OpenGL flavor",
     "RUN_READINESS=1",
     "RUN_FIELD_SESSION=0",
     "--skip-readiness",

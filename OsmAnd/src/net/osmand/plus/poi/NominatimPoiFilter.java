@@ -17,6 +17,9 @@ import net.osmand.util.MapUtils;
 import net.osmand.util.TransliterationHelper;
 
 import org.apache.commons.logging.Log;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -35,8 +38,16 @@ public class NominatimPoiFilter extends PoiUIFilter {
 
 	private static final String FILTER_ID = "name_finder";
 	private static final String NOMINATIM_API = "https://nominatim.openstreetmap.org/search";
+	private static final String CENSUS_ONELINE_ADDRESS_API =
+			"https://geocoding.geo.census.gov/geocoder/locations/onelineaddress";
 	private static final int MIN_SEARCH_DISTANCE_ON_MAP = 20000;
 	private static final int LIMIT = 300;
+	private static final String[] US_STREET_ADDRESS_HINTS = {
+			" st ", " street ", " ave ", " avenue ", " rd ", " road ", " dr ", " drive ",
+			" blvd ", " boulevard ", " ln ", " lane ", " ct ", " court ", " pl ", " place ",
+			" ter ", " terrace ", " way ", " hwy ", " highway ", " pkwy ", " parkway ",
+			" cir ", " circle ", " trl ", " trail "
+	};
 
 	private String lastError = "";
 	private final boolean bboxSearch;
@@ -75,6 +86,10 @@ public class NominatimPoiFilter extends PoiUIFilter {
 	                                                ResultMatcher<Amenity> matcher) {
 		currentSearchResult = new ArrayList<>();
 		if (Algorithms.isEmpty(getFilterByName())) {
+			return currentSearchResult;
+		}
+		if (!bboxSearch && searchCensusAddress(matcher)) {
+			MapUtils.sortListOfMapObject(currentSearchResult, lat, lon);
 			return currentSearchResult;
 		}
 
@@ -185,6 +200,86 @@ public class NominatimPoiFilter extends PoiUIFilter {
 		}
 		MapUtils.sortListOfMapObject(currentSearchResult, lat, lon);
 		return currentSearchResult;
+	}
+
+	private boolean searchCensusAddress(ResultMatcher<Amenity> matcher) {
+		String query = getFilterByName();
+		if (!isLikelyUsStreetAddress(query)) {
+			return false;
+		}
+		try {
+			String urlq = CENSUS_ONELINE_ADDRESS_API + "?benchmark=Public_AR_Current&format=json"
+					+ "&address=" + URLEncoder.encode(query);
+			log.info("US Census address search: " + urlq);
+			URLConnection connection = NetworkUtils.getHttpURLConnection(urlq);
+			connection.setRequestProperty("User-Agent", Version.getFullVersion(app));
+			String body = Algorithms.readFromInputStream(connection.getInputStream()).toString();
+			JSONObject result = new JSONObject(body).optJSONObject("result");
+			JSONArray matches = result != null ? result.optJSONArray("addressMatches") : null;
+			if (matches == null || matches.length() == 0) {
+				return false;
+			}
+			MapPoiTypes poiTypes = ((OsmandApplication) getApplication()).getPoiTypes();
+			for (int i = 0; i < matches.length(); i++) {
+				Amenity amenity = createAmenityFromCensusMatch(matches.optJSONObject(i), poiTypes);
+				if (amenity != null && (matcher == null || matcher.publish(amenity))) {
+					currentSearchResult.add(amenity);
+				}
+			}
+			return !currentSearchResult.isEmpty();
+		} catch (IOException | JSONException e) {
+			log.error("Error loading US Census address search", e);
+			return false;
+		}
+	}
+
+	private Amenity createAmenityFromCensusMatch(JSONObject match, MapPoiTypes poiTypes) {
+		if (match == null) {
+			return null;
+		}
+		JSONObject coordinates = match.optJSONObject("coordinates");
+		if (coordinates == null) {
+			return null;
+		}
+		double lon = coordinates.optDouble("x", Double.NaN);
+		double lat = coordinates.optDouble("y", Double.NaN);
+		if (Double.isNaN(lat) || Double.isNaN(lon)) {
+			return null;
+		}
+		String matchedAddress = match.optString("matchedAddress", "").trim();
+		if (Algorithms.isEmpty(matchedAddress)) {
+			return null;
+		}
+		Amenity amenity = new Amenity();
+		amenity.setLocation(lat, lon);
+		amenity.setName(matchedAddress);
+		amenity.setEnName(TransliterationHelper.transliterate(matchedAddress));
+		amenity.setSubType("house");
+		PoiType pt = poiTypes.getPoiTypeByKey(amenity.getSubType());
+		amenity.setType(pt != null ? pt.getCategory() : poiTypes.getOtherPoiCategory());
+		amenity.setAdditionalInfo("source", "US Census Geocoder");
+		JSONObject tigerLine = match.optJSONObject("tigerLine");
+		if (tigerLine != null) {
+			long tigerLineId = tigerLine.optLong("tigerLineId", 0);
+			if (tigerLineId != 0) {
+				amenity.setId(tigerLineId);
+			}
+		}
+		return amenity;
+	}
+
+	private boolean isLikelyUsStreetAddress(String query) {
+		String trimmed = query == null ? "" : query.trim();
+		if (trimmed.length() < 8 || !Character.isDigit(trimmed.charAt(0))) {
+			return false;
+		}
+		String normalized = " " + trimmed.toLowerCase(Locale.US).replaceAll("[^a-z0-9]+", " ") + " ";
+		for (String hint : US_STREET_ADDRESS_HINTS) {
+			if (normalized.contains(hint)) {
+				return true;
+			}
+		}
+		return trimmed.contains(",") && normalized.matches(".* \\d{5}( \\d{4})? .*");
 	}
 	
 	public String getLastError() {

@@ -2,7 +2,7 @@
 
 Goal: prove the debug APK installs over Wi-Fi ADB, launches as FlockFree, and exposes the current camera-awareness MVP without chasing unfinished features.
 
-Current status: APK packaging is working for the `gplayFreeLegacyFatDebug` flavor. The latest verified APK installed successfully on the Moto G Stylus, launched to the map, and returned a `READY` readiness verdict from clean source `155a5382e8`. Current source includes FlockFree launcher/adaptive/splash branding and a red/cyan visible palette, SQLite-backed camera persistence, bundled first-use camera seed fallback, camera-data source/freshness diagnostics, a nearest-camera-at-map-center inspection action with retained last-check status, iterative relaxation camera avoidance (full block first, then progressively unblocks least-camera roads up to 4 iterations), profile-persisted applied/partial/fallback/skipped route diagnostics, movement/navigation camera alerts with profile-persisted last-check status, OSM editor tag-prefill reporting with map-center draft action and profile-persisted report-draft status, cache/database-backed route startup, a settings-driven CYD BLE scan/status/simulation path, CYD auto-reconnect on map resume, a CYD foreground service source path with permission-gated background scan restart and Android `connectedDevice` service type, phone GPS streaming to CYD, local CYD simulation from phone/OsmAnd GPS or current map center when hardware is absent, and persisted CYD detection map/review candidates. Run `scripts/flockfree-user-build-install.sh` before morning feature testing whenever app-code changes after the latest verified build.
+Current status: APK packaging should use the `gplayFreeOpenglFatDebug` flavor so the installed build includes the OpenGL renderer required for 2D/3D map mode and 3D buildings. The v1.7.1 hotfix source includes FlockFree launcher/adaptive/splash branding and a red/cyan visible palette, SQLite-backed camera persistence, bundled first-use camera seed fallback, camera-data source/freshness diagnostics, nearest-camera-at-map-center inspection with retained last-check status, iterative relaxation and budgeted camera avoidance, profile-persisted route diagnostics, movement/navigation camera alerts, OSM editor tag-prefill reporting, cache/database-backed route startup, CYD BLE scan/status/simulation, CYD auto-reconnect on map resume, CYD foreground-service handling, phone GPS streaming to CYD, local CYD simulation, persisted CYD detection map/review candidates, US Census-backed address fallback, post-route progress reporting, active-navigation camera route counts, directional vehicle arrow rendering, non-navigation road-stick tracking, and OpenGL-stable camera redraw during map animation. The latest Moto bench pass installed the OpenGL APK, launched to `MapActivity`, showed no FlockFree fatal/ANR lines, and confirmed an intentionally off-road mock path snapped the vehicle marker back onto 9th Avenue South. A real drive and a camera-dense rotate/pan field pass are still recommended before calling the tracking and camera-redraw fixes fully field-proven. Run `scripts/flockfree-user-build-install.sh` before feature testing whenever app-code changes after the latest verified build.
 
 ## Setup
 
@@ -44,7 +44,7 @@ Full no-Gradle readiness pass against the already installed APK:
 scripts/flockfree-morning-readiness.sh
 ```
 
-Start with the generated `logs/flockfree-readiness/.../readiness-report.txt`. The report compares `build-artifacts/FlockFree-build-info.txt` against the current repo, states whether the installed APK is app-code current or whether app/runtime paths changed after the last APK build, and ends with a `Readiness verdict`.
+Start with the generated `logs/flockfree-readiness/.../readiness-report.txt`. The report compares `build-artifacts/FlockFree-build-info.txt` against the current repo, states whether the installed app-code is current or whether app/runtime paths changed after the last APK build, and ends with a `Readiness verdict`.
 The verdict also flags an empty camera database when diagnostics can inspect `flockfree_cameras.db`; the latest verified APK has already proven the populated SQLite source path on-device.
 
 Timed no-Gradle evidence capture while performing the manual checklist:
@@ -107,20 +107,20 @@ Manual equivalent:
 cd /home/yetisoldier/projects/FlockFree-Navigation
 
 ANDROID_HOME=$HOME/Android/Sdk ANDROID_SDK=$HOME/Android/Sdk \
-  ./gradlew :OsmAnd:assembleGplayFreeLegacyFatDebug \
+  ./gradlew :OsmAnd:assembleGplayFreeOpenglFatDebug \
   -x test --no-daemon --max-workers=1
 ```
 
 Find the APK:
 
 ```bash
-find OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug -type f -name '*.apk' -print
+find OsmAnd/build/outputs/apk/gplayFreeOpenglFat/debug -type f -name '*.apk' -print
 ```
 
 Expected current APK:
 
 ```text
-OsmAnd/build/outputs/apk/gplayFreeLegacyFat/debug/OsmAnd-gplayFree-legacy-fat-debug.apk
+OsmAnd/build/outputs/apk/gplayFreeOpenglFat/debug/OsmAnd-gplayFree-opengl-fat-debug.apk
 ```
 
 ## Install
@@ -143,6 +143,7 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 - [ ] Wait up to 2 minutes for camera data to load from cache, bundled seed, or network.
 - [ ] Zoom to 10+ in an area expected to have ALPR cameras.
 - [ ] Camera dots appear on the map.
+- [ ] Rotate, pan, and zoom over a camera-dense area; camera markers should stay fixed to their map positions without disappearing and jumping back into place after the animation.
 - [ ] At zoom 15+, short vendor labels appear where camera data has a known brand.
 - [ ] Tapping a camera opens the `ALPR Camera` details dialog.
 - [ ] Move the map to a suggested camera-dense anchor, tap `Draft report at map center`, or long-press/use map context at a location and confirm `Add ALPR Camera` is present.
@@ -160,6 +161,7 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 - [ ] Enable camera avoidance, calculate a route, and confirm FlockFree shows a route camera summary toast with `Avoidance applied`, `Partial avoidance`, `Avoidance fallback`, or an explicit skipped reason.
 - [ ] Reopen FlockFree settings and confirm `Last route check` preserves the same route summary/status after the toast disappears; restart the app once and confirm the row still holds the result.
 - [ ] On an offline OsmAnd route through a known camera corridor, compare the route with camera avoidance off versus on and look for a reroute around camera-adjacent road objects, or a partial reroute if full avoidance is not possible.
+- [ ] In car mode with map following enabled and snap-to-road enabled, drive or inject a slightly off-road location path; the vehicle marker should stay on the nearest road when the GPS fix is accurate and within roughly 35 meters of that road.
 - [ ] If full avoidance fails, confirm the toast and settings row report partial avoidance with blocked/total/remaining camera counts.
 - [ ] If a route corridor is not obvious, run `scripts/flockfree-suggest-test-areas.py --limit 10 --radius-km 80` and use one of the printed `Map anchor` coordinates as the route/map test area.
 - [ ] Run `scripts/flockfree-moto-permission-primer.sh` before CYD/GPS testing, then confirm the generated `summary.txt` shows location and Bluetooth permissions granted.

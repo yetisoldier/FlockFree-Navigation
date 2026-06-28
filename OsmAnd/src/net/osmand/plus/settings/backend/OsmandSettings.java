@@ -2489,6 +2489,7 @@ public class OsmandSettings {
 	public static final String LAST_KNOWN_MAP_ZOOM = "last_known_map_zoom";
 	public static final String LAST_KNOWN_MAP_ZOOM_FLOAT_PART = "last_known_map_zoom_float_part";
 	public static final String LAST_KNOWN_MAP_HEIGHT = "last_known_map_height";
+	public static final float DEFAULT_MAP_ELEVATION = 90f;
 	public static final String MAP_LABEL_TO_SHOW = "map_label_to_show";
 	public static final String MAP_LAT_TO_SHOW = "map_lat_to_show";
 	public static final String MAP_LON_TO_SHOW = "map_lon_to_show";
@@ -2618,8 +2619,8 @@ public class OsmandSettings {
 
 	private final CommonPreference<Float> LAST_KNOWN_MAP_ROTATION = new FloatPreference(this, "last_known_map_rotation", 0).makeProfile();
 	private final CommonPreference<Float> LAST_KNOWN_MANUALLY_MAP_ROTATION = new FloatPreference(this, "last_known_manually_map_rotation", 0).makeProfile();
-	private final CommonPreference<Float> LAST_KNOWN_MAP_ELEVATION = new FloatPreference(this, "last_known_map_elevation", 90).makeProfile();
-	private final CommonPreference<Float> LAST_KNOWN_AA_MAP_ELEVATION = new FloatPreference(this, "last_known_aa_map_elevation", 90).makeProfile();
+	private final CommonPreference<Float> LAST_KNOWN_MAP_ELEVATION = new FloatPreference(this, "last_known_map_elevation", DEFAULT_MAP_ELEVATION).makeProfile();
+	private final CommonPreference<Float> LAST_KNOWN_AA_MAP_ELEVATION = new FloatPreference(this, "last_known_aa_map_elevation", DEFAULT_MAP_ELEVATION).makeProfile();
 
 	public float getLastKnownMapRotation() {
 		return getLastKnownMapRotation(getApplicationMode());
@@ -2658,7 +2659,8 @@ public class OsmandSettings {
 	}
 
 	public float getLastKnownMapElevation(@NonNull ApplicationMode appMode) {
-		return getLastKnownMapElevationPref().getModeValue(appMode);
+		float elevation = getLastKnownMapElevationPref().getModeValue(appMode);
+		return Float.isFinite(elevation) ? elevation : DEFAULT_MAP_ELEVATION;
 	}
 
 	public void setLastKnownMapElevation(float elevation) {
@@ -2666,7 +2668,8 @@ public class OsmandSettings {
 	}
 
 	public void setLastKnownMapElevation(@NonNull ApplicationMode appMode, float elevation) {
-		getLastKnownMapElevationPref().setModeValue(appMode, elevation);
+		getLastKnownMapElevationPref().setModeValue(appMode,
+				Float.isFinite(elevation) ? elevation : DEFAULT_MAP_ELEVATION);
 	}
 
 	private CommonPreference<Float> getLastKnownMapElevationPref() {

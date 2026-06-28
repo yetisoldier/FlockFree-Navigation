@@ -112,7 +112,7 @@ Many resources (icons, fonts, voice files) are not in the main `res` folder but 
 - **Updating Plugins:** Most plugin-specific code is in `net.osmand.plus.plugins`.
 
 ## 9. Restrictions
-- **Building Gradle project:** Agents may run Gradle builds for this fork. Use `./gradlew :OsmAnd:assembleGplayFreeLegacyFatDebug` for debug APK builds.
+- **Building Gradle project:** Agents may run Gradle builds for this fork. Use `./gradlew :OsmAnd:assembleGplayFreeOpenglFatDebug` for debug APK builds so the test APK includes the OpenGL renderer required for 2D/3D mode and 3D buildings.
 
 ---
 *Note: This file is a living document and should be updated as the project evolves.*

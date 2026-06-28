@@ -64,6 +64,7 @@ public class MapViewTrackingUtilities implements OsmAndLocationListener, IMapLoc
 	private static final int AUTO_FOLLOW_MSG_ID = OsmAndConstants.UI_HANDLER_LOCATION_SERVICE + 4;
 	private static final long MOVE_ANIMATION_TIME = 500;
 	private static final float FLOCKFREE_LANDSCAPE_NAVIGATION_MAP_RATIO_X = 0.65f;
+	private static final float FLOCKFREE_PATROL_AUTO_FOLLOW_MIN_SPEED_MPS = 2.0f;
 	public static final int AUTO_ZOOM_DEFAULT_CHANGE_ZOOM = 4500;
 	private static final float DELAY_TO_ROTATE_AFTER_RESET_ROTATION = 1000f;
 	public static final long KEEP_VIEWPOINT_AFTER_SURFACE_HIT = 5000;
@@ -320,6 +321,9 @@ public class MapViewTrackingUtilities implements OsmAndLocationListener, IMapLoc
 					registerUnregisterSensor(location, false);
 			}
 			this.showViewAngle = showViewAngle;
+			if (!isMapLinkedToLocation() && location != null) {
+				scheduleFlockFreePatrolAutoFollow(location);
+			}
 			followingMode = routingHelper.isFollowingMode();
 			if (routePlanningMode != routingHelper.isRoutePlanningMode()) {
 				switchRoutePlanningMode();
@@ -549,7 +553,10 @@ public class MapViewTrackingUtilities implements OsmAndLocationListener, IMapLoc
 
 	private void backToLocationWithDelay(int delay) {
 		app.runInUIThreadAndCancelPrevious(AUTO_FOLLOW_MSG_ID, () -> {
-			if (mapView != null && !isMapLinkedToLocation() && contextMenu == null) {
+			Location lastKnownLocation = app.getLocationProvider().getLastKnownLocation();
+			boolean shouldAutoFollow = routingHelper.isFollowingMode()
+					|| shouldAutoFollowInFlockFreePatrol(lastKnownLocation);
+			if (mapView != null && !isMapLinkedToLocation() && contextMenu == null && shouldAutoFollow) {
 				app.showToastMessage(R.string.auto_follow_location_enabled);
 				backToLocationImpl(15, false);
 			}
@@ -588,10 +595,38 @@ public class MapViewTrackingUtilities implements OsmAndLocationListener, IMapLoc
 			int autoFollow = settings.AUTO_FOLLOW_ROUTE.get();
 			if (autoFollow > 0 && routingHelper.isFollowingMode() && !routePlanningMode) {
 				backToLocationWithDelay(autoFollow);
+			} else {
+				scheduleFlockFreePatrolAutoFollow(myLocation);
 			}
 		} else {
 			updateSettings(false);
 		}
+	}
+
+	private void scheduleFlockFreePatrolAutoFollow(@Nullable Location location) {
+		int autoFollow = settings.AUTO_FOLLOW_ROUTE.get();
+		if (autoFollow > 0
+				&& !app.hasMessagesInUiThread(AUTO_FOLLOW_MSG_ID)
+				&& shouldAutoFollowInFlockFreePatrol(location)) {
+			backToLocationWithDelay(autoFollow);
+		}
+	}
+
+	private boolean shouldAutoFollowInFlockFreePatrol(@Nullable Location location) {
+		FlockFreePlugin plugin = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class);
+		return plugin != null
+				&& plugin.CAMERA_SHOW_LAYER.get()
+				&& mapView != null
+				&& contextMenu == null
+				&& !mapView.isUserMapInteractionActive()
+				&& !routingHelper.isFollowingMode()
+				&& !routingHelper.isRoutePlanningMode()
+				&& !routingHelper.isRouteBeingCalculated()
+				&& !routingHelper.isPauseNavigation()
+				&& location != null
+				&& location.hasSpeed()
+				&& !Float.isNaN(location.getSpeed())
+				&& location.getSpeed() >= FLOCKFREE_PATROL_AUTO_FOLLOW_MIN_SPEED_MPS;
 	}
 
 	private void updateFlockFreeLandscapeNavigationMapRatio() {

@@ -25,6 +25,7 @@ import androidx.appcompat.content.res.AppCompatResources;
 import androidx.core.content.ContextCompat;
 
 import net.osmand.Location;
+import net.osmand.PlatformUtil;
 import net.osmand.core.android.MapRendererView;
 import net.osmand.core.jni.AnimatedValue;
 import net.osmand.core.jni.FColorRGB;
@@ -61,14 +62,21 @@ import net.osmand.plus.views.layers.base.OsmandMapLayer;
 import net.osmand.util.Algorithms;
 import net.osmand.util.MapUtils;
 
+import org.apache.commons.logging.Log;
+
 import java.util.List;
 
 public class PointLocationLayer extends OsmandMapLayer
 		implements OsmAndLocationListener, OsmAndCompassListener, IContextMenuProvider {
 
+	private static final Log LOG = PlatformUtil.getLog(PointLocationLayer.class);
 	private static final int MODEL_3D_MAX_SIZE_DP = 6;
 	protected static final float BEARING_SPEED_THRESHOLD = 0.1f;
 	private static final long BEARING_GRACE_PERIOD_MS = 5_000L;
+	private static final long MAX_LOCATION_ANIMATION_DURATION_MS = 1_200L;
+	private static final long MAX_LOCATION_PREDICTION_INTERVAL_MS = 5_000L;
+	private static final long STALE_LOCATION_ANIMATION_GAP_MS = 10_000L;
+	private static final long LOCATION_CADENCE_LOG_INTERVAL_MS = 5_000L;
 	protected static final int MIN_ZOOM = 3;
 	protected static final int RADIUS = 7;
 	private static final float FLOCKFREE_LOCATION_MARKER_SCALE = 0.78f;
@@ -80,6 +88,7 @@ public class PointLocationLayer extends OsmandMapLayer
 	private Paint headingPaint;
 	private Paint area;
 	private Paint aroundArea;
+	private long lastLocationCadenceLogMs;
 
 	private ApplicationMode appMode;
 	private boolean carView;
@@ -444,8 +453,9 @@ public class PointLocationLayer extends OsmandMapLayer
 				animateBearing = false;
 			}
 			updateMarkerPosition(location, target31, animationDuration);
-			if (location.hasBearing()) {
-				float bearing = location.getBearing() - 90.0f;
+			Float bearingToShow = getBearingToShow(location);
+			if (bearingToShow != null) {
+				float bearing = bearingToShow - 90.0f;
 				Float cachedBearing = lastBearingCached;
 				boolean updateBearing = cachedBearing == null || Math.abs(bearing - cachedBearing) > 0.1;
 				if (updateBearing) {
@@ -575,21 +585,50 @@ public class PointLocationLayer extends OsmandMapLayer
 		if (!locationOutdated && location != null) {
 			// Issue 5538: Some devices return positives for hasBearing() at rest, hence add 0.0 check:
 			boolean hasBearing = location.hasBearing() && location.getBearing() != 0.0f;
-			boolean bearingValid = hasBearing || isUseRouting() && lastBearingCached != null;
-			boolean speedValid = !location.hasSpeed() || location.getSpeed() > BEARING_SPEED_THRESHOLD;
+			Float navigationBearing = getNavigationBearingToShow(location);
+			Float cachedBearing = getCachedBearingToShow();
+			boolean bearingValid = hasBearing || navigationBearing != null || isUseRouting() && cachedBearing != null;
+			boolean speedValid = navigationBearing != null || !location.hasSpeed()
+					|| location.getSpeed() > BEARING_SPEED_THRESHOLD;
 
 			if (bearingValid && (speedValid || isLocationSnappedToRoad())) {
 				lastBearingValidTimeMs = System.currentTimeMillis();
-				return hasBearing ? location.getBearing() : lastBearingCached;
+				return hasBearing ? location.getBearing()
+						: navigationBearing != null ? navigationBearing : cachedBearing;
 			}
 			// Grace period: keep showing the last bearing for 5 seconds to prevent
 			// the marker flickering between STAY and MOVE states during brief GPS gaps
 			if (lastBearingCached != null
 					&& System.currentTimeMillis() - lastBearingValidTimeMs < BEARING_GRACE_PERIOD_MS) {
-				return lastBearingCached;
+				return cachedBearing;
 			}
 		}
 		return null;
+	}
+
+	@Nullable
+	private Float getNavigationBearingToShow(@NonNull Location location) {
+		RoutingHelper routingHelper = getApplication().getRoutingHelper();
+		if (!routingHelper.isFollowingMode() || routingHelper.isRoutePlanningMode()
+				|| routingHelper.isPauseNavigation() || !routingHelper.isRouteCalculated()) {
+			return null;
+		}
+		Location projection = getApplication().getOsmandMap().getMapLayers().getRouteLayer().getLastRouteProjection();
+		if (projection != null && projection.hasBearing()) {
+			return projection.getBearing();
+		}
+		Location next = routingHelper.getRoute().getNextRouteLocation();
+		Location previous = routingHelper.getRoute().getRouteLocationByDistance(-15);
+		if (previous != null && next != null && !MapUtils.areLatLonEqual(previous, next)) {
+			return previous.bearingTo(next);
+		}
+		Float heading = locationProvider.getHeading();
+		return heading != null ? heading : getCachedBearingToShow();
+	}
+
+	@Nullable
+	private Float getCachedBearingToShow() {
+		return lastBearingCached != null ? MapUtils.normalizeDegrees360(lastBearingCached + 90.0f) : null;
 	}
 
 	private boolean isUseRouting() {
@@ -746,16 +785,19 @@ public class PointLocationLayer extends OsmandMapLayer
 			}
 			boolean dataChanged = !MapUtils.areLatLonEqual(prevLocation, markerLocation, HIGH_LATLON_PRECISION);
 			if (dataChanged) {
-				long movingTime = prevLocation != null ? markerLocation.getTime() - prevLocation.getTime() : 0;
+				long movingTime = prevLocation != null ? Math.max(0, markerLocation.getTime() - prevLocation.getTime()) : 0;
 				boolean animatePosition = settings.ANIMATE_MY_LOCATION.get();
 				long animationDuration = userInterruptingMovingToMyLocation ? 0
-						: isAnimateMyLocation() ? movingTime : 0;
+						: isAnimateMyLocation() ? getLocationAnimationDuration(movingTime) : 0;
 				Integer interpolationPercent = settings.LOCATION_INTERPOLATION_PERCENT.get();
+				boolean recentLocationGap = movingTime > 0 && movingTime <= STALE_LOCATION_ANIMATION_GAP_MS;
+				logLocationCadence(markerLocation, movingTime, animationDuration);
 				if (!userInterruptingMovingToMyLocation
 						&& prevLocation != null && getApplication().getRoutingHelper().isFollowingMode()
-						&& interpolationPercent > 0 && animatePosition) {
+						&& recentLocationGap && interpolationPercent > 0 && animatePosition) {
 					List<Location> predictedLocations = RoutingHelperUtils.predictLocations(prevLocation, location,
-							movingTime / 1000.0, getApplication().getRoutingHelper().getRoute(), interpolationPercent);
+							Math.min(movingTime, MAX_LOCATION_PREDICTION_INTERVAL_MS) / 1000.0,
+							getApplication().getRoutingHelper().getRoute(), interpolationPercent);
 					if (!predictedLocations.isEmpty()) {
 						// At the moment we get the first predicted location, but there may be several of them
 						Location predictedLocation = predictedLocations.get(0);
@@ -767,6 +809,32 @@ public class PointLocationLayer extends OsmandMapLayer
 				prevLocation = markerLocation;
 			}
 		}
+	}
+
+	private long getLocationAnimationDuration(long movingTime) {
+		if (movingTime <= 0 || movingTime > STALE_LOCATION_ANIMATION_GAP_MS) {
+			return 0;
+		}
+		return Math.min(movingTime, MAX_LOCATION_ANIMATION_DURATION_MS);
+	}
+
+	private void logLocationCadence(@NonNull Location location, long providerDeltaMs, long animationDurationMs) {
+		long now = System.currentTimeMillis();
+		if (providerDeltaMs <= STALE_LOCATION_ANIMATION_GAP_MS
+				&& now - lastLocationCadenceLogMs < LOCATION_CADENCE_LOG_INTERVAL_MS) {
+			return;
+		}
+		lastLocationCadenceLogMs = now;
+		long ageMs = location.getTime() > 0 ? Math.max(0, now - location.getTime()) : -1;
+		String accuracy = location.hasAccuracy() ? String.valueOf(Math.round(location.getAccuracy())) : "unknown";
+		String speed = location.hasSpeed() ? String.valueOf(location.getSpeed()) : "unknown";
+		LOG.info("FlockFree location update provider=" + location.getProvider()
+				+ " providerDeltaMs=" + providerDeltaMs
+				+ " ageMs=" + ageMs
+				+ " accuracyMeters=" + accuracy
+				+ " speedMps=" + speed
+				+ " following=" + getApplication().getRoutingHelper().isFollowingMode()
+				+ " animationMs=" + animationDurationMs);
 	}
 
 	@Override
