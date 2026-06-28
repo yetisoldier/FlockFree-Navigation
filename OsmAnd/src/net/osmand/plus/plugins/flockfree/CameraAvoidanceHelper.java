@@ -7,6 +7,7 @@ import net.osmand.Location;
 import net.osmand.PlatformUtil;
 import net.osmand.binary.RouteDataObject;
 import net.osmand.data.LatLon;
+import net.osmand.data.QuadPointDouble;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
 import net.osmand.plus.routing.RouteCalculationResult;
@@ -100,12 +101,18 @@ public class CameraAvoidanceHelper {
 
     public synchronized void recordAvoidanceApplied(int roadCount, int cameraCount, int originalRouteTimeSeconds,
                                                     int originalRouteDistanceMeters) {
+        recordAvoidanceApplied(roadCount, cameraCount, 0, originalRouteTimeSeconds, originalRouteDistanceMeters);
+    }
+
+    public synchronized void recordAvoidanceApplied(int roadCount, int originalCameraCount, int routeCameraCount,
+                                                    int originalRouteTimeSeconds,
+                                                    int originalRouteDistanceMeters) {
         lastAvoidanceStatus = AvoidanceStatus.APPLIED;
         lastAvoidanceRoadCount = roadCount;
-        lastAvoidanceCameraCount = Math.max(0, cameraCount);
+        lastAvoidanceCameraCount = Math.max(0, originalCameraCount - routeCameraCount);
         lastAvoidanceOriginalTimeSeconds = originalRouteTimeSeconds;
         lastAvoidanceOriginalDistanceMeters = Math.max(0, originalRouteDistanceMeters);
-        lastAvoidanceOriginalCameraCount = Math.max(0, cameraCount);
+        lastAvoidanceOriginalCameraCount = Math.max(0, originalCameraCount);
         lastPartialBlockedRoadCount = 0;
         lastPartialTotalCameraRoadCount = 0;
         lastPartialRemainingCameraCount = 0;
@@ -138,9 +145,9 @@ public class CameraAvoidanceHelper {
     /**
      * Records that partial (iterative relaxation) avoidance was applied.
      *
-     * @param blockedRoadCount     Number of Flock-camera-adjacent roads that remain blocked
-     * @param totalCameraRoadCount Total number of distinct Flock-camera-adjacent roads originally identified
-     * @param remainingCameraCount  Number of Flock cameras still on/near the route after partial avoidance
+     * @param blockedRoadCount      Number of Flock-camera-adjacent roads that remain blocked
+     * @param totalCameraRoadCount  Total number of distinct Flock-camera-adjacent roads originally identified
+     * @param remainingCameraCount  Actual Flock camera exposures still on/near the accepted route
      */
     public synchronized void recordAvoidancePartial(int blockedRoadCount, int totalCameraRoadCount, int remainingCameraCount) {
         recordAvoidancePartial(blockedRoadCount, totalCameraRoadCount, remainingCameraCount,
@@ -148,24 +155,24 @@ public class CameraAvoidanceHelper {
     }
 
     public synchronized void recordAvoidancePartial(int blockedRoadCount, int totalCameraRoadCount,
-                                                    int remainingCameraCount, int avoidedCameraCount,
+                                                    int remainingCameraCount, int originalCameraCount,
                                                     int originalRouteTimeSeconds) {
         recordAvoidancePartial(blockedRoadCount, totalCameraRoadCount, remainingCameraCount,
-                avoidedCameraCount, originalRouteTimeSeconds, 0);
+                originalCameraCount, originalRouteTimeSeconds, 0);
     }
 
     public synchronized void recordAvoidancePartial(int blockedRoadCount, int totalCameraRoadCount,
-                                                    int remainingCameraCount, int avoidedCameraCount,
+                                                    int remainingCameraCount, int originalCameraCount,
                                                     int originalRouteTimeSeconds, int originalRouteDistanceMeters) {
         lastAvoidanceStatus = AvoidanceStatus.PARTIAL_APPLIED;
         lastAvoidanceRoadCount = blockedRoadCount;
-        lastAvoidanceCameraCount = Math.max(0, avoidedCameraCount);
+        lastAvoidanceCameraCount = Math.max(0, originalCameraCount - remainingCameraCount);
         lastAvoidanceOriginalTimeSeconds = originalRouteTimeSeconds;
         lastAvoidanceOriginalDistanceMeters = Math.max(0, originalRouteDistanceMeters);
-        lastAvoidanceOriginalCameraCount = Math.max(0, avoidedCameraCount) + Math.max(0, remainingCameraCount);
+        lastAvoidanceOriginalCameraCount = Math.max(0, originalCameraCount);
         lastPartialBlockedRoadCount = blockedRoadCount;
         lastPartialTotalCameraRoadCount = totalCameraRoadCount;
-        lastPartialRemainingCameraCount = remainingCameraCount;
+        lastPartialRemainingCameraCount = Math.max(0, remainingCameraCount);
     }
 
     @NonNull
@@ -295,11 +302,9 @@ public class CameraAvoidanceHelper {
         }
 
         List<CameraData.CameraPoint> cameras = findCamerasNearRouteLocations(locations, radiusMeters);
-        int px, py;
-        double camDist;
         for (CameraData.CameraPoint camera : cameras) {
-            px = MapUtils.get31TileNumberX(camera.lon);
-            py = MapUtils.get31TileNumberY(camera.lat);
+            int cameraX31 = MapUtils.get31TileNumberX(camera.lon);
+            int cameraY31 = MapUtils.get31TileNumberY(camera.lat);
             boolean matchedAny = false;
             for (int i = 0; i < roads.size(); i++) {
                 if (i == 0 || i == roads.size() - 1) {
@@ -310,17 +315,9 @@ public class CameraAvoidanceHelper {
                 if (obj == null) {
                     continue;
                 }
-                int startPointIndex = Math.min(road.getStartPointIndex(), road.getEndPointIndex());
-                int endPointIndex = Math.max(road.getEndPointIndex(), road.getStartPointIndex());
-                for (int j = startPointIndex; j <= endPointIndex; j++) {
-                    int segX = obj.getPoint31XTile(j);
-                    int segY = obj.getPoint31YTile(j);
-                    camDist = MapUtils.squareRootDist31(segX, segY, px, py);
-                    if (camDist <= radiusMeters) {
-                        result.add(obj.getId());
-                        matchedAny = true;
-                        break;
-                    }
+                if (isCameraNearRoadGeometry(road, cameraX31, cameraY31, radiusMeters)) {
+                    result.add(obj.getId());
+                    matchedAny = true;
                 }
             }
             if (!matchedAny) {
@@ -376,11 +373,9 @@ public class CameraAvoidanceHelper {
         // the single nearest one. This prevents the router from simply using
         // an adjacent road in the same corridor and still passing near the camera.
         Map<Long, Integer> roadIdToCameraCount = new HashMap<>();
-        int px, py;
-        double camDist;
         for (CameraData.CameraPoint camera : cameras) {
-            px = MapUtils.get31TileNumberX(camera.lon);
-            py = MapUtils.get31TileNumberY(camera.lat);
+            int cameraX31 = MapUtils.get31TileNumberX(camera.lon);
+            int cameraY31 = MapUtils.get31TileNumberY(camera.lat);
             boolean matchedAny = false;
             for (int i = 0; i < roads.size(); i++) {
                 if (i == 0 || i == roads.size() - 1) {
@@ -391,22 +386,13 @@ public class CameraAvoidanceHelper {
                 if (obj == null) {
                     continue;
                 }
-                int startPointIndex = Math.min(road.getStartPointIndex(), road.getEndPointIndex());
-                int endPointIndex = Math.max(road.getEndPointIndex(), road.getStartPointIndex());
-                // Check if any point on this segment is within radiusMeters of the camera
-                for (int j = startPointIndex; j <= endPointIndex; j++) {
-                    int segX = obj.getPoint31XTile(j);
-                    int segY = obj.getPoint31YTile(j);
-                    camDist = MapUtils.squareRootDist31(segX, segY, px, py);
-                    if (camDist <= radiusMeters) {
-                        Long roadId = obj.getId();
-                        roadIdToCameraCount.merge(roadId, 1, Integer::sum);
-                        matchedAny = true;
-                        break;  // this road is already counted for this camera
-                    }
+                if (isCameraNearRoadGeometry(road, cameraX31, cameraY31, radiusMeters)) {
+                    Long roadId = obj.getId();
+                    roadIdToCameraCount.merge(roadId, 1, Integer::sum);
+                    matchedAny = true;
                 }
             }
-            // If no segment point was within radius, fall back to nearest-segment search
+            // If no route road geometry was within radius, fall back to nearest-segment search.
             if (!matchedAny) {
                 RouteSegmentSearchResult searchResult = RouteSegmentSearchResult.searchRouteSegment(
                         camera.lat, camera.lon, radiusMeters, roads);
@@ -435,6 +421,34 @@ public class CameraAvoidanceHelper {
             LOG.info("FlockFree collected " + result.size() + " Flock-camera-adjacent road ids with camera counts");
         }
         return result;
+    }
+
+    private boolean isCameraNearRoadGeometry(@NonNull RouteSegmentResult road,
+                                             int cameraX31, int cameraY31, int radiusMeters) {
+        RouteDataObject obj = road.getObject();
+        if (obj == null) {
+            return false;
+        }
+        int startPointIndex = Math.min(road.getStartPointIndex(), road.getEndPointIndex());
+        int endPointIndex = Math.max(road.getEndPointIndex(), road.getStartPointIndex());
+        for (int j = startPointIndex; j <= endPointIndex; j++) {
+            int pointX31 = obj.getPoint31XTile(j);
+            int pointY31 = obj.getPoint31YTile(j);
+            if (MapUtils.squareRootDist31(pointX31, pointY31, cameraX31, cameraY31) <= radiusMeters) {
+                return true;
+            }
+            if (j > startPointIndex) {
+                QuadPointDouble projection = MapUtils.getProjectionPoint31(cameraX31, cameraY31,
+                        obj.getPoint31XTile(j - 1), obj.getPoint31YTile(j - 1),
+                        pointX31, pointY31);
+                double distance = MapUtils.squareRootDist31((int) projection.x, (int) projection.y,
+                        cameraX31, cameraY31);
+                if (distance <= radiusMeters) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**

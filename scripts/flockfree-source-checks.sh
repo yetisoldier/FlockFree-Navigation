@@ -276,6 +276,95 @@ for phrase in stale_phrases:
 print("camera database wiring ok")
 PY
 
+log "FlockFree route avoidance checks"
+python3 - <<'PY'
+from pathlib import Path
+
+route_provider = Path("OsmAnd/src/net/osmand/plus/routing/RouteProvider.java").read_text()
+avoidance_helper = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/CameraAvoidanceHelper.java").read_text()
+plugin = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/FlockFreePlugin.java").read_text()
+route_menu = Path("OsmAnd/src/net/osmand/plus/routepreparationmenu/MapRouteInfoMenu.java").read_text()
+route_status_card = Path("OsmAnd/src/net/osmand/plus/routepreparationmenu/cards/FlockFreeRouteStatusCard.java").read_text()
+route_status_layout = Path("OsmAnd/res/layout/flockfree_route_status_card.xml").read_text()
+readme = Path("README.md").read_text()
+avoidance_doc = Path("docs/FLOCK-CAMERA-AVOIDANCE-ROUTING.md").read_text()
+
+required_route_tokens = [
+    "int originalRouteCameraCount = avoidanceHelper.findCamerasNearRouteLocations(",
+    "int originalRoadAssociationCount = 0;",
+    "originalRoadAssociationCount += rwc.cameraCount;",
+    "getFlockFreeAvoidanceRejectionReason(",
+    "FLOCKFREE_MAX_AVOIDANCE_EXTRA_TIME_SECONDS = 10 * 60",
+    "FLOCKFREE_MAX_AVOIDANCE_TIME_MULTIPLIER = 1.20d",
+    "FLOCKFREE_MAX_AVOIDANCE_DISTANCE_MULTIPLIER = 1.25d",
+    "getFlockFreeMaxAvoidanceExtraTimeSeconds(",
+    "Math.max(FLOCKFREE_MAX_AVOIDANCE_EXTRA_TIME_SECONDS, percentageAllowanceSeconds)",
+    "candidateCameraCount >= originalCameraCount",
+    "candidateCameraCount == 0",
+    "recordAvoidanceApplied(blockedIds.size(), originalRouteCameraCount,",
+    "recordAvoidancePartial(blockedIds.size(),",
+    "originalRouteCameraCount, originalRouteTimeSeconds",
+]
+missing_route = [item for item in required_route_tokens if item not in route_provider]
+if missing_route:
+    raise SystemExit("missing route avoidance acceptance wiring:\n" + "\n".join(missing_route))
+
+stale_route_tokens = [
+    "totalCameraCount += rwc.cameraCount",
+    "avoidedCameraCount < totalCameraCount",
+    "relaxedCameraCount >= totalCameraCount",
+]
+stale_route = [item for item in stale_route_tokens if item in route_provider]
+if stale_route:
+    raise SystemExit("stale route avoidance camera-count comparison tokens:\n" + "\n".join(stale_route))
+
+required_helper_tokens = [
+    "recordAvoidanceApplied(int roadCount, int originalCameraCount, int routeCameraCount",
+    "lastAvoidanceCameraCount = Math.max(0, originalCameraCount - routeCameraCount);",
+    "lastAvoidanceOriginalCameraCount = Math.max(0, originalCameraCount);",
+    "lastAvoidanceCameraCount = Math.max(0, originalCameraCount - remainingCameraCount);",
+    "lastPartialRemainingCameraCount = Math.max(0, remainingCameraCount);",
+    "MapUtils.getProjectionPoint31(cameraX31, cameraY31",
+    "isCameraNearRoadGeometry(",
+]
+missing_helper = [item for item in required_helper_tokens if item not in avoidance_helper]
+if missing_helper:
+    raise SystemExit("missing route avoidance helper wiring:\n" + "\n".join(missing_helper))
+
+required_status_card_tokens = [
+    "hasRouteCheckSummaryForRouteMenu()",
+    "getRouteCheckSummaryForRouteMenu(",
+    "getAvoidanceHelper().getRouteCameraSummaryFromLocations(routeLocations)",
+    "refreshRouteInfoMenuIfVisible()",
+    "mapActivity.getMapRouteInfoMenu().updateMenu()",
+    "FlockFreeRouteStatusCard",
+    "plugin.getRouteCheckSummaryForRouteMenu(routingHelper.getRoute())",
+    "flockfree_route_status_card_title",
+    "flockfree_route_status_summary",
+    "ic_action_privacy_and_security",
+]
+status_card_text = "\n".join([plugin, route_menu, route_status_card, route_status_layout])
+missing_status_card = [item for item in required_status_card_tokens if item not in status_card_text]
+if missing_status_card:
+    raise SystemExit("missing route status card wiring:\n" + "\n".join(missing_status_card))
+
+required_doc_tokens = [
+    "actual route exposure",
+    "road association",
+    "10 minutes",
+    "20 percent",
+    "25 percent",
+    "route-check status card",
+    "source metadata identifies them as Flock-related",
+]
+docs_text = "\n".join([readme, avoidance_doc])
+missing_doc_tokens = [item for item in required_doc_tokens if item not in docs_text]
+if missing_doc_tokens:
+    raise SystemExit("missing route avoidance documentation updates:\n" + "\n".join(missing_doc_tokens))
+
+print("route avoidance wiring ok")
+PY
+
 log "Diagnostics script checks"
 python3 - <<'PY'
 from pathlib import Path

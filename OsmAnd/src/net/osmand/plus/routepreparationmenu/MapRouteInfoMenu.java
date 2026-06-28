@@ -549,6 +549,13 @@ public class MapRouteInfoMenu implements IRouteInformationListener, CardListener
 						app.getRoutingHelper().recalculateRouteDueToSettingsChange(true);
 					});
 					menuCards.add(card);
+				} else {
+					String routeStatusSummary = plugin.getRouteCheckSummaryForRouteMenu(routingHelper.getRoute());
+					if (!Algorithms.isEmpty(routeStatusSummary)) {
+						FlockFreeRouteStatusCard card = new FlockFreeRouteStatusCard(mapActivity, routeStatusSummary);
+						card.setListener(this);
+						menuCards.add(card);
+					}
 				}
 			}
 			GpxFile gpx = GpxUiHelper.makeGpxFromRoute(routingHelper.getRoute(), app);

@@ -30,9 +30,11 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for Floc
 - **Wide corridor road blocking** — For each Flock camera within the route corridor radius (default 100m), blocks ALL route segments within the radius, not just the single nearest road. This prevents the router from using adjacent roads in the same corridor and still passing near cameras.
 - **Iterative relaxation avoidance** — If full avoidance fails (no route exists with all roads blocked), progressively unblocks the least-camera-impactful roads (up to 4 iterations) until a viable route is found.
 - **Camera count validation** — Only accepts an avoidance route if it has strictly fewer Flock cameras than the original route. Prevents the inverted "privacy route has more cameras" bug.
-- **Route comparison card** — Shows fastest vs privacy route side-by-side with Flock camera counts, distance, time, and percentage fewer cameras.
+- **Detour guardrails** — Non-zero-camera privacy routes must stay within the greater of 10 minutes or 20 percent extra time, plus 25 percent extra distance; zero-camera routes are always accepted.
+- **Route comparison/status card** — Shows fastest vs privacy route side-by-side when a privacy route is accepted, or shows the FlockFree route-check status when no separate privacy route is available.
 - **Partial avoidance reporting** — When full avoidance isn't possible, reports how many Flock camera roads were blocked and how many Flock cameras remain on the route.
 - **Status persistence** — Route check results persist across app restarts
+- **Metadata scope note** — FlockFree only avoids cameras whose source metadata identifies them as Flock-related through the `brand` or `operator` field.
 - **Implementation reference** — See [Flock Camera Avoidance Routing](docs/FLOCK-CAMERA-AVOIDANCE-ROUTING.md) for the detailed algorithm, acceptance gates, and verification checklist.
 
 ### Traffic-Aware Routing (Optional)
@@ -276,6 +278,7 @@ For developers and field testers:
 ## Known Limitations
 
 - Route avoidance is offline-only (requires downloaded vector maps)
+- A real Flock camera may not be avoided until the source data labels it with Flock-related `brand` or `operator` metadata
 - Iterative relaxation caps at 4 retries to limit recalculation latency; very dense camera areas may still fall back to the original route
 - The reserved multi-pass reroute helper is disabled in the current build; active avoidance uses full blocking plus iterative relaxation.
 - Optional CYD detection to camera submission is a manual review flow (no auto-upload)

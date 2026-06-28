@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:orientation="vertical">
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		android:paddingStart="@dimen/content_padding"
+		android:paddingTop="@dimen/content_padding"
+		android:paddingEnd="@dimen/content_padding"
+		android:paddingBottom="@dimen/content_padding">
+
+		<androidx.appcompat.widget.AppCompatImageView
+			android:id="@+id/flockfree_route_status_icon"
+			android:layout_width="32dp"
+			android:layout_height="32dp"
+			android:layout_marginEnd="@dimen/content_padding"
+			android:layout_marginRight="@dimen/content_padding"
+			android:contentDescription="@string/flockfree_route_status_card_title"
+			tools:src="@drawable/ic_action_privacy_and_security" />
+
+		<LinearLayout
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:orientation="vertical">
+
+			<TextView
+				android:id="@+id/flockfree_route_status_title"
+				style="@style/TitleStyle.Medium"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:text="@string/flockfree_route_status_card_title" />
+
+			<TextView
+				android:id="@+id/flockfree_route_status_summary"
+				style="@style/DescStyle"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="@dimen/content_padding_half"
+				tools:text="FlockFree: 4 Flock cameras near route. Avoidance fallback: original route kept." />
+
+		</LinearLayout>
+
+	</LinearLayout>
+
+	<include
+		android:id="@+id/shadow"
+		layout="@layout/card_bottom_divider"
+		android:visibility="visible" />
+
+</LinearLayout>

@@ -4,6 +4,23 @@ All notable changes to FlockFree Navigation are documented here.
 
 ## [Unreleased]
 
+## [v1.8.2] — 2026-06-28
+
+### Changed
+- Camera-avoidance route acceptance now compares actual original-route Flock exposure against actual candidate-route Flock exposure, while keeping camera-to-road association counts only for road blocking, diagnostics, and relaxation ordering.
+- Non-zero-camera privacy routes now have detour guardrails: no more than the greater of 10 minutes or 20 percent extra time, plus no more than 25 percent extra distance. Zero-camera privacy routes are still accepted immediately.
+- Camera-to-road mapping now checks projected distance to route road geometry edges instead of only matching stored geometry vertices.
+
+### Fixed
+- The route preview sheet now refreshes after FlockFree route analysis and shows either the fastest-vs-privacy comparison card or a FlockFree route-check status card when no separate privacy route is available.
+
+### Documentation
+- Clarified the Flock-only source metadata limitation in the README and route-avoidance design notes.
+
+### Verification
+- Source-only checks passed after the route-guardrail and route-sheet visibility changes.
+- Built and installed a local route-sheet status APK on a Moto G Stylus over Wi-Fi ADB, and the route preview behavior was field-validated.
+
 ## [v1.8.1] — 2026-06-28
 
 ### Added

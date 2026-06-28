@@ -183,6 +183,7 @@
 	<string name="flockfree_route_status_no_data">Avoidance skipped: Flock camera data cache unavailable.</string>
 	<string name="flockfree_route_status_no_road_ids">Avoidance skipped: no Flock-camera-adjacent road objects found.</string>
 	<string name="flockfree_route_status_partial_applied">Partial avoidance: %1$d of %2$d Flock camera roads blocked, %3$d Flock cameras remain on route</string>
+	<string name="flockfree_route_status_card_title">FlockFree route check</string>
 	<string name="flockfree_route_last_check">Last route check</string>
 	<string name="flockfree_route_last_check_none">No route checked yet.</string>
 	<string name="flockfree_route_last_check_no_route">No calculated route available.</string>

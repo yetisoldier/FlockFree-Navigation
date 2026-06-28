@@ -12,10 +12,14 @@ route for Flock-labeled cameras inside the configured corridor radius, maps
 those cameras to OsmAnd road object IDs, and runs a second offline route
 calculation with those road IDs marked as temporary impassable roads. The
 privacy route is accepted only if a fresh scan shows fewer Flock camera
-exposures than the original route. If full avoidance cannot produce a better
-route, FlockFree progressively unblocks the least camera-impactful roads and
-tries again up to 4 times. If none of those attempts improves the route, the
-original route is kept.
+exposures than the original route. If the accepted route still has Flock
+camera exposure, it also has to stay within the current detour guardrails: no
+more than the greater of 10 minutes or 20 percent extra time, and no more than
+25 percent extra distance.
+A route that reduces exposure to zero cameras is always accepted. If full
+avoidance cannot produce a better route, FlockFree progressively unblocks the
+least camera-impactful roads and tries again up to 4 times. If none of those
+attempts improves the route, the original route is kept.
 
 The implementation is intentionally conservative:
 
@@ -162,24 +166,25 @@ The process is:
    segments and are poor candidates for hard blocking.
 4. For each Flock camera, convert the camera coordinate to OsmAnd's 31-bit tile
    coordinate space.
-5. For each route road segment, iterate the segment geometry points between the
-   segment's start and end indexes.
-6. If any geometry point on that road object is within the avoidance radius,
-   add that road object ID to the block set and increment its camera count.
-7. If no geometry point matched, fall back to
+5. For each route road segment, iterate the road geometry between the segment's
+   start and end indexes.
+6. Check both stored geometry points and the projected distance to each geometry
+   edge. If the camera is within the avoidance radius, add that road object ID
+   to the block set and increment its camera-road association count.
+7. If no route road geometry matched, fall back to
    `RouteSegmentSearchResult.searchRouteSegment(...)` to find the nearest route
    segment within the radius.
-8. Sort road IDs by camera count descending.
+8. Sort road IDs by camera-road association count descending.
 
 The important design choice is wide corridor blocking: a single Flock camera can
 cause multiple adjacent route road objects to be blocked when they are within
 the radius. That prevents the router from simply shifting onto the next parallel
 road in the same camera corridor.
 
-The sorted camera-count list is also what enables relaxation. Roads with more
-camera associations are kept blocked longer; roads with fewer camera
-associations are the first candidates to unblock when full avoidance cannot find
-a viable route.
+The sorted road association list is also what enables relaxation. Roads with
+more camera associations are kept blocked longer; roads with fewer camera
+associations are the first candidates to unblock when full avoidance cannot
+find a viable route.
 
 ## Full Avoidance Pass
 
@@ -205,10 +210,15 @@ The full avoidance pass blocks every Flock camera-adjacent road ID found on the
 initial route and runs `findVectorMapsRoute(...)` again. If OsmAnd finds a
 candidate route, FlockFree does not accept it blindly. It scans the candidate
 route for Flock cameras again and accepts the route only when the candidate has
-fewer Flock camera exposures than the baseline.
+fewer actual Flock camera exposures than the original route baseline and stays
+inside the detour guardrails. The detour guardrails are skipped when a candidate
+route reaches zero Flock camera exposure.
 
 If the route is not calculated, throws an exception, or has an equal-or-worse
-camera count, FlockFree keeps looking instead of replacing the route.
+camera count, FlockFree keeps looking instead of replacing the route. The same
+happens when a non-zero-camera candidate improves exposure but exceeds the
+greater of 10 minutes or 20 percent extra time, or exceeds 25 percent extra
+distance.
 
 ## Iterative Relaxation
 
@@ -228,8 +238,9 @@ camera-impactful roads are at the end. Each relaxation iteration:
 1. Removes one lowest-camera road from the blocked set.
 2. Recalculates an OsmAnd route with the remaining road IDs still blocked.
 3. Scans the candidate route for Flock cameras.
-4. Accepts the route only if it improves on the baseline camera exposure.
-5. Continues if the candidate is not better.
+4. Accepts the route only if it improves on the actual route exposure baseline
+   and passes the same detour guardrails as full avoidance.
+5. Continues if the candidate is not better or the detour is too large.
 
 If a relaxed route is accepted, the user-facing status is recorded as partial
 avoidance. The accepted route still avoids the most camera-dense road objects,
@@ -241,22 +252,32 @@ original route.
 
 ## Acceptance Rules
 
-FlockFree's route acceptance rule is deliberately simple: an avoidance route
-must have fewer Flock camera exposures than the route it is replacing.
+FlockFree's route acceptance rule is deliberately conservative: an avoidance
+route must have fewer actual Flock camera exposures than the route it is
+replacing. If it still has one or more Flock cameras, it must also stay within
+the detour guardrails.
 
 This protects against the inverted-route bug where a "privacy" route exists but
 actually passes more cameras than the original route.
 
 There are two related counts in the code:
 
-- The route summary count is a fresh count of Flock camera points near a route.
-- The road-blocking baseline is the sum of camera-to-road associations produced
-  by the road mapper. A single camera may map to multiple adjacent road objects
+- Actual route exposure is a fresh count of Flock camera points near a route.
+  This is the count used by route summaries, route comparison, widgets, and the
+  acceptance gate.
+- Road association count is the sum of camera-to-road associations produced by
+  the road mapper. A single camera may map to multiple adjacent road objects
   when wide corridor blocking is active.
 
-The user-visible route summary and widget use the fresh route camera scan. The
-road-blocking baseline is used internally to decide whether a reroute is worth
-accepting.
+Only actual route exposure is used to decide whether a reroute is accepted. The
+road association count is kept for road-blocking priority, relaxation ordering,
+and diagnostics.
+
+The current detour guardrails for non-zero-camera avoidance routes are:
+
+- Maximum extra time: the greater of 10 minutes or 20 percent of original route time.
+- Maximum extra distance: 25 percent.
+- Zero-camera candidate route: always accepted.
 
 ## Optional Routing Budget
 
@@ -318,9 +339,12 @@ Important statuses:
 - `SKIPPED_NO_ROAD_IDS`: cameras were not mapped to avoidable route road IDs.
 
 After route calculation, `FlockFreePlugin.newRouteIsCalculated(...)` builds the
-route summary, route comparison card data, and route tradeoff text. The camera
-proximity widget uses the same avoidance helper to count remaining Flock cameras
-on the active route.
+route summary, route comparison card data, and route tradeoff text, then refreshes
+the route preview sheet. If an accepted privacy route exists, the sheet shows the
+fastest-vs-privacy comparison card. If no separate privacy route is available, it
+shows the FlockFree route-check status card instead of silently falling back to
+the stock OsmAnd route card. The camera proximity widget uses the same avoidance
+helper to count remaining Flock cameras on the active route.
 
 ## Known Limits
 
@@ -328,12 +352,12 @@ on the active route.
   routes, direct-to routes, and external routing services are outside this path.
 - The Flock-only filter depends on source metadata. A real Flock camera without
   `flock` in `brand` or `operator` is intentionally excluded until the source
-  data labels it.
+  metadata identifies them as Flock-related.
 - Road blocking uses OsmAnd road object IDs, so one camera can block a longer
   road object than a driver might expect.
-- The road-ID mapper checks road geometry points and falls back to nearest route
-  segment search. The route-corridor camera scan is more precise than the road
-  ID mapping step.
+- The road-ID mapper checks road geometry edges and falls back to nearest route
+  segment search, but it still has to translate camera points into OsmAnd road
+  object IDs rather than blocking a raw lat/lon point.
 - First and last route segments are skipped for blocking to avoid hard-blocking
   start/end connectors.
 - Relaxation is capped at 4 attempts to keep route calculation responsive.
@@ -381,5 +405,5 @@ logic:
 7. Reopen FlockFree settings and confirm `Last route check` and the route
    tradeoff summary match the route behavior.
 
-8. Verify the camera proximity widget and route comparison card count Flock
-   cameras only.
+8. Verify the camera proximity widget and route comparison/status card count or
+   summarize Flock cameras only.

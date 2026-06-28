@@ -40,6 +40,7 @@ import net.osmand.plus.views.mapwidgets.WidgetInfoCreator;
 import net.osmand.plus.views.mapwidgets.WidgetType;
 import net.osmand.plus.views.mapwidgets.WidgetsPanel;
 import net.osmand.plus.views.mapwidgets.widgets.MapWidget;
+import net.osmand.plus.views.OsmandMapTileView;
 import net.osmand.plus.widgets.ctxmenu.ContextMenuAdapter;
 import net.osmand.plus.widgets.ctxmenu.data.ContextMenuItem;
 import net.osmand.util.Algorithms;
@@ -500,6 +501,39 @@ public class FlockFreePlugin extends OsmandPlugin {
         return summary != null && summary.length() > 0
                 ? summary
                 : app.getString(R.string.flockfree_route_last_check_none);
+    }
+
+    public synchronized boolean hasRouteCheckSummaryForRouteMenu() {
+        return !Algorithms.isEmpty(getPersistedRouteCheckSummaryForRouteMenu());
+    }
+
+    @Nullable
+    private synchronized String getPersistedRouteCheckSummaryForRouteMenu() {
+        String summary = CAMERA_ROUTE_LAST_CHECK_SUMMARY.get();
+        return !Algorithms.isEmpty(summary)
+                && !summary.equals(app.getString(R.string.flockfree_route_last_check_none))
+                && !summary.equals(app.getString(R.string.flockfree_route_last_check_no_route))
+                ? summary
+                : null;
+    }
+
+    @Nullable
+    public String getRouteCheckSummaryForRouteMenu(@Nullable RouteCalculationResult route) {
+        String summary = getPersistedRouteCheckSummaryForRouteMenu();
+        if (!Algorithms.isEmpty(summary)) {
+            return summary;
+        }
+        if (route == null || !route.isCalculated()) {
+            return null;
+        }
+        if (!getCameraData().isDataLoaded()) {
+            return app.getString(R.string.flockfree_route_camera_data_loading);
+        }
+        List<Location> routeLocations = route.getImmutableAllLocations();
+        if (routeLocations == null || routeLocations.isEmpty()) {
+            return null;
+        }
+        return getAvoidanceHelper().getRouteCameraSummaryFromLocations(routeLocations);
     }
 
     private synchronized void setLastRouteCheckSummary(@NonNull String summary) {
@@ -1390,6 +1424,7 @@ public class FlockFreePlugin extends OsmandPlugin {
             }
         }
         if (!avoidActive && !trafficEnabled) {
+            refreshRouteInfoMenuIfVisible();
             return;
         }
         boolean cameraAvoidanceEnabled = avoidActive;
@@ -1402,6 +1437,7 @@ public class FlockFreePlugin extends OsmandPlugin {
             setLastRouteTradeoffSummary(null);
             setLastRouteComparisonInfo(null);
             app.showShortToastMessage(loadingSummary);
+            refreshRouteInfoMenuIfVisible();
             return;
         }
         RouteCalculationResult route = app.getRoutingHelper().getRoute();
@@ -1409,6 +1445,7 @@ public class FlockFreePlugin extends OsmandPlugin {
             setLastRouteCheckSummary(app.getString(R.string.flockfree_route_last_check_no_route));
             setLastRouteTradeoffSummary(null);
             setLastRouteComparisonInfo(null);
+            refreshRouteInfoMenuIfVisible();
             return;
         }
         List<Location> routeLocations = route.getImmutableAllLocations();
@@ -1416,6 +1453,7 @@ public class FlockFreePlugin extends OsmandPlugin {
             setLastRouteCheckSummary(app.getString(R.string.flockfree_route_last_check_no_route));
             setLastRouteTradeoffSummary(null);
             setLastRouteComparisonInfo(null);
+            refreshRouteInfoMenuIfVisible();
             return;
         }
         String routeSummary = "";
@@ -1457,6 +1495,17 @@ public class FlockFreePlugin extends OsmandPlugin {
         }
         setLastRouteCheckSummary(routeSummary);
         app.showToastMessage(routeSummary);
+        refreshRouteInfoMenuIfVisible();
+    }
+
+    private void refreshRouteInfoMenuIfVisible() {
+        app.runInUIThread(() -> {
+            OsmandMapTileView mapView = app.getOsmandMap().getMapView();
+            MapActivity mapActivity = mapView != null ? mapView.getMapActivity() : null;
+            if (mapActivity != null && !mapActivity.isDestroyed()) {
+                mapActivity.getMapRouteInfoMenu().updateMenu();
+            }
+        });
     }
 
     private void updateLastRouteComparisonInfo(@NonNull CameraAvoidanceHelper helper,
