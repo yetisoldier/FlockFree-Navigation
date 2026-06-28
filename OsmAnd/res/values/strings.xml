@@ -10,6 +10,23 @@
 	- For wording and consistency, please note https://docs.osmand.net/docs/technical/contributions/translating-osmand
 	Thx - Hardy
 -->
+	<string name="flockfree_app_updates">App Updates</string>
+	<string name="flockfree_app_update_check">Check for updates</string>
+	<string name="flockfree_app_update_check_description">Check GitHub Releases for the newest FlockFree sideload APK.</string>
+	<string name="flockfree_app_update_last_check">Last update check</string>
+	<string name="flockfree_app_update_never_checked">No update checked yet.</string>
+	<string name="flockfree_app_update_checking">Checking for updates...</string>
+	<string name="flockfree_app_update_available_summary">Update available: %1$s. Installed: %2$s.</string>
+	<string name="flockfree_app_update_current_summary">FlockFree is up to date: %1$s.</string>
+	<string name="flockfree_app_update_failed_summary">Update check failed: %1$s.</string>
+	<string name="flockfree_app_update_available_title">FlockFree update available</string>
+	<string name="flockfree_app_update_available_message">Installed: %1$s\nLatest: %2$s\n\n%3$s</string>
+	<string name="flockfree_app_update_download">Download APK</string>
+	<string name="flockfree_app_update_release">Release notes</string>
+	<string name="flockfree_app_update_later">Later</string>
+	<string name="flockfree_app_update_no_notes">No release notes were provided.</string>
+	<string name="flockfree_app_update_network_error">Unable to reach GitHub Releases.</string>
+	<string name="flockfree_app_update_bad_response">GitHub Releases returned an unexpected response.</string>
 	<plurals name="flockfree_route_tradeoff_avoids_cameras">
 		<item quantity="one">Avoids %1$d camera</item>
 		<item quantity="other">Avoids %1$d cameras</item>

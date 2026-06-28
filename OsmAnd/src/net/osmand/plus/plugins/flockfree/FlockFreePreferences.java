@@ -28,6 +28,9 @@ public final class FlockFreePreferences {
     public static final String CAMERA_ALERT_LAST_CHECK_SUMMARY = "camera_alert_last_check_summary";
     public static final String CAMERA_REPORT_LAST_DRAFT_SUMMARY = "camera_report_last_draft_summary";
     public static final String CAMERA_NEAREST_LAST_CHECK_SUMMARY = "camera_nearest_last_check_summary";
+    public static final String APP_UPDATE_LAST_CHECK_SUMMARY = "app_update_last_check_summary";
+    public static final String APP_UPDATE_LAST_CHECK_TIME = "app_update_last_check_time";
+    public static final String APP_UPDATE_LAST_NOTIFIED_VERSION = "app_update_last_notified_version";
     public static final String RENDERER_MIGRATION_DONE = "renderer_migration_done";
     public static final String VISUAL_DEFAULTS_MIGRATION_DONE = "visual_defaults_migration_done";
     public static final String CAMERA_AVOIDANCE_DEFAULTS_MIGRATION_DONE = "camera_avoidance_defaults_migration_done";
@@ -65,6 +68,8 @@ public final class FlockFreePreferences {
     public static final float MIN_NAVIGATION_TILT_ANGLE = 30f;
     public static final float MAX_NAVIGATION_TILT_ANGLE = 80f;
     public static final String DEFAULT_STATUS_SUMMARY = "";
+    public static final long DEFAULT_APP_UPDATE_LAST_CHECK_TIME = 0L;
+    public static final String DEFAULT_APP_UPDATE_LAST_NOTIFIED_VERSION = "";
 
     // Bounds
     public static final int MIN_AVOIDANCE_RADIUS = 50;
@@ -74,7 +79,11 @@ public final class FlockFreePreferences {
 
     // Data source
     public static final String CAMERA_DATA_URL = "https://data.dontgetflocked.com/cameras.geojson.gz";
+    public static final String APP_UPDATE_RELEASES_URL = "https://api.github.com/repos/yetisoldier/FlockFree-Navigation/releases/latest";
+    public static final String APP_UPDATE_RELEASES_PAGE_URL = "https://github.com/yetisoldier/FlockFree-Navigation/releases/latest";
     public static final long REFRESH_INTERVAL_MS = 7L * 24 * 60 * 60 * 1000; // 1 week
+    public static final long APP_UPDATE_CHECK_INTERVAL_MS = 24L * 60 * 60 * 1000; // 1 day
+    public static final String APP_RELEASE_VERSION = "1.8.1";
 
     private FlockFreePreferences() {
         // Utility class, no instances

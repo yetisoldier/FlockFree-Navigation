@@ -238,6 +238,8 @@ Nothing uploads automatically. You always review and confirm before submitting.
 | Live traffic routing (experimental) | Use TomTom traffic as a soft route cost when a key is configured |
 | TomTom API key | Device-local traffic API key; blank disables TomTom traffic routing |
 | Last traffic routing check | Shows the last traffic-routing result or skip reason |
+| Check for updates | Checks GitHub Releases for the newest sideload APK |
+| Last update check | Shows whether the installed app is current or an update is available |
 | Nearby Flock camera alerts | Enable proximity toast + vibration alerts |
 | Alert distance | Radius for proximity alerts |
 | WiFi Flock scan | Enable WiFi beacon scanning for Flock Safety cameras |

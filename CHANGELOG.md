@@ -4,6 +4,18 @@ All notable changes to FlockFree Navigation are documented here.
 
 ## [Unreleased]
 
+## [v1.8.1] — 2026-06-28
+
+### Added
+- Added a FlockFree settings update checker that reads the latest GitHub Release, reports whether the installed FlockFree release is current, and links directly to the newest sideload APK.
+- Added a quiet once-daily update check on map resume for future builds so users who install this release can be notified about later public releases from inside the app.
+
+### Changed
+- FlockFree settings now include an App Updates section with `Check for updates` and `Last update check` rows.
+
+### Verification
+- Source-only checks passed after adding the GitHub Releases update checker.
+
 ## [v1.8.0] — 2026-06-28
 
 ### Added

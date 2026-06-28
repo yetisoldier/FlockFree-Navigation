@@ -48,6 +48,8 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 	private static final String CYD_CLEAR_DETECTIONS_KEY = "flockfree_cyd_clear_detections";
 	private static final String WIFI_SCAN_STATUS_KEY = "flockfree_wifi_scan_status";
 	private static final String WIFI_SCAN_CLEAR_KEY = "flockfree_wifi_scan_clear";
+	private static final String APP_UPDATE_CHECK_KEY = "flockfree_app_update_check";
+	private static final String APP_UPDATE_LAST_CHECK_KEY = "flockfree_app_update_last_check";
 	private static final Integer[] AVOIDANCE_RADIUS_VALUES = {50, 75, 100, 150, 200, 300, 500};
 	private static final Integer[] ALERT_DISTANCE_VALUES = {100, 200, 300, 500, 750, 1000};
 	private static final Float[] TILT_ANGLE_VALUES = {30f, 35f, 40f, 45f, 50f, 55f, 60f, 65f, 70f, 75f, 80f};
@@ -101,6 +103,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		setupNavigationTiltEnabledPreference();
 		setupNavigationTiltAnglePreference();
 		setupWifiScanStatusPreference();
+		setupAppUpdateLastCheckPreference();
 		setupCydStatusPreference();
 	}
 
@@ -215,6 +218,13 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		if (preference != null) {
 			WifiScannerManager manager = plugin.getWifiScannerManager();
 			preference.setSummary(manager.getStatusSummary());
+		}
+	}
+
+	private void setupAppUpdateLastCheckPreference() {
+		Preference preference = findPreference(APP_UPDATE_LAST_CHECK_KEY);
+		if (preference != null) {
+			preference.setSummary(plugin.getLastAppUpdateCheckSummary());
 		}
 	}
 
@@ -435,6 +445,11 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 			plugin.getWifiScannerManager().clearDetections();
 			setupWifiScanStatusPreference();
 			return true;
+		} else if (APP_UPDATE_CHECK_KEY.equals(key)) {
+			plugin.checkForAppUpdate(getMapActivity(), true);
+			setupAppUpdateLastCheckPreference();
+			startDynamicStatusRefresh();
+			return true;
 		}
 		return super.onPreferenceClick(preference);
 	}
@@ -483,6 +498,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		setupCydStatusPreference();
 		setupNavigationTiltAnglePreference();
 		setupWifiScanStatusPreference();
+		setupAppUpdateLastCheckPreference();
 	}
 
 	private void startDynamicStatusRefresh() {
@@ -495,6 +511,9 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 
 	private boolean shouldKeepDynamicStatusRefreshing() {
 		if (plugin.getCameraData().isLoading()) {
+			return true;
+		}
+		if (plugin.isAppUpdateCheckInProgress()) {
 			return true;
 		}
 		CydHardwareManager.State state = plugin.getCydHardwareManager().getState();

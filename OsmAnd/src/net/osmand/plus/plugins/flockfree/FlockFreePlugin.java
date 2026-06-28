@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.Uri;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -44,9 +45,21 @@ import net.osmand.plus.widgets.ctxmenu.data.ContextMenuItem;
 import net.osmand.util.Algorithms;
 import net.osmand.util.MapUtils;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class FlockFreePlugin extends OsmandPlugin {
 
@@ -71,6 +84,9 @@ public class FlockFreePlugin extends OsmandPlugin {
     public final CommonPreference<String> CAMERA_ALERT_LAST_CHECK_SUMMARY;
     public final CommonPreference<String> CAMERA_REPORT_LAST_DRAFT_SUMMARY;
     public final CommonPreference<String> CAMERA_NEAREST_LAST_CHECK_SUMMARY;
+    public final CommonPreference<String> APP_UPDATE_LAST_CHECK_SUMMARY;
+    public final CommonPreference<Long> APP_UPDATE_LAST_CHECK_TIME;
+    public final CommonPreference<String> APP_UPDATE_LAST_NOTIFIED_VERSION;
     private final CommonPreference<Boolean> RENDERER_MIGRATION_DONE;
     private final CommonPreference<Boolean> VISUAL_DEFAULTS_MIGRATION_DONE;
     private final CommonPreference<Boolean> TRAFFIC_DEFAULTS_MIGRATION_DONE;
@@ -100,6 +116,11 @@ public class FlockFreePlugin extends OsmandPlugin {
     private static final String RENDER_HIDE_HOUSE_NUMBERS = "hideHouseNumbers";
     private static final String RENDER_HIDE_POI_LABELS = "hidePOILabels";
     private static final String RENDER_HIDE_POI_ICONS = "hideIcons";
+    private static final int APP_UPDATE_CONNECT_TIMEOUT_MS = 10_000;
+    private static final int APP_UPDATE_READ_TIMEOUT_MS = 15_000;
+    private static final int APP_UPDATE_MAX_RESPONSE_BYTES = 512 * 1024;
+    private static final String APP_UPDATE_TAG_PREFIX = "v";
+    private static final String APK_EXTENSION = ".apk";
 
     public static final class RouteComparisonInfo {
         public final int fastestDistanceMeters;
@@ -142,7 +163,9 @@ public class FlockFreePlugin extends OsmandPlugin {
     private long lastCameraAlertTimeMs;
     private String lastCameraAlertKey;
     private BroadcastReceiver debugAlertReceiver;
+    private final ExecutorService appUpdateExecutor = Executors.newSingleThreadExecutor();
     private final Map<String, Long> alertedIncidentIds = new java.util.concurrent.ConcurrentHashMap<>();
+    private volatile boolean appUpdateCheckInProgress;
     private static final long INCIDENT_ALERT_COOLDOWN_MS = 60_000L;
     private static final double INCIDENT_ALERT_RADIUS_METERS = 2000.0;
     public FlockFreePlugin(OsmandApplication app) {
@@ -205,6 +228,15 @@ public class FlockFreePlugin extends OsmandPlugin {
         CAMERA_NEAREST_LAST_CHECK_SUMMARY = registerStringPreference(
                 FlockFreePreferences.CAMERA_NEAREST_LAST_CHECK_SUMMARY,
                 FlockFreePreferences.DEFAULT_STATUS_SUMMARY).makeProfile().cache();
+        APP_UPDATE_LAST_CHECK_SUMMARY = registerStringPreference(
+                FlockFreePreferences.APP_UPDATE_LAST_CHECK_SUMMARY,
+                FlockFreePreferences.DEFAULT_STATUS_SUMMARY).makeGlobal().cache();
+        APP_UPDATE_LAST_CHECK_TIME = registerLongPreference(
+                FlockFreePreferences.APP_UPDATE_LAST_CHECK_TIME,
+                FlockFreePreferences.DEFAULT_APP_UPDATE_LAST_CHECK_TIME).makeGlobal().cache();
+        APP_UPDATE_LAST_NOTIFIED_VERSION = registerStringPreference(
+                FlockFreePreferences.APP_UPDATE_LAST_NOTIFIED_VERSION,
+                FlockFreePreferences.DEFAULT_APP_UPDATE_LAST_NOTIFIED_VERSION).makeGlobal().cache();
         RENDERER_MIGRATION_DONE = registerBooleanPreference(
                 FlockFreePreferences.RENDERER_MIGRATION_DONE,
                 FlockFreePreferences.DEFAULT_RENDERER_MIGRATION_DONE).makeGlobal().cache();
@@ -554,6 +586,260 @@ public class FlockFreePlugin extends OsmandPlugin {
         CAMERA_NEAREST_LAST_CHECK_SUMMARY.set(summary);
     }
 
+    @NonNull
+    public synchronized String getLastAppUpdateCheckSummary() {
+        String summary = APP_UPDATE_LAST_CHECK_SUMMARY.get();
+        return summary != null && summary.length() > 0
+                ? summary
+                : app.getString(R.string.flockfree_app_update_never_checked);
+    }
+
+    private synchronized void setLastAppUpdateCheckSummary(@NonNull String summary) {
+        APP_UPDATE_LAST_CHECK_SUMMARY.set(summary);
+    }
+
+    public boolean isAppUpdateCheckInProgress() {
+        return appUpdateCheckInProgress;
+    }
+
+    public void checkForAppUpdate(@Nullable MapActivity mapActivity, boolean userInitiated) {
+        long now = System.currentTimeMillis();
+        if (!userInitiated && now - APP_UPDATE_LAST_CHECK_TIME.get()
+                < FlockFreePreferences.APP_UPDATE_CHECK_INTERVAL_MS) {
+            return;
+        }
+        if (appUpdateCheckInProgress) {
+            if (userInitiated) {
+                app.showShortToastMessage(R.string.flockfree_app_update_checking);
+            }
+            return;
+        }
+        appUpdateCheckInProgress = true;
+        APP_UPDATE_LAST_CHECK_TIME.set(now);
+        setLastAppUpdateCheckSummary(app.getString(R.string.flockfree_app_update_checking));
+        if (userInitiated) {
+            app.showShortToastMessage(R.string.flockfree_app_update_checking);
+        }
+        appUpdateExecutor.execute(() -> {
+            try {
+                AppUpdateInfo info = fetchLatestAppUpdateInfo();
+                String currentVersion = getInstalledVersionName();
+                boolean updateAvailable = compareVersions(info.tagName, currentVersion) > 0;
+                if (updateAvailable) {
+                    String summary = app.getString(R.string.flockfree_app_update_available_summary,
+                            info.tagName, currentVersion);
+                    setLastAppUpdateCheckSummary(summary);
+                    String lastNotified = APP_UPDATE_LAST_NOTIFIED_VERSION.get();
+                    if (userInitiated || !info.tagName.equals(lastNotified)) {
+                        APP_UPDATE_LAST_NOTIFIED_VERSION.set(info.tagName);
+                        app.runInUIThread(() -> showAppUpdateDialog(mapActivity, info, currentVersion));
+                    }
+                } else {
+                    String summary = app.getString(R.string.flockfree_app_update_current_summary, currentVersion);
+                    setLastAppUpdateCheckSummary(summary);
+                    if (userInitiated) {
+                        app.runInUIThread(() -> app.showShortToastMessage(summary));
+                    }
+                }
+            } catch (Exception e) {
+                String message = e.getMessage();
+                if (Algorithms.isEmpty(message)) {
+                    message = app.getString(R.string.flockfree_app_update_network_error);
+                }
+                String summary = app.getString(R.string.flockfree_app_update_failed_summary, message);
+                setLastAppUpdateCheckSummary(summary);
+                if (userInitiated) {
+                    String toast = summary;
+                    app.runInUIThread(() -> app.showShortToastMessage(toast));
+                }
+            } finally {
+                appUpdateCheckInProgress = false;
+            }
+        });
+    }
+
+    @NonNull
+    private String getInstalledVersionName() {
+        return APP_UPDATE_TAG_PREFIX + FlockFreePreferences.APP_RELEASE_VERSION;
+    }
+
+    @NonNull
+    private AppUpdateInfo fetchLatestAppUpdateInfo() throws Exception {
+        HttpURLConnection connection = null;
+        try {
+            URL url = new URL(FlockFreePreferences.APP_UPDATE_RELEASES_URL);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setConnectTimeout(APP_UPDATE_CONNECT_TIMEOUT_MS);
+            connection.setReadTimeout(APP_UPDATE_READ_TIMEOUT_MS);
+            connection.setRequestProperty("Accept", "application/vnd.github+json");
+            connection.setRequestProperty("User-Agent", "FlockFree-UpdateChecker");
+            int code = connection.getResponseCode();
+            if (code < 200 || code >= 300) {
+                throw new IOException(app.getString(R.string.flockfree_app_update_bad_response));
+            }
+            String json = readLimitedText(connection.getInputStream(), APP_UPDATE_MAX_RESPONSE_BYTES);
+            JSONObject release = new JSONObject(json);
+            String tagName = release.optString("tag_name", "");
+            if (Algorithms.isEmpty(tagName)) {
+                throw new IOException(app.getString(R.string.flockfree_app_update_bad_response));
+            }
+            String releaseUrl = release.optString("html_url",
+                    FlockFreePreferences.APP_UPDATE_RELEASES_PAGE_URL);
+            String notes = release.optString("body",
+                    app.getString(R.string.flockfree_app_update_no_notes));
+            String apkUrl = findApkAssetUrl(release.optJSONArray("assets"));
+            if (Algorithms.isEmpty(apkUrl)) {
+                apkUrl = releaseUrl;
+            }
+            return new AppUpdateInfo(tagName, releaseUrl, apkUrl, notes);
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+    }
+
+    @NonNull
+    private String findApkAssetUrl(@Nullable JSONArray assets) {
+        if (assets == null) {
+            return "";
+        }
+        String fallback = "";
+        for (int i = 0; i < assets.length(); i++) {
+            JSONObject asset = assets.optJSONObject(i);
+            if (asset == null) {
+                continue;
+            }
+            String name = asset.optString("name", "");
+            String url = asset.optString("browser_download_url", "");
+            if (Algorithms.isEmpty(url) || !name.toLowerCase(java.util.Locale.US).endsWith(APK_EXTENSION)) {
+                continue;
+            }
+            if (name.toLowerCase(java.util.Locale.US).contains("sideload")) {
+                return url;
+            }
+            fallback = url;
+        }
+        return fallback;
+    }
+
+    @NonNull
+    private String readLimitedText(@NonNull InputStream inputStream, int maxBytes) throws IOException {
+        StringBuilder builder = new StringBuilder();
+        int bytesRead = 0;
+        char[] buffer = new char[4096];
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+            int read;
+            while ((read = reader.read(buffer)) != -1) {
+                bytesRead += read * 2;
+                if (bytesRead > maxBytes) {
+                    throw new IOException(app.getString(R.string.flockfree_app_update_bad_response));
+                }
+                builder.append(buffer, 0, read);
+            }
+        }
+        return builder.toString();
+    }
+
+    private void showAppUpdateDialog(@Nullable MapActivity mapActivity, @NonNull AppUpdateInfo info,
+                                     @NonNull String currentVersion) {
+        if (mapActivity == null || mapActivity.isFinishing()) {
+            app.showShortToastMessage(getLastAppUpdateCheckSummary());
+            return;
+        }
+        String notes = Algorithms.isEmpty(info.releaseNotes)
+                ? app.getString(R.string.flockfree_app_update_no_notes)
+                : info.releaseNotes.trim();
+        String message = app.getString(R.string.flockfree_app_update_available_message,
+                currentVersion, info.tagName, truncateReleaseNotes(notes));
+        new android.app.AlertDialog.Builder(mapActivity)
+                .setTitle(R.string.flockfree_app_update_available_title)
+                .setMessage(message)
+                .setPositiveButton(R.string.flockfree_app_update_download,
+                        (dialog, which) -> openUrl(mapActivity, info.apkUrl))
+                .setNeutralButton(R.string.flockfree_app_update_release,
+                        (dialog, which) -> openUrl(mapActivity, info.releaseUrl))
+                .setNegativeButton(R.string.flockfree_app_update_later, null)
+                .show();
+    }
+
+    @NonNull
+    private String truncateReleaseNotes(@NonNull String notes) {
+        String normalized = notes.replace("\r\n", "\n").trim();
+        int max = 1200;
+        if (normalized.length() <= max) {
+            return normalized;
+        }
+        return normalized.substring(0, max).trim() + "\n...";
+    }
+
+    private void openUrl(@NonNull MapActivity mapActivity, @NonNull String url) {
+        if (Algorithms.isEmpty(url)) {
+            url = FlockFreePreferences.APP_UPDATE_RELEASES_PAGE_URL;
+        }
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+        try {
+            mapActivity.startActivity(intent);
+        } catch (Exception e) {
+            app.showShortToastMessage(url);
+        }
+    }
+
+    private int compareVersions(@NonNull String latestVersion, @NonNull String currentVersion) {
+        int[] latest = parseVersionNumbers(latestVersion);
+        int[] current = parseVersionNumbers(currentVersion);
+        int length = Math.max(latest.length, current.length);
+        for (int i = 0; i < length; i++) {
+            int latestPart = i < latest.length ? latest[i] : 0;
+            int currentPart = i < current.length ? current[i] : 0;
+            if (latestPart != currentPart) {
+                return latestPart > currentPart ? 1 : -1;
+            }
+        }
+        return 0;
+    }
+
+    @NonNull
+    private int[] parseVersionNumbers(@NonNull String version) {
+        String normalized = version.trim();
+        if (normalized.startsWith(APP_UPDATE_TAG_PREFIX)) {
+            normalized = normalized.substring(APP_UPDATE_TAG_PREFIX.length());
+        }
+        String[] parts = normalized.split("[^0-9]+");
+        List<Integer> numbers = new ArrayList<>();
+        for (String part : parts) {
+            if (part.length() == 0) {
+                continue;
+            }
+            try {
+                numbers.add(Integer.parseInt(part));
+            } catch (NumberFormatException ignored) {
+                // Ignore oversized or malformed segments and compare what remains.
+            }
+        }
+        int[] result = new int[numbers.size()];
+        for (int i = 0; i < numbers.size(); i++) {
+            result[i] = numbers.get(i);
+        }
+        return result;
+    }
+
+    private static final class AppUpdateInfo {
+        final String tagName;
+        final String releaseUrl;
+        final String apkUrl;
+        final String releaseNotes;
+
+        AppUpdateInfo(@NonNull String tagName, @NonNull String releaseUrl, @NonNull String apkUrl,
+                      @NonNull String releaseNotes) {
+            this.tagName = tagName;
+            this.releaseUrl = releaseUrl;
+            this.apkUrl = apkUrl;
+            this.releaseNotes = releaseNotes;
+        }
+    }
+
     public void checkCameraAlertAtMapCenter(@Nullable MapActivity mapActivity) {
         if (mapActivity == null || mapActivity.getMapView() == null) {
             setLastCameraAlertCheckSummary(app.getString(R.string.flockfree_alert_last_check_map_unavailable));
@@ -856,6 +1142,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     @Override
     public void mapActivityResume(@NonNull MapActivity activity) {
         getCameraData().ensureDataLoaded();
+        checkForAppUpdate(activity, false);
         ensureCydScanIfEnabled(activity);
         ensureWifiScanIfEnabled();
         ensureNavigationTiltController();

@@ -39,6 +39,28 @@
 		android:selectable="false" />
 
 	<PreferenceCategory
+		android:key="flockfree_app_updates"
+		android:layout="@layout/preference_category_with_descr"
+		android:title="@string/flockfree_app_updates" />
+
+	<Preference
+		android:key="flockfree_app_update_check"
+		android:layout="@layout/preference_with_descr"
+		android:persistent="false"
+		android:summary="@string/flockfree_app_update_check_description"
+		android:title="@string/flockfree_app_update_check" />
+
+	<Preference
+		android:key="flockfree_app_update_last_check"
+		android:layout="@layout/preference_with_descr"
+		android:persistent="false"
+		android:title="@string/flockfree_app_update_last_check" />
+
+	<Preference
+		android:layout="@layout/simple_divider_item"
+		android:selectable="false" />
+
+	<PreferenceCategory
 		android:key="flockfree_camera_avoidance"
 		android:layout="@layout/preference_category_with_descr"
 		android:title="@string/flockfree_camera_avoidance_routing" />
