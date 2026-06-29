@@ -129,7 +129,7 @@ public class SearchHistoryHelper {
 			boolean includeDeleted) {
 		List<SearchResult> searchResults = new ArrayList<>();
 
-		SearchPhrase phrase = SearchPhrase.emptyPhrase();
+		SearchPhrase phrase = SearchPhrase.emptyPhrase(app.getSearchUICore().getCore().getSearchSettings());
 		for (HistoryEntry entry : getHistoryEntries(source, onlyPoints, includeDeleted)) {
 			SearchResult result = SearchHistoryAPI.createSearchResult(app, entry, phrase);
 			searchResults.add(result);
