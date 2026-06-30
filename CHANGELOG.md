@@ -4,6 +4,17 @@ All notable changes to FlockFree Navigation are documented here.
 
 ## [Unreleased]
 
+## [v1.8.5] — 2026-06-30
+
+### Changed
+- Camera proximity alert toast now persists until the driver has passed the camera, with the distance updating live as the vehicle approaches. No more fixed 10-second timer.
+- When navigating with an active route, camera alerts now only fire for cameras on or near the route line, not cameras on side streets or cross roads that happen to be within the radial search radius.
+- Camera alert toast redesigned with a wider, more readable layout (⚠ icon + text side-by-side, 17sp font, rounded dark background).
+
+### Fixed
+- Fixed the next-next-turn widget showing a rectangular outline artifact between the distance unit (e.g. "ft") and the street name. The exit-sign background drawable and text stroke outlines are now removed when FlockFree is active.
+- Fixed camera alert toast using a double-toast hack (firing two standard toasts 3.5s apart) to approximate longer duration. Replaced with a single WindowManager overlay that stays visible until the camera is passed, with a 2-minute safety fallback timeout.
+
 ## [v1.8.4] — 2026-06-29
 
 ### Fixed

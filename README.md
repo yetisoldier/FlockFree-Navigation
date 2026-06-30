@@ -10,7 +10,7 @@ FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for Floc
 - **89,942-camera Flock index** — Bundled public-camera source snapshot filtered to Flock-labeled records, stored in SQLite for fast spatial queries
 - **Camera orientation cones** — Translucent view cones rendered on the map at zoom 15+ showing camera heading
 - **Rotation-stable camera markers** — Camera points use the OpenGL elevated projection path and refresh during rotate, pan, and zoom animations to prevent delayed marker jumps
-- **Nearby Flock camera alerts** — Toast alerts with vibration when approaching known Flock cameras; cooldown logic prevents repeat alerts for the same camera
+- **Nearby Flock camera alerts** — Toast overlay with vibration when approaching known Flock cameras; distance updates live as you approach and the alert persists until you've passed the camera. When navigating, only cameras on your route trigger alerts
 - **WiFi Flock detection** — Passively scans for Flock Safety camera WiFi beacons and triggers alerts + CYD auto-pause when detected
 - **Nearest Flock camera inspection** — Map-center query to find the closest Flock camera within 5,000m
 
@@ -187,7 +187,7 @@ Flock cameras appear on the map at zoom 10+. At zoom 15+, orientation cones show
 1. Open Menu → FlockFree
 2. Enable **Nearby Flock camera alerts**
 3. Set the **Alert distance** (default: 200 meters)
-4. While navigating or moving, you will receive a toast alert with vibration when approaching a known Flock camera
+4. While navigating or moving, you will receive a persistent toast overlay with vibration when approaching a known Flock camera. The toast stays visible with live distance updates until you have passed the camera. When navigating, only cameras on or near your route trigger alerts
 5. Enable **WiFi Flock scan** to also detect Flock Safety cameras via WiFi beacon scanning
 
 Use **Check map center alert** in settings to bench-test alerts without driving. You can also trigger a test alert via ADB:

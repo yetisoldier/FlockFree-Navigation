@@ -109,7 +109,6 @@ public class FlockFreePlugin extends OsmandPlugin {
     private static final int ADD_CAMERA_ITEM_ORDER = 7900;
     private static final long CAMERA_ALERT_COOLDOWN_MS = 90_000L;
     private static final long SAME_CAMERA_ALERT_COOLDOWN_MS = 10 * 60_000L;
-    private static final long CAMERA_ALERT_TOAST_REPEAT_DELAY_MS = 3_500L;
     private static final float MOVING_ALERT_SPEED_MPS = 2.0f;
     private static final float FLOCKFREE_DEFAULT_TEXT_SCALE = 1.2f;
     private static final float FLOCKFREE_MAX_LEGACY_TEXT_SCALE = 1.3f;
@@ -371,12 +370,35 @@ public class FlockFreePlugin extends OsmandPlugin {
         debugAlertReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                // Force-trigger a camera alert toast for UI testing
+                // Simulate approaching and passing a camera for UI testing
                 String brand = "Flock Safety";
-                int distance = 150;
-                String title = app.getString(R.string.flockfree_nearby_camera_alert, brand, distance);
-                showExtendedCameraAlertToast(title);
+                showExtendedCameraAlertToast(
+                        app.getString(R.string.flockfree_nearby_camera_alert, brand, 150));
                 vibrateForCameraAlert();
+                app.runInUIThread(() -> {
+                    if (cameraAlertToast != null && cameraAlertToast.isShowing()) {
+                        cameraAlertToast.updateText(
+                                app.getString(R.string.flockfree_nearby_camera_alert, brand, 80));
+                    }
+                }, 3_000L);
+                app.runInUIThread(() -> {
+                    if (cameraAlertToast != null && cameraAlertToast.isShowing()) {
+                        cameraAlertToast.updateText(
+                                app.getString(R.string.flockfree_nearby_camera_alert, brand, 30));
+                    }
+                }, 6_000L);
+                app.runInUIThread(() -> {
+                    if (cameraAlertToast != null && cameraAlertToast.isShowing()) {
+                        cameraAlertToast.updateText(
+                                app.getString(R.string.flockfree_nearby_camera_alert, brand, 5));
+                    }
+                }, 9_000L);
+                // Simulate passing the camera at 12s
+                app.runInUIThread(() -> {
+                    if (cameraAlertToast != null && cameraAlertToast.isShowing()) {
+                        cameraAlertToast.dismiss();
+                    }
+                }, 12_000L);
             }
         };
         app.registerReceiver(debugAlertReceiver, new IntentFilter("net.osmand.flockfree.TEST_ALERT"),
@@ -1248,21 +1270,53 @@ public class FlockFreePlugin extends OsmandPlugin {
             return;
         }
         int alertDistance = CAMERA_ALERT_DISTANCE.get();
-        List<CameraData.CameraPoint> cameras = data.getCamerasNear(
-                latitude, longitude, alertDistance);
+
+        // When navigating, only alert for cameras that are on or near the route line.
+        // This prevents alerts for cameras on side streets or cross roads that happen
+        // to be within the radial search distance but aren't on the driver's path.
+        List<Location> routeLocations = null;
+        RouteCalculationResult route = app.getRoutingHelper().getRoute();
+        if (route != null && route.isCalculated()) {
+            routeLocations = route.getImmutableAllLocations();
+        }
+
         CameraData.CameraPoint closest = null;
         double closestDistance = Double.MAX_VALUE;
-        for (CameraData.CameraPoint camera : cameras) {
-            double distance = MapUtils.getDistance(
-                    latitude, longitude, camera.lat, camera.lon);
-            if (distance < closestDistance) {
-                closest = camera;
-                closestDistance = distance;
+
+        if (routeLocations != null && !routeLocations.isEmpty()) {
+            // Route-based search: only cameras near the route corridor
+            List<CameraData.CameraPoint> routeCameras =
+                    getAvoidanceHelper().findCamerasNearRouteLocations(routeLocations, alertDistance);
+            for (CameraData.CameraPoint camera : routeCameras) {
+                double distance = MapUtils.getDistance(
+                        latitude, longitude, camera.lat, camera.lon);
+                // Only consider cameras that are ahead on the route (within alert distance of current position)
+                if (distance <= alertDistance && distance < closestDistance) {
+                    closest = camera;
+                    closestDistance = distance;
+                }
+            }
+        } else {
+            // No active route — fall back to radial search around current position
+            List<CameraData.CameraPoint> cameras = data.getCamerasNear(
+                    latitude, longitude, alertDistance);
+            for (CameraData.CameraPoint camera : cameras) {
+                double distance = MapUtils.getDistance(
+                        latitude, longitude, camera.lat, camera.lon);
+                if (distance < closestDistance) {
+                    closest = camera;
+                    closestDistance = distance;
+                }
             }
         }
+
         if (closest != null) {
             showCameraAlertIfNeeded(closest, closestDistance, forceAlert);
         } else {
+            // No cameras on route/nearby — dismiss any active camera alert toast (we've passed it)
+            if (cameraAlertToast != null && cameraAlertToast.isShowing()) {
+                cameraAlertToast.dismiss();
+            }
             setLastCameraAlertCheckSummary(app.getString(R.string.flockfree_alert_last_check_no_cameras,
                     alertDistance));
         }
@@ -1363,6 +1417,13 @@ public class FlockFreePlugin extends OsmandPlugin {
                 ? SAME_CAMERA_ALERT_COOLDOWN_MS
                 : CAMERA_ALERT_COOLDOWN_MS;
         if (!forceAlert && now - lastCameraAlertTimeMs < cooldown) {
+            // While the toast overlay is still visible, live-update the distance text
+            // so the driver sees the countdown as they approach the camera.
+            if (cameraAlertToast != null && cameraAlertToast.isShowing()
+                    && cameraKey.equals(lastCameraAlertKey)) {
+                String updatedTitle = app.getString(R.string.flockfree_nearby_camera_alert, brand, roundedDistance);
+                cameraAlertToast.updateText(updatedTitle);
+            }
             setLastCameraAlertCheckSummary(app.getString(R.string.flockfree_alert_last_check_cooldown,
                     brand, roundedDistance));
             return;
@@ -1378,9 +1439,13 @@ public class FlockFreePlugin extends OsmandPlugin {
         vibrateForCameraAlert();
     }
 
+    private CameraAlertToast cameraAlertToast;
+
     private void showExtendedCameraAlertToast(@NonNull String title) {
-        app.showToastMessage(title);
-        app.runInUIThread(() -> app.showToastMessage(title), CAMERA_ALERT_TOAST_REPEAT_DELAY_MS);
+        if (cameraAlertToast == null) {
+            cameraAlertToast = new CameraAlertToast(app);
+        }
+        cameraAlertToast.show(title);
     }
 
     private void vibrateForCameraAlert() {

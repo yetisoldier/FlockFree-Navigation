@@ -97,11 +97,20 @@ public class SecondNextTurnWidget extends NextTurnBaseWidget {
 			TextView exitView = getView().findViewById(R.id.map_exit_ref);
 			if (exitView != null) {
 				exitView.setTextColor(ContextCompat.getColor(app, android.R.color.white));
+				// Remove the rectangular border background — it can briefly appear as an empty
+				// rectangle between the distance and street name when the view is recycled.
+				exitView.setBackground(null);
+				exitView.setMinimumWidth(0);
 			}
 			ImageView arrowView = getView().findViewById(R.id.arrow_icon);
 			if (arrowView != null) {
 				arrowView.setColorFilter(primaryTextColor);
 			}
+			// FlockFree design uses flat text without stroke outlines.
+			// Disable outlines on all text containers to prevent any outline artifacts.
+			if (distanceView != null) distanceView.showOutline(false);
+			if (distanceSubView != null) distanceSubView.showOutline(false);
+			if (streetView != null) streetView.showOutline(false);
 		}
 	}
 
