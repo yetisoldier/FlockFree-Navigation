@@ -7,6 +7,10 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PHONE_SERIAL="${PHONE_SERIAL:-192.168.1.139:39183}"
 ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
 ANDROID_SDK="${ANDROID_SDK:-$ANDROID_HOME}"
+# Production package: com.yetiwurks.flockfree (gplayFree flavor)
+# NEVER use nightlyFree flavor for releases or test installs — it uses
+# com.yetiwurks.flockfree.dev which installs as a separate app and causes
+# duplicate installations, map loss, and update checker confusion.
 GRADLE_TASK="${GRADLE_TASK:-:OsmAnd:assembleGplayFreeOpenglFatDebug}"
 APK_PATH="$ROOT_DIR/OsmAnd/build/outputs/apk/gplayFreeOpenglFat/debug/OsmAnd-gplayFree-opengl-fat-debug.apk"
 FLOCKFREE_ARTIFACT_VERSION="${FLOCKFREE_ARTIFACT_VERSION:-local}"
