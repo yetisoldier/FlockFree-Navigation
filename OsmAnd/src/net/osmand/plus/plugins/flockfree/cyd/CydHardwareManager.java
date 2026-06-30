@@ -41,6 +41,7 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 	private static final Log LOG = PlatformUtil.getLog(CydHardwareManager.class);
 	private static final long SCAN_TIMEOUT_MS = 15_000L;
 	private static final long GPS_SEND_INTERVAL_MS = 1_000L;
+	private static final long GPS_IDLE_RESEND_MS = 5_000L;
 	private static final long CONNECT_RETRY_DELAY_MS = 2_000L;
 	private static final int MAX_CONNECT_RETRIES = 10;
 	private static final int MAX_RECENT_DETECTIONS = 20;
@@ -52,6 +53,7 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 	private final Object lock = new Object();
 	private final Runnable scanTimeoutRunnable = this::handleScanTimeout;
 	private final Runnable connectRetryRunnable = this::retryScanAndConnect;
+	private final Runnable gpsResendRunnable = this::resendLastKnownGpsToCyd;
 
 	@Nullable
 	private BluetoothLeScanner scanner;
@@ -277,6 +279,61 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 		return sent;
 	}
 
+	/**
+	 * Periodically resend the phone's last known location to the CYD even when the OS
+	 * is throttling location updates (phone is stationary). This keeps the CYD's GPS
+	 * data fresh so detections always have coordinates attached.
+	 */
+	private void resendLastKnownGpsToCyd() {
+		synchronized (lock) {
+			if (state != State.READY || manualDisconnect) {
+				return;
+			}
+		}
+		if (!client.isReady()) {
+			return;
+		}
+		double lat;
+		double lng;
+		Float accuracy;
+		long locationMs;
+		long nowMs = System.currentTimeMillis();
+		synchronized (lock) {
+			if (lastPhoneLatitude == null || lastPhoneLongitude == null) {
+				// No location ever received — try to get one from the location provider
+				Location loc = app.getLocationProvider().getLastStaleKnownLocation();
+				if (loc != null && isValidGpsFix(loc)) {
+					rememberPhoneLocation(loc);
+				} else {
+					scheduleNextGpsResend();
+					return;
+				}
+			}
+			lat = lastPhoneLatitude;
+			lng = lastPhoneLongitude;
+			accuracy = lastPhoneAccuracy;
+			locationMs = lastPhoneLocationAtMs;
+		}
+		// Only resend if location is less than 2 minutes old
+		if (nowMs - locationMs > 120_000L) {
+			scheduleNextGpsResend();
+			return;
+		}
+		synchronized (lock) {
+			lastGpsSentAtMs = nowMs;
+		}
+		client.sendGpsFix(lat, lng,
+				accuracy != null ? accuracy : 0f,
+				0f, 0f, 0, 0f,
+				locationMs / 1000L,
+				TimeZone.getDefault().getOffset(locationMs) / 60_000);
+		scheduleNextGpsResend();
+	}
+
+	private void scheduleNextGpsResend() {
+		handler.postDelayed(gpsResendRunnable, GPS_IDLE_RESEND_MS);
+	}
+
 	private void rememberPhoneLocation(@NonNull Location location) {
 		long nowMs = System.currentTimeMillis();
 		synchronized (lock) {
@@ -371,6 +428,7 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 			connectRetryAttempts = 0;
 		}
 		handler.removeCallbacks(connectRetryRunnable);
+		handler.removeCallbacks(gpsResendRunnable);
 		stopScan();
 		client.disconnect();
 		synchronized (lock) {
@@ -556,12 +614,16 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 		}
 		setState(State.READY, app.getString(R.string.flockfree_cyd_status_ready));
 		app.showShortToastMessage(R.string.flockfree_cyd_status_ready);
+		// Start periodic GPS resend — keeps the CYD's GPS fresh even when the phone
+		// is stationary and the OS throttles location updates.
+		handler.postDelayed(gpsResendRunnable, GPS_IDLE_RESEND_MS);
 		// Notify plugin so it can pause WiFi scanning (CYD does full promiscuous scanning)
 		notifyCydConnectionStateChanged();
 	}
 
 	@Override
 	public void onCydDisconnected() {
+		handler.removeCallbacks(gpsResendRunnable);
 		State previousState;
 		synchronized (lock) {
 			previousState = state;
