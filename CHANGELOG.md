@@ -4,6 +4,15 @@ All notable changes to FlockFree Navigation are documented here.
 
 ## [Unreleased]
 
+## [v1.8.3] — 2026-06-29
+
+### Fixed
+- Fixed the nightlyFree (dev) launcher icon to use FlockFree-branded adaptive icon assets instead of OsmAnd's stock nightly icon drawables.
+- Fixed the right-side widget panel overlapping the top bar in portrait mode when FlockFree is active; the panel now starts 96dp below the top edge.
+
+### Added
+- Added a 'View CYD detections' preference in FlockFree settings that displays a dialog listing recent CYD hardware detections with detection type, source, age, and GPS fix status. Tapping a detection shows its details.
+
 ## [v1.8.2] — 2026-06-28
 
 ### Changed
