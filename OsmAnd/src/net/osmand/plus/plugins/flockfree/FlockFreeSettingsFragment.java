@@ -2,6 +2,7 @@ package net.osmand.plus.plugins.flockfree;
 
 import android.Manifest;
 import android.os.Handler;
+import java.util.List;
 import android.os.Looper;
 
 import androidx.annotation.NonNull;
@@ -46,6 +47,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 	private static final String CYD_REQUEST_STATUS_KEY = "flockfree_cyd_request_status";
 	private static final String CYD_SIMULATE_DETECTION_KEY = "flockfree_cyd_simulate_detection";
 	private static final String CYD_CLEAR_DETECTIONS_KEY = "flockfree_cyd_clear_detections";
+	private static final String CYD_VIEW_DETECTIONS_KEY = "flockfree_cyd_view_detections";
 	private static final String WIFI_SCAN_STATUS_KEY = "flockfree_wifi_scan_status";
 	private static final String WIFI_SCAN_CLEAR_KEY = "flockfree_wifi_scan_clear";
 	private static final String APP_UPDATE_CHECK_KEY = "flockfree_app_update_check";
@@ -211,6 +213,36 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 				preference.setSummary(manager.getStatusSummary());
 			}
 		}
+	}
+
+	private void showCydDetectionList() {
+		MapActivity mapActivity = getMapActivity();
+		if (mapActivity == null) {
+			return;
+		}
+		List<CydDetectionCandidate> detections = plugin.getCydHardwareManager().getRecentDetections();
+		if (detections.isEmpty()) {
+			app.showShortToastMessage(R.string.flockfree_cyd_no_detections);
+			return;
+		}
+		androidx.appcompat.app.AlertDialog.Builder builder =
+				new androidx.appcompat.app.AlertDialog.Builder(mapActivity);
+		builder.setTitle(getString(R.string.flockfree_cyd_detections_count, detections.size()));
+		String[] items = new String[detections.size()];
+		for (int i = 0; i < detections.size(); i++) {
+			CydDetectionCandidate d = detections.get(i);
+			long ageSec = d.getReceivedAgeMs(System.currentTimeMillis()) / 1000L;
+			String ageLabel = ageSec < 60 ? ageSec + "s ago" : (ageSec / 60) + "m ago";
+			String gpsLabel = d.hasGpsFix() ? "GPS ✓" : "GPS ✗";
+			items[i] = d.getDetectionTypeLabel() + " · " + d.getSourceLabel()
+					+ " · " + ageLabel + " · " + gpsLabel;
+		}
+		builder.setItems(items, (dialog, which) -> {
+			CydDetectionCandidate d = detections.get(which);
+			plugin.showCydDetectionDetails(mapActivity, d);
+		});
+		builder.setNegativeButton(R.string.shared_string_close, null);
+		builder.show();
 	}
 
 	private void setupWifiScanStatusPreference() {
@@ -440,6 +472,9 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 			if (mapActivity != null) {
 				mapActivity.refreshMap();
 			}
+			return true;
+		} else if (CYD_VIEW_DETECTIONS_KEY.equals(key)) {
+			showCydDetectionList();
 			return true;
 		} else if (WIFI_SCAN_CLEAR_KEY.equals(key)) {
 			plugin.getWifiScannerManager().clearDetections();
