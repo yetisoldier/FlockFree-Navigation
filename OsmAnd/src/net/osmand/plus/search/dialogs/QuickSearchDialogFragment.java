@@ -1489,6 +1489,7 @@ public class QuickSearchDialogFragment extends BaseFullScreenDialogFragment impl
 				.setEmptyQueryAllowed(false)
 				.setSortByName(false)
 				.setRadiusLevel(1);
+		onlineSettings.setSortType(SearchSettings.SortType.ONLY_BY_DISTANCE);
 		QuickSearchHelper.applySearchStatSetting(onlineSettings);
 		searchUICore.updateSettings(onlineSettings);
 		setResultCollection(null);
@@ -1499,6 +1500,7 @@ public class QuickSearchDialogFragment extends BaseFullScreenDialogFragment impl
 				.setSortByName(false)
 				.setSearchTypes(CITY, VILLAGE, POSTCODE, HOUSE, STREET_INTERSECTION, STREET, LOCATION, PARTIAL_LOCATION)
 				.setRadiusLevel(1);
+		addressSettings.setSortType(SearchSettings.SortType.BY_RELEVANCE);
 		QuickSearchHelper.applySearchStatSetting(addressSettings);
 		searchUICore.updateSettings(addressSettings);
 	}

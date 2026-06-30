@@ -5,6 +5,11 @@ All notable changes to FlockFree Navigation are documented here.
 ## [Unreleased]
 
 ### Changed
+- Online search results are now sorted by distance from your current location, so closer matches appear first instead of being ordered by relevance alone.
+
+## [v1.8.6] — 2026-06-30
+
+### Changed
 - Search now defaults to online when internet is available and automatically falls back to offline if online returns no results. Previously only street-address queries triggered online search; now all queries prefer online first.
 
 ## [v1.8.5] — 2026-06-30
