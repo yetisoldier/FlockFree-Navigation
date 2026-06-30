@@ -4,6 +4,9 @@ All notable changes to FlockFree Navigation are documented here.
 
 ## [Unreleased]
 
+### Changed
+- Search now defaults to online when internet is available and automatically falls back to offline if online returns no results. Previously only street-address queries triggered online search; now all queries prefer online first.
+
 ## [v1.8.5] — 2026-06-30
 
 ### Changed

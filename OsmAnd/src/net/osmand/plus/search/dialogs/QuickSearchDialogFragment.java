@@ -892,6 +892,13 @@ public class QuickSearchDialogFragment extends BaseFullScreenDialogFragment impl
 						isResultEmpty() && lastSelectedWord != null) {
 					mainSearchFragment.showResult(lastSelectedWord.getResult());
 				}
+				// Fallback: if online search returned no results, retry with offline search
+				if (searchUICore.isOnlineSearch() && isResultEmpty()
+						&& !Algorithms.isEmpty(searchQuery)) {
+					startAddressSearch();
+					runCoreSearch(searchQuery, true, false);
+					return false; // don't finish — let the offline search publish its own results
+				}
 				return true;
 			}
 		};
@@ -1566,7 +1573,10 @@ public class QuickSearchDialogFragment extends BaseFullScreenDialogFragment impl
 	}
 
 	private void maybeStartOnlineAddressSearch(@NonNull String text) {
-		if (!searchUICore.isOnlineSearch() && isLikelyStreetAddress(text)
+		// When internet is available, prefer online search for any non-empty query.
+		// Online search provides better results for POIs, businesses, and addresses.
+		// If online returns no results, runSearch fallback will switch to offline.
+		if (!searchUICore.isOnlineSearch() && !Algorithms.isEmpty(text.trim())
 				&& settings.isInternetConnectionAvailable()) {
 			startOnlineSearch();
 			updateTabBarVisibility(false);
