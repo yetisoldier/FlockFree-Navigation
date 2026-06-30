@@ -52,9 +52,7 @@ final class CydDetectionStore {
 			try {
 				long receivedAtMs = item.optLong("received_at_ms", System.currentTimeMillis());
 				CydDetectionCandidate candidate = CydDetectionCandidate.fromJson(new JSONObject(raw), receivedAtMs);
-				if (candidate.hasGpsFix()) {
-					detections.add(candidate);
-				}
+				detections.add(candidate);
 			} catch (Exception ignored) {
 				// Skip malformed persisted entries; a fresh detection will rewrite the store.
 			}
@@ -67,9 +65,6 @@ final class CydDetectionStore {
 		JSONArray array = new JSONArray();
 		for (int i = 0; i < detections.size() && i < maxCount; i++) {
 			CydDetectionCandidate detection = detections.get(i);
-			if (!detection.hasGpsFix()) {
-				continue;
-			}
 			try {
 				JSONObject item = new JSONObject();
 				item.put("raw", detection.rawJson);

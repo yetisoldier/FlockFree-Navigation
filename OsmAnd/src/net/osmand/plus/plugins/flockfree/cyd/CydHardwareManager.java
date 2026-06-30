@@ -597,14 +597,12 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 	private void storeDetection(@NonNull CydDetectionCandidate candidate, int toastStringId) {
 		synchronized (lock) {
 			lastDetection = candidate;
-			if (candidate.hasGpsFix()) {
-				ArrayList<CydDetectionCandidate> updated = new ArrayList<>(recentDetections);
-				updated.add(0, candidate);
-				while (updated.size() > MAX_RECENT_DETECTIONS) {
-					updated.remove(updated.size() - 1);
-				}
-				recentDetections = Collections.unmodifiableList(updated);
+			ArrayList<CydDetectionCandidate> updated = new ArrayList<>(recentDetections);
+			updated.add(0, candidate);
+			while (updated.size() > MAX_RECENT_DETECTIONS) {
+				updated.remove(updated.size() - 1);
 			}
+			recentDetections = Collections.unmodifiableList(updated);
 			lastMessage = candidate.getStatusSummary();
 		}
 		app.showShortToastMessage(toastStringId);

@@ -4,6 +4,10 @@ All notable changes to FlockFree Navigation are documented here.
 
 ## [Unreleased]
 
+### Fixed
+- Speed limit sign now renders above the layers button instead of behind it (added elevation to the alarm warning widget).
+- CYD detections list now shows all detections including those without a GPS fix. Previously detections without GPS were silently dropped from both the in-memory list and the persisted store, causing "No detections recorded" even when the CYD status showed active detections.
+
 ### Changed
 - Online search results are now sorted by distance from your current location, so closer matches appear first instead of being ordered by relevance alone.
 
