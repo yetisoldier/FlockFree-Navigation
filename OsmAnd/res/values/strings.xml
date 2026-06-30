@@ -232,6 +232,9 @@
 	<string name="flockfree_cyd_request_status">Request CYD status</string>
 	<string name="flockfree_cyd_simulate_detection">Simulate CYD detection</string>
 	<string name="flockfree_cyd_clear_detections">Clear CYD detections</string>
+	<string name="flockfree_cyd_view_detections">View CYD detections</string>
+	<string name="flockfree_cyd_no_detections">No detections recorded.</string>
+	<string name="flockfree_cyd_detections_count">%1$d detection(s) recorded</string>
 	<string name="flockfree_cyd_status_idle">CYD not connected.</string>
 	<string name="flockfree_cyd_status_permission_requested">Bluetooth permission requested.</string>
 	<string name="flockfree_cyd_status_no_adapter">Bluetooth adapter unavailable.</string>
