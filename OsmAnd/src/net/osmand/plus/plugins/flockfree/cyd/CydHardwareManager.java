@@ -44,6 +44,7 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 	private static final long CONNECT_RETRY_DELAY_MS = 1_500L;
 	private static final int MAX_CONNECT_RETRIES = 3;
 	private static final int MAX_RECENT_DETECTIONS = 20;
+	private static final long MAX_PHONE_LOCATION_AGE_MS = 30_000L; // 30 seconds
 
 	private final OsmandApplication app;
 	private final Handler handler = new Handler(Looper.getMainLooper());
@@ -591,7 +592,58 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 
 	@Override
 	public void onCydDetection(@NonNull CydDetectionCandidate candidate) {
-		storeDetection(candidate, R.string.flockfree_cyd_detection_received);
+		CydDetectionCandidate enriched = enrichWithPhoneLocation(candidate);
+		storeDetection(enriched, R.string.flockfree_cyd_detection_received);
+	}
+
+	/**
+	 * If the CYD detection lacks GPS coordinates, enrich it with the phone's last known location.
+	 * The CYD reports "GPS OK" based on its own GPS module, but may not include coordinates
+	 * in every detection packet if the phone's GPS fix hasn't been forwarded yet or is stale.
+	 */
+	@NonNull
+	private CydDetectionCandidate enrichWithPhoneLocation(@NonNull CydDetectionCandidate candidate) {
+		if (candidate.hasGpsFix()) {
+			return candidate;
+		}
+		synchronized (lock) {
+			if (lastPhoneLatitude == null || lastPhoneLongitude == null
+					|| !isValidCoordinate(lastPhoneLatitude, lastPhoneLongitude)) {
+				return candidate;
+			}
+			long ageMs = System.currentTimeMillis() - lastPhoneLocationAtMs;
+			if (ageMs > MAX_PHONE_LOCATION_AGE_MS) {
+				return candidate;
+			}
+		}
+		try {
+			JSONObject json = new JSONObject(candidate.rawJson);
+			JSONObject gps = json.optJSONObject("gps");
+			if (gps == null) {
+				gps = new JSONObject();
+				json.put("gps", gps);
+			}
+			if (!gps.has("latitude")) {
+				gps.put("latitude", lastPhoneLatitude);
+			}
+			if (!gps.has("longitude")) {
+				gps.put("longitude", lastPhoneLongitude);
+			}
+			synchronized (lock) {
+				if (lastPhoneAccuracy != null && !gps.has("accuracy")) {
+					gps.put("accuracy", lastPhoneAccuracy);
+				}
+				if (!gps.has("age_ms")) {
+					gps.put("age_ms", System.currentTimeMillis() - lastPhoneLocationAtMs);
+				}
+				if (!gps.has("source")) {
+					gps.put("source", "phone");
+				}
+			}
+			return CydDetectionCandidate.fromJson(json, candidate.receivedAtMs);
+		} catch (Exception e) {
+			return candidate;
+		}
 	}
 
 	private void storeDetection(@NonNull CydDetectionCandidate candidate, int toastStringId) {

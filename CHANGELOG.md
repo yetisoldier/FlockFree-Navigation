@@ -6,7 +6,8 @@ All notable changes to FlockFree Navigation are documented here.
 
 ### Fixed
 - Speed limit sign now renders above the layers button instead of behind it (added elevation to the alarm warning widget).
-- CYD detections list now shows all detections including those without a GPS fix. Previously detections without GPS were silently dropped from both the in-memory list and the persisted store, causing "No detections recorded" even when the CYD status showed active detections.
+- CYD detections list now shows all detections. Previously detections without GPS were silently dropped from both the in-memory list and the persisted store, causing "No detections recorded" even when the CYD status showed active detections.
+- CYD detections without GPS coordinates from the CYD are now enriched with the phone's last known location (within 30 seconds). The CYD may report "GPS OK" on its status screen but not include coordinates in every detection packet — the phone's GPS is now used as a fallback so every detection has a location.
 
 ### Changed
 - Online search results are now sorted by distance from your current location, so closer matches appear first instead of being ordered by relevance alone.
