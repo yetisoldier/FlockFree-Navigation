@@ -41,8 +41,8 @@ public final class CydHardwareManager implements AutoCloseable, CydBleUartClient
 	private static final Log LOG = PlatformUtil.getLog(CydHardwareManager.class);
 	private static final long SCAN_TIMEOUT_MS = 15_000L;
 	private static final long GPS_SEND_INTERVAL_MS = 1_000L;
-	private static final long CONNECT_RETRY_DELAY_MS = 1_500L;
-	private static final int MAX_CONNECT_RETRIES = 3;
+	private static final long CONNECT_RETRY_DELAY_MS = 2_000L;
+	private static final int MAX_CONNECT_RETRIES = 10;
 	private static final int MAX_RECENT_DETECTIONS = 20;
 	private static final long MAX_PHONE_LOCATION_AGE_MS = 30_000L; // 30 seconds
 

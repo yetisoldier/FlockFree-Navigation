@@ -4,6 +4,10 @@ All notable changes to FlockFree Navigation are documented here.
 
 ## [Unreleased]
 
+### Improved
+- BLE reliability: write failures now retry instead of killing the connection. A 5-second write timeout watchdog detects stalled BLE callbacks and recovers gracefully. Queue overflow protection drops stale data instead of piling up. Auto-reconnect retries increased from 3 to 10 with 2-second back-off.
+- BLE throughput: chunk size now uses the negotiated MTU (up to 244 bytes) instead of the default 20 bytes, reducing the number of BLE writes per GPS fix from 4 to 1.
+
 ### Fixed
 - Speed limit sign now renders above the layers button instead of behind it (added elevation to the alarm warning widget).
 - CYD detections list now shows all detections. Previously detections without GPS were silently dropped from both the in-memory list and the persisted store, causing "No detections recorded" even when the CYD status showed active detections.

@@ -47,6 +47,9 @@ public final class CydBleUartClient implements AutoCloseable {
 	private static final int REQUESTED_MTU = 247;
 	private static final int DEFAULT_ATT_PAYLOAD_BYTES = 20;
 	private static final long INITIAL_WRITE_DELAY_MS = 200L;
+	private static final long WRITE_TIMEOUT_MS = 5_000L;
+	private static final int MAX_WRITE_QUEUE_SIZE = 64;
+	private static final int MAX_CONSECUTIVE_WRITE_RETRIES = 2;
 
 	private final Handler mainHandler = new Handler(Looper.getMainLooper());
 	private final Object lock = new Object();
@@ -63,6 +66,7 @@ public final class CydBleUartClient implements AutoCloseable {
 	private boolean writeInProgress;
 	private boolean ready;
 	private boolean closed = true;
+	private int consecutiveWriteFailures = 0;
 
 	public CydBleUartClient(@Nullable Listener listener) {
 		this.listener = listener;
@@ -93,6 +97,7 @@ public final class CydBleUartClient implements AutoCloseable {
 			parser.reset();
 			writeQueue.clear();
 			writeInProgress = false;
+			consecutiveWriteFailures = 0;
 			maxPayloadBytes = DEFAULT_ATT_PAYLOAD_BYTES;
 			rxCharacteristic = null;
 			bluetoothGatt = device.connectGatt(context.getApplicationContext(), false, gattCallback,
@@ -150,7 +155,12 @@ public final class CydBleUartClient implements AutoCloseable {
 			if (!ready || bluetoothGatt == null || rxCharacteristic == null || closed) {
 				return false;
 			}
-			int chunkSize = DEFAULT_ATT_PAYLOAD_BYTES;
+			// Drop the entire queue if it's backing up — keep only the most recent data.
+			// This prevents stale GPS fixes from piling up when the BLE link is slow.
+			if (writeQueue.size() + 4 > MAX_WRITE_QUEUE_SIZE) {
+				writeQueue.clear();
+			}
+			int chunkSize = Math.max(DEFAULT_ATT_PAYLOAD_BYTES, maxPayloadBytes);
 			for (int offset = 0; offset < data.length; offset += chunkSize) {
 				int end = Math.min(data.length, offset + chunkSize);
 				writeQueue.add(Arrays.copyOfRange(data, offset, end));
@@ -159,6 +169,17 @@ public final class CydBleUartClient implements AutoCloseable {
 		writeNextChunk();
 		return true;
 	}
+
+	private final Runnable writeTimeoutRunnable = () -> {
+		synchronized (lock) {
+			if (writeInProgress) {
+				writeInProgress = false;
+				writeQueue.clear();
+			}
+		}
+		emitError("CYD BLE write timeout — no callback in " + WRITE_TIMEOUT_MS + "ms", null);
+		close();
+	};
 
 	@SuppressLint("MissingPermission")
 	private void writeNextChunk() {
@@ -189,12 +210,25 @@ public final class CydBleUartClient implements AutoCloseable {
 			started = gatt.writeCharacteristic(characteristic);
 		}
 		if (!started) {
+			// Retry a few times before giving up on this chunk.
+			// Only close the connection after repeated failures.
 			synchronized (lock) {
 				writeInProgress = false;
-				writeQueue.clear();
+				consecutiveWriteFailures++;
 			}
-			emitError("CYD BLE write could not be started", null);
-			close();
+			if (consecutiveWriteFailures >= MAX_CONSECUTIVE_WRITE_RETRIES) {
+				emitError("CYD BLE write failed " + consecutiveWriteFailures + " times, closing connection", null);
+				close();
+			} else {
+				// Retry after a short delay
+				mainHandler.postDelayed(this::writeNextChunk, 200L);
+			}
+		} else {
+			synchronized (lock) {
+				consecutiveWriteFailures = 0;
+			}
+			// Schedule a timeout watchdog in case onCharacteristicWrite never fires
+			mainHandler.postDelayed(writeTimeoutRunnable, WRITE_TIMEOUT_MS);
 		}
 	}
 
@@ -253,6 +287,7 @@ public final class CydBleUartClient implements AutoCloseable {
 			writeInProgress = false;
 			parser.reset();
 		}
+		mainHandler.removeCallbacks(writeTimeoutRunnable);
 		if (gatt != null) {
 			gatt.disconnect();
 		} else {
@@ -382,17 +417,22 @@ public final class CydBleUartClient implements AutoCloseable {
 		public void onCharacteristicWrite(BluetoothGatt gatt,
 		                                  BluetoothGattCharacteristic characteristic,
 		                                  int status) {
+			mainHandler.removeCallbacks(writeTimeoutRunnable);
 			if (status != BluetoothGatt.GATT_SUCCESS) {
 				emitError("CYD BLE characteristic write failed: " + status, null);
 				synchronized (lock) {
 					writeInProgress = false;
-					writeQueue.clear();
-				}
-				close();
-				return;
+				writeQueue.clear();
+				consecutiveWriteFailures++;
 			}
+			if (consecutiveWriteFailures >= MAX_CONSECUTIVE_WRITE_RETRIES) {
+				close();
+			}
+			return;
+		}
 			synchronized (lock) {
 				writeInProgress = false;
+				consecutiveWriteFailures = 0;
 			}
 			writeNextChunk();
 		}
