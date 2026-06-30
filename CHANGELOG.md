@@ -4,6 +4,11 @@ All notable changes to FlockFree Navigation are documented here.
 
 ## [Unreleased]
 
+## [v1.8.4] — 2026-06-29
+
+### Fixed
+- Fixed `APP_RELEASE_VERSION` still hardcoded as `1.8.1`, causing the in-app update checker to report the wrong installed version. Now correctly set to `1.8.4`.
+
 ## [v1.8.3] — 2026-06-29
 
 ### Fixed

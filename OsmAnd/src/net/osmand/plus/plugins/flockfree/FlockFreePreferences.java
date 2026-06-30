@@ -83,7 +83,7 @@ public final class FlockFreePreferences {
     public static final String APP_UPDATE_RELEASES_PAGE_URL = "https://github.com/yetisoldier/FlockFree-Navigation/releases/latest";
     public static final long REFRESH_INTERVAL_MS = 7L * 24 * 60 * 60 * 1000; // 1 week
     public static final long APP_UPDATE_CHECK_INTERVAL_MS = 24L * 60 * 60 * 1000; // 1 day
-    public static final String APP_RELEASE_VERSION = "1.8.3";
+    public static final String APP_RELEASE_VERSION = "1.8.4";
 
     private FlockFreePreferences() {
         // Utility class, no instances
