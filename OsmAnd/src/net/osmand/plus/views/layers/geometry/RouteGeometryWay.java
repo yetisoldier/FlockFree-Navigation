@@ -49,7 +49,7 @@ public class RouteGeometryWay extends
 		MultiColoringGeometryWay<RouteGeometryWayContext, MultiColoringGeometryWayDrawer<RouteGeometryWayContext>> {
 
 	private static final Log log = PlatformUtil.getLog(RouteGeometryWay.class);
-
+	private static final double VECTOR_LINE_EARTH_RADIUS = 6371000.0;
 	public static final int MIN_COLOR_SQUARE_DISTANCE = 15_000;
 
 	private final RoutingHelper helper;
@@ -375,6 +375,32 @@ public class RouteGeometryWay extends
 	@Override
 	protected boolean shouldDrawArrows() {
 		return drawDirectionArrows;
+	}
+
+	@Override
+	protected double calculateSegmentDistance(double lat1, double lon1, double lat2, double lon2) {
+		return calculateNativeVectorLineDistance(lat1, lon1, lat2, lon2);
+	}
+
+	@Override
+	protected double calculateProjectionDistance(@NonNull Location projection, int x31, int y31) {
+		return calculateNativeVectorLineDistance(
+				projection.getLatitude(), projection.getLongitude(),
+				MapUtils.get31LatitudeY(y31), MapUtils.get31LongitudeX(x31));
+	}
+
+	private static double calculateNativeVectorLineDistance(double lat1, double lon1, double lat2, double lon2) {
+		// Keep startingDistance in the same metric as OsmAnd-core VectorLine_P::calculateShortestPath().
+		double dLat = Math.toRadians(lat2 - lat1);
+		double dLon = Math.toRadians(lon2 - lon1);
+		double sinHalfLat = Math.sin(dLat / 2.0);
+		double sinHalfLon = Math.sin(dLon / 2.0);
+		double a = sinHalfLat * sinHalfLat
+				+ Math.cos(Math.toRadians(lat1))
+				* Math.cos(Math.toRadians(lat2))
+				* sinHalfLon
+				* sinHalfLon;
+		return 2.0 * VECTOR_LINE_EARTH_RADIUS * Math.asin(Math.sqrt(a));
 	}
 
 	public void clearRoute() {
