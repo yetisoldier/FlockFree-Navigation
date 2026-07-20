@@ -11,6 +11,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 
 import net.osmand.Location;
+import net.osmand.PlatformUtil;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
@@ -46,6 +47,7 @@ import net.osmand.plus.widgets.ctxmenu.data.ContextMenuItem;
 import net.osmand.util.Algorithms;
 import net.osmand.util.MapUtils;
 
+import org.apache.commons.logging.Log;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -63,6 +65,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class FlockFreePlugin extends OsmandPlugin {
+
+    private static final Log LOG = PlatformUtil.getLog(FlockFreePlugin.class);
 
     public static final String PLUGIN_ID = "flockfree";
 
@@ -102,6 +106,12 @@ public class FlockFreePlugin extends OsmandPlugin {
 
     // Building transparency during turns
     public final OsmandPreference<Boolean> BUILDING_TRANSPARENCY_ENABLED;
+
+    // OSM Overpass second source preferences
+    public final CommonPreference<Boolean> OSM_REFRESH_ENABLED;
+    public final CommonPreference<Integer> OSM_REFRESH_INTERVAL_DAYS;
+    public final CommonPreference<Long> OSM_LAST_REFRESH_TIME;
+    public final CommonPreference<String> OSM_OVERPASS_ENDPOINT;
 
     // Context menu item order
     private static final int CAMERA_DETAILS_ITEM_ORDER = 7800;
@@ -263,6 +273,20 @@ public class FlockFreePlugin extends OsmandPlugin {
         BUILDING_TRANSPARENCY_ENABLED = registerBooleanPreference(
                 FlockFreePreferences.BUILDING_TRANSPARENCY_ENABLED,
                 FlockFreePreferences.DEFAULT_BUILDING_TRANSPARENCY_ENABLED).makeProfile().cache();
+
+        // OSM Overpass second source preferences
+        OSM_REFRESH_ENABLED = registerBooleanPreference(
+                FlockFreePreferences.OSM_REFRESH_ENABLED,
+                FlockFreePreferences.DEFAULT_OSM_REFRESH_ENABLED).makeProfile().cache();
+        OSM_REFRESH_INTERVAL_DAYS = registerIntPreference(
+                FlockFreePreferences.OSM_REFRESH_INTERVAL_DAYS,
+                FlockFreePreferences.DEFAULT_OSM_REFRESH_INTERVAL_DAYS).makeProfile().cache();
+        OSM_LAST_REFRESH_TIME = registerLongPreference(
+                FlockFreePreferences.OSM_LAST_REFRESH_TIME,
+                FlockFreePreferences.DEFAULT_OSM_LAST_REFRESH_TIME).makeProfile().cache();
+        OSM_OVERPASS_ENDPOINT = registerStringPreference(
+                FlockFreePreferences.OSM_OVERPASS_ENDPOINT,
+                FlockFreePreferences.DEFAULT_OSM_OVERPASS_ENDPOINT).makeGlobal().cache();
 
         migrateDefaultRendererToFlockFree();
         applyFlockFreeVisualDefaults();
@@ -1207,6 +1231,43 @@ public class FlockFreePlugin extends OsmandPlugin {
         ensureNavigationTiltController();
         // Initialize building transparency controller for turn approach
         ensureBuildingTransparencyController();
+        // Check if OSM Overpass refresh is due and trigger background refresh
+        maybeRefreshOsmCameras();
+    }
+
+    /**
+     * Checks if the last OSM Overpass refresh was more than N days ago and triggers
+     * a background refresh if so. Called from map activity create and resume.
+     * Non-blocking — always runs the refresh on a background thread.
+     */
+    public void maybeRefreshOsmCameras() {
+        if (!OSM_REFRESH_ENABLED.get()) {
+            return;
+        }
+        int intervalDays = OSM_REFRESH_INTERVAL_DAYS.get();
+        if (intervalDays <= 0) {
+            intervalDays = FlockFreePreferences.DEFAULT_OSM_REFRESH_INTERVAL_DAYS;
+        }
+        long intervalMs = (long) intervalDays * 24 * 60 * 60 * 1000L;
+        long lastRefresh = OSM_LAST_REFRESH_TIME.get();
+        long now = System.currentTimeMillis();
+        if (lastRefresh > 0 && (now - lastRefresh) < intervalMs) {
+            return; // Not due yet
+        }
+        // Trigger background refresh
+        java.util.concurrent.ExecutorService osmExecutor = Executors.newSingleThreadExecutor();
+        osmExecutor.execute(() -> {
+            try {
+                String endpoint = OSM_OVERPASS_ENDPOINT.get();
+                if (endpoint == null || endpoint.isEmpty()) {
+                    endpoint = FlockFreePreferences.DEFAULT_OSM_OVERPASS_ENDPOINT;
+                }
+                getCameraData().refreshOsmCameras(endpoint);
+            } catch (Exception e) {
+                LOG.error("OSM camera background refresh failed", e);
+            }
+        });
+        osmExecutor.shutdown();
     }
 
     @Override
@@ -1217,6 +1278,7 @@ public class FlockFreePlugin extends OsmandPlugin {
         ensureWifiScanIfEnabled();
         ensureNavigationTiltController();
         ensureBuildingTransparencyController();
+        maybeRefreshOsmCameras();
     }
 
     @Override
@@ -1537,6 +1599,14 @@ public class FlockFreePlugin extends OsmandPlugin {
         }
         String routeSummary = "";
         String routeTradeoffSummary = null;
+        // Determine if this is a lightweight recalculation during active navigation
+        // (off-route recalc or start-point-only change) vs a full replan (user changed destination).
+        // During active navigation, RouteProvider uses horizon-limited avoidance scanning.
+        boolean activelyNavigating = app.getRoutingHelper().isFollowingMode();
+        boolean lightweightRecalc = activelyNavigating && route.isInitialCalculation() == false;
+        if (activelyNavigating) {
+            LOG.info("FlockFree route callback: active navigation mode (lightweightRecalc=" + lightweightRecalc + ")");
+        }
         if (cameraAvoidanceEnabled) {
             CameraAvoidanceHelper helper = getAvoidanceHelper();
             routeSummary = helper.getRouteCameraSummaryFromLocations(routeLocations);
@@ -1554,6 +1624,9 @@ public class FlockFreePlugin extends OsmandPlugin {
             String avoidanceSummary = helper.consumeLastAvoidanceStatusSummary();
             if (!avoidanceSummary.isEmpty()) {
                 routeSummary = routeSummary + "\n" + avoidanceSummary;
+            }
+            if (lightweightRecalc) {
+                routeSummary = routeSummary + "\n" + "⚡ Horizon planning: only next 10 km scanned during active navigation";
             }
         } else if (!preserveComparison) {
             setLastRouteComparisonInfo(null);

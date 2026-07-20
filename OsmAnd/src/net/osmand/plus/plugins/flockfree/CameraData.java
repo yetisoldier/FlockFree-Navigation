@@ -45,6 +45,12 @@ public class CameraData {
     private static final long WEEK_MS = FlockFreePreferences.REFRESH_INTERVAL_MS;
     private static final long MAX_GEOJSON_BYTES = 128L * 1024 * 1024;
     private static final double SPATIAL_CELL_DEGREES = 0.05d;
+    private static final int OVERPASS_TIMEOUT_MS = 60_000;
+    private static final int OVERPASS_CONNECT_TIMEOUT_MS = 30_000;
+    private static final String DEFAULT_OVERPASS_ENDPOINT = "https://overpass-api.de/api/interpreter";
+    private static final String OVERPASS_QUERY_TEMPLATE =
+            "[out:json][timeout:60];(node[\"man_made\"=\"surveillance\"][\"surveillance:type\"=\"ALPR\"](15, -170, 75, -50););out body;";
+    private static final double DEDUP_DISTANCE_METERS = 10.0;
 
     /** Known Flock manufacturer name variants for matching (case-insensitive). */
     private static final String[] FLOCK_MANUFACTURER_ALIASES = {
@@ -60,6 +66,7 @@ public class CameraData {
     private volatile boolean dataLoaded = false;
     private volatile boolean loading = false;
     private volatile boolean databaseReady = false;
+    private volatile boolean osmDatabaseReady = false;
     @NonNull
     private volatile DataSource lastLoadedSource = DataSource.NONE;
 
@@ -138,6 +145,309 @@ public class CameraData {
         } finally {
             loading = false;
         }
+    }
+
+    // ── OSM Overpass Second Source ──
+
+    /**
+     * Fetches ALPR camera data from the OpenStreetMap Overpass API.
+     * Queries for nodes tagged with man_made=surveillance and surveillance:type=ALPR.
+     *
+     * @param overpassEndpoint the Overpass API endpoint URL
+     * @return list of OSM-sourced camera points, or empty list on failure
+     */
+    @NonNull
+    public List<CameraPoint> fetchOsmCameras(@NonNull String overpassEndpoint) {
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL(overpassEndpoint);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(OVERPASS_CONNECT_TIMEOUT_MS);
+            conn.setReadTimeout(OVERPASS_TIMEOUT_MS);
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            conn.setRequestProperty("Accept-Encoding", "gzip");
+
+            String formData = "data=" + java.net.URLEncoder.encode(OVERPASS_QUERY_TEMPLATE, StandardCharsets.UTF_8.name());
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(formData.getBytes(StandardCharsets.UTF_8));
+            }
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode != HttpURLConnection.HTTP_OK) {
+                LOG.error("Overpass API error: HTTP " + responseCode);
+                return Collections.emptyList();
+            }
+
+            String json = readGeoJsonResponse(conn);
+            return parseOverpassJson(json);
+        } catch (java.net.SocketTimeoutException e) {
+            LOG.error("Overpass API timeout", e);
+            return Collections.emptyList();
+        } catch (Exception e) {
+            LOG.error("Failed to fetch OSM cameras from Overpass", e);
+            return Collections.emptyList();
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
+
+    /**
+     * Fetches OSM cameras using the default Overpass endpoint.
+     *
+     * @return list of OSM-sourced camera points, or empty list on failure
+     */
+    @NonNull
+    public List<CameraPoint> fetchOsmCameras() {
+        String endpoint = DEFAULT_OVERPASS_ENDPOINT;
+        try {
+            OsmandPreference<?> pref = app.getSettings().getPreference(FlockFreePreferences.OSM_OVERPASS_ENDPOINT);
+            if (pref != null && pref.get() instanceof String) {
+                String val = (String) pref.get();
+                if (val != null && !val.isEmpty()) {
+                    endpoint = val;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return fetchOsmCameras(endpoint);
+    }
+
+    /**
+     * Parses an Overpass API JSON response into CameraPoint objects.
+     * Overpass returns { "elements": [ { "type": "node", "lat": ..., "lon": ..., "tags": { ... } } ] }
+     *
+     * @param json the Overpass JSON response string
+     * @return list of parsed camera points
+     */
+    @NonNull
+    private List<CameraPoint> parseOverpassJson(@NonNull String json) {
+        List<CameraPoint> result = new ArrayList<>();
+        try {
+            JSONObject root = new JSONObject(json);
+            JSONArray elements = root.optJSONArray("elements");
+            if (elements == null) {
+                LOG.warn("Overpass response has no elements array");
+                return result;
+            }
+            Set<String> seenKeys = new HashSet<>();
+            int skipped = 0;
+            for (int i = 0; i < elements.length(); i++) {
+                JSONObject element = elements.optJSONObject(i);
+                if (element == null) {
+                    skipped++;
+                    continue;
+                }
+                String type = element.optString("type", "");
+                if (!"node".equals(type)) {
+                    skipped++;
+                    continue;
+                }
+                double lat = element.optDouble("lat", Double.NaN);
+                double lon = element.optDouble("lon", Double.NaN);
+                if (!isValidCoordinate(lat, lon)) {
+                    skipped++;
+                    continue;
+                }
+                JSONObject tags = element.optJSONObject("tags");
+                if (tags == null) {
+                    tags = new JSONObject();
+                }
+
+                CameraPoint point = new CameraPoint();
+                point.lat = lat;
+                point.lon = lon;
+                point.manufacturer = tags.optString("manufacturer", null);
+                point.brand = tags.optString("brand", null);
+                point.operator = tags.optString("operator", null);
+                point.direction = tags.optString("camera:direction", tags.optString("direction", null));
+                point.bearing = parseBearing(point.direction);
+
+                // Deduplicate by rounded coords
+                String dedupKey = Math.round(lat * 1_000_000d) + ":" + Math.round(lon * 1_000_000d);
+                if (!seenKeys.add(dedupKey)) {
+                    continue;
+                }
+                result.add(point);
+            }
+            LOG.info("Parsed " + result.size() + " OSM ALPR cameras from Overpass (skipped=" + skipped + ")");
+        } catch (Exception e) {
+            LOG.error("Failed to parse Overpass JSON response", e);
+        }
+        return result;
+    }
+
+    /**
+     * Refreshes OSM camera data by fetching from Overpass and storing in the overlay table.
+     * Must be called on a background thread.
+     *
+     * @param overpassEndpoint the Overpass API endpoint URL
+     * @return true if the refresh succeeded
+     */
+    public boolean refreshOsmCameras(@NonNull String overpassEndpoint) {
+        try {
+            LOG.info("Starting OSM camera refresh from Overpass: " + overpassEndpoint);
+            List<CameraPoint> osmCameras = fetchOsmCameras(overpassEndpoint);
+            if (osmCameras.isEmpty()) {
+                LOG.warn("OSM camera refresh returned no cameras");
+                return false;
+            }
+            boolean persisted = databaseHelper.replaceAllOsmCameras(osmCameras);
+            osmDatabaseReady = persisted;
+            if (persisted) {
+                LOG.info("OSM camera refresh complete: " + osmCameras.size() + " cameras stored");
+                // Save refresh timestamp
+                app.getSettings().setPreference(FlockFreePreferences.OSM_LAST_REFRESH_TIME, System.currentTimeMillis());
+            } else {
+                LOG.warn("Failed to persist OSM cameras to overlay database");
+            }
+            return persisted;
+        } catch (Exception e) {
+            LOG.error("OSM camera refresh failed", e);
+            return false;
+        }
+    }
+
+    /**
+     * Refreshes OSM camera data using the configured Overpass endpoint.
+     * Must be called on a background thread.
+     *
+     * @return true if the refresh succeeded
+     */
+    public boolean refreshOsmCameras() {
+        String endpoint = DEFAULT_OVERPASS_ENDPOINT;
+        try {
+            OsmandPreference<?> pref = app.getSettings().getPreference(FlockFreePreferences.OSM_OVERPASS_ENDPOINT);
+            if (pref != null && pref.get() instanceof String) {
+                String val = (String) pref.get();
+                if (val != null && !val.isEmpty()) {
+                    endpoint = val;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return refreshOsmCameras(endpoint);
+    }
+
+    /**
+     * Returns OSM overlay cameras within the given bounding box.
+     *
+     * @param top    northern latitude boundary
+     * @param left   western longitude boundary
+     * @param bottom southern latitude boundary
+     * @param right  eastern longitude boundary
+     * @return list of OSM camera points in the bounding box
+     */
+    @NonNull
+    public List<CameraPoint> getOsmCamerasInBoundingBox(double top, double left, double bottom, double right) {
+        if (!osmDatabaseReady && !databaseHelper.hasOsmData()) {
+            return Collections.emptyList();
+        }
+        try {
+            List<CameraPoint> osmCameras = databaseHelper.queryOsmCamerasInBounds(top, left, bottom, right);
+            osmDatabaseReady = true;
+            return osmCameras;
+        } catch (Exception e) {
+            LOG.error("Failed to query OSM cameras in bounding box", e);
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Merges OSM overlay cameras into the primary camera list, deduplicating by lat/lon proximity.
+     * Cameras within {@link #DEDUP_DISTANCE_METERS} of a primary camera are considered duplicates.
+     *
+     * @param primaryCameras cameras from the primary (dontgetflocked.com) source
+     * @param osmCameras     cameras from the OSM Overpass source
+     * @return merged list with duplicates removed
+     */
+    @NonNull
+    public static List<CameraPoint> mergeWithOsmCameras(
+            @NonNull List<CameraPoint> primaryCameras,
+            @NonNull List<CameraPoint> osmCameras) {
+        if (osmCameras.isEmpty()) {
+            return primaryCameras;
+        }
+        List<CameraPoint> merged = new ArrayList<>(primaryCameras.size() + osmCameras.size());
+        merged.addAll(primaryCameras);
+        int deduped = 0;
+        for (CameraPoint osmCam : osmCameras) {
+            boolean isDuplicate = false;
+            for (CameraPoint primary : primaryCameras) {
+                double dist = net.osmand.util.MapUtils.getDistance(
+                        osmCam.lat, osmCam.lon, primary.lat, primary.lon);
+                if (dist <= DEDUP_DISTANCE_METERS) {
+                    isDuplicate = true;
+                    break;
+                }
+            }
+            if (!isDuplicate) {
+                merged.add(osmCam);
+            } else {
+                deduped++;
+            }
+        }
+        if (deduped > 0) {
+            LOG.info("Merged OSM cameras: " + (osmCameras.size() - deduped) + " added, " + deduped + " duplicates removed");
+        }
+        return merged;
+    }
+
+    /**
+     * Returns merged cameras (primary + OSM overlay) within the given bounding box.
+     * Deduplicates by lat/lon proximity.
+     *
+     * @param top    northern latitude boundary
+     * @param left   western longitude boundary
+     * @param bottom southern latitude boundary
+     * @param right  eastern longitude boundary
+     * @return merged list of camera points in the bounding box
+     */
+    @NonNull
+    public synchronized List<CameraPoint> getMergedCamerasInBoundingBox(
+            double top, double left, double bottom, double right) {
+        List<CameraPoint> primary = getCamerasInBoundingBox(top, left, bottom, right);
+        List<CameraPoint> osm = getOsmCamerasInBoundingBox(top, left, bottom, right);
+        return mergeWithOsmCameras(primary, osm);
+    }
+
+    /**
+     * Returns merged cameras (primary + OSM overlay) near the given point.
+     *
+     * @param lat          center latitude
+     * @param lon          center longitude
+     * @param radiusMeters search radius in meters
+     * @return merged list of cameras within the radius
+     */
+    @NonNull
+    public synchronized List<CameraPoint> getMergedCamerasNear(double lat, double lon, double radiusMeters) {
+        List<CameraPoint> primary = getCamerasNear(lat, lon, radiusMeters);
+        List<CameraPoint> osm = getOsmCamerasInBoundingBox(
+                lat + (radiusMeters / 111_000d),
+                lon - (radiusMeters / (111_000d * Math.max(0.01d, Math.cos(Math.toRadians(lat))))),
+                lat - (radiusMeters / 111_000d),
+                lon + (radiusMeters / (111_000d * Math.max(0.01d, Math.cos(Math.toRadians(lat))))));
+        // Filter OSM results by precise distance
+        List<CameraPoint> osmFiltered = new ArrayList<>();
+        for (CameraPoint cam : osm) {
+            double dist = net.osmand.util.MapUtils.getDistance(cam.lat, cam.lon, lat, lon);
+            if (dist <= radiusMeters) {
+                osmFiltered.add(cam);
+            }
+        }
+        return mergeWithOsmCameras(primary, osmFiltered);
+    }
+
+    /**
+     * Returns the total number of OSM overlay cameras in the database.
+     *
+     * @return OSM camera count, or 0 if unavailable
+     */
+    public int getOsmCameraCount() {
+        return databaseHelper.getOsmCameraCount();
     }
 
     private File getCacheFile() {
@@ -439,11 +749,16 @@ public class CameraData {
     public synchronized List<CameraPoint> getCamerasInBoundingBox(double top, double left, double bottom, double right) {
         // When the database has data, query it directly for the bounding box.
         // This avoids iterating over all 104K in-memory cameras.
+        List<CameraPoint> primaryResult;
         if (databaseReady) {
-            List<CameraPoint> databaseResult = databaseHelper.getCamerasInBoundingBox(top, left, bottom, right);
-            if (!databaseResult.isEmpty() || cameras.isEmpty()) {
-                return databaseResult;
+            primaryResult = databaseHelper.getCamerasInBoundingBox(top, left, bottom, right);
+            if (!primaryResult.isEmpty() || cameras.isEmpty()) {
+                // Merge OSM overlay cameras and deduplicate
+                List<CameraPoint> osmResult = getOsmCamerasInBoundingBox(top, left, bottom, right);
+                return mergeWithOsmCameras(primaryResult, osmResult);
             }
+        } else {
+            primaryResult = new ArrayList<>();
         }
         if (top < bottom) {
             double temp = top;
@@ -454,11 +769,14 @@ public class CameraData {
         bottom = clamp(bottom, -90d, 90d);
 
         if (left > right) {
-            List<CameraPoint> result = getCamerasInBoundingBoxInternal(top, left, bottom, 180d);
-            result.addAll(getCamerasInBoundingBoxInternal(top, -180d, bottom, right));
-            return result;
+            primaryResult = getCamerasInBoundingBoxInternal(top, left, bottom, 180d);
+            primaryResult.addAll(getCamerasInBoundingBoxInternal(top, -180d, bottom, right));
+        } else {
+            primaryResult = getCamerasInBoundingBoxInternal(top, left, bottom, right);
         }
-        return getCamerasInBoundingBoxInternal(top, left, bottom, right);
+        // Merge OSM overlay cameras and deduplicate
+        List<CameraPoint> osmResult = getOsmCamerasInBoundingBox(top, left, bottom, right);
+        return mergeWithOsmCameras(primaryResult, osmResult);
     }
 
     @NonNull
@@ -547,35 +865,54 @@ public class CameraData {
 
     public synchronized List<CameraPoint> getCamerasNear(double lat, double lon, double radiusMeters) {
         // When the database has data, query it directly with radius filtering.
+        List<CameraPoint> primaryResult;
         if (databaseReady) {
-            List<CameraPoint> databaseResult = databaseHelper.getCamerasNear(lat, lon, radiusMeters);
-            if (!databaseResult.isEmpty() || cameras.isEmpty()) {
-                return databaseResult;
+            primaryResult = databaseHelper.getCamerasNear(lat, lon, radiusMeters);
+            if (primaryResult.isEmpty() && !cameras.isEmpty()) {
+                primaryResult = null; // fall through to in-memory search
+            }
+        } else {
+            primaryResult = null;
+        }
+        if (primaryResult == null) {
+            double latitudeDelta = radiusMeters / 111_000d;
+            double longitudeScale = Math.max(0.01d, Math.cos(Math.toRadians(lat)));
+            double longitudeDelta = radiusMeters / (111_000d * longitudeScale);
+            double top = clamp(lat + latitudeDelta, -90d, 90d);
+            double bottom = clamp(lat - latitudeDelta, -90d, 90d);
+            double left = lon - longitudeDelta;
+            double right = lon + longitudeDelta;
+            if (left < -180d) {
+                left += 360d;
+            }
+            if (right > 180d) {
+                right -= 360d;
+            }
+
+            primaryResult = new ArrayList<>();
+            List<CameraPoint> candidates = getCamerasInBoundingBoxInternal(top, left, bottom, right);
+            for (CameraPoint cam : candidates) {
+                double dist = net.osmand.util.MapUtils.getDistance(cam.lat, cam.lon, lat, lon);
+                if (dist <= radiusMeters) {
+                    primaryResult.add(cam);
+                }
             }
         }
-        double latitudeDelta = radiusMeters / 111_000d;
-        double longitudeScale = Math.max(0.01d, Math.cos(Math.toRadians(lat)));
-        double longitudeDelta = radiusMeters / (111_000d * longitudeScale);
-        double top = clamp(lat + latitudeDelta, -90d, 90d);
-        double bottom = clamp(lat - latitudeDelta, -90d, 90d);
-        double left = lon - longitudeDelta;
-        double right = lon + longitudeDelta;
-        if (left < -180d) {
-            left += 360d;
-        }
-        if (right > 180d) {
-            right -= 360d;
-        }
-
-        List<CameraPoint> result = new ArrayList<>();
-        List<CameraPoint> candidates = getCamerasInBoundingBox(top, left, bottom, right);
-        for (CameraPoint cam : candidates) {
+        // Merge OSM overlay cameras and deduplicate
+        List<CameraPoint> osmResult = getOsmCamerasInBoundingBox(
+                clamp(lat + (radiusMeters / 111_000d), -90d, 90d),
+                lon - (radiusMeters / (111_000d * Math.max(0.01d, Math.cos(Math.toRadians(lat))))),
+                clamp(lat - (radiusMeters / 111_000d), -90d, 90d),
+                lon + (radiusMeters / (111_000d * Math.max(0.01d, Math.cos(Math.toRadians(lat))))));
+        // Filter OSM results by precise distance
+        List<CameraPoint> osmFiltered = new ArrayList<>();
+        for (CameraPoint cam : osmResult) {
             double dist = net.osmand.util.MapUtils.getDistance(cam.lat, cam.lon, lat, lon);
             if (dist <= radiusMeters) {
-                result.add(cam);
+                osmFiltered.add(cam);
             }
         }
-        return result;
+        return mergeWithOsmCameras(primaryResult, osmFiltered);
     }
 
     @NonNull

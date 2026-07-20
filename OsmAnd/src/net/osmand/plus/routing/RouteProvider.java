@@ -87,6 +87,10 @@ public class RouteProvider {
 	/** Number of roads to block per tier in staged tier-based avoidance. */
 	private static final int TIER_SIZE = 3;
 	private static final long FLOCKFREE_OPTIONAL_ROUTING_BUDGET_MS = 30_000L;
+	/** Only scan cameras in the next N km of route during active navigation. */
+	private static final int ACTIVE_NAVIGATION_HORIZON_KM = 10;
+	/** Tighter time budget for avoidance replanning during active driving. */
+	private static final long ACTIVE_NAVIGATION_BUDGET_MS = 5_000L;
 	private static final double FLOCKFREE_BALANCED_MAX_AVOIDANCE_TIME_MULTIPLIER = 1.50d;
 	private static final double FLOCKFREE_BALANCED_MAX_AVOIDANCE_DISTANCE_MULTIPLIER = 1.50d;
 	private static final int FLOCKFREE_BALANCED_MAX_AVOIDANCE_EXTRA_TIME_SECONDS = 15 * 60;
@@ -96,6 +100,9 @@ public class RouteProvider {
 	private static final int FLOCKFREE_OPTIONAL_AVOIDANCE_STEPS = 1 + MAX_RELAXATION_ITERATIONS;
 	private static final long FLOCKFREE_OPTIONAL_STEP_EXPECTED_MS =
 			FLOCKFREE_OPTIONAL_ROUTING_BUDGET_MS / FLOCKFREE_OPTIONAL_AVOIDANCE_STEPS;
+	private static final int ACTIVE_NAVIGATION_AVOIDANCE_STEPS = 1 + MAX_RELAXATION_ITERATIONS;
+	private static final long ACTIVE_NAVIGATION_STEP_EXPECTED_MS =
+			ACTIVE_NAVIGATION_BUDGET_MS / ACTIVE_NAVIGATION_AVOIDANCE_STEPS;
 
 	private final GpxRouteHelper gpxRouteHelper = new GpxRouteHelper(this);
 
@@ -270,20 +277,50 @@ public class RouteProvider {
 			return null;
 		}
 		int avoidanceRadius = plugin.CAMERA_AVOIDANCE_RADIUS.get();
+		boolean activelyNavigating = isActivelyNavigating(params);
+
+		// Determine scan locations: use horizon-limited subset during active navigation
+		List<Location> scanLocations = initial.getImmutableAllLocations();
+		int totalRouteCameraCount = -1; // -1 means not yet computed
+		if (activelyNavigating) {
+			List<Location> horizonLocations = getHorizonRouteLocations(
+					initial.getImmutableAllLocations(), ACTIVE_NAVIGATION_HORIZON_KM);
+			// Count total cameras on the full route for display, but only scan/avoid within horizon
+			totalRouteCameraCount = avoidanceHelper.findCamerasNearRouteLocations(
+					initial.getImmutableAllLocations(), avoidanceRadius).size();
+			scanLocations = horizonLocations;
+			log.info("FlockFree active navigation horizon planning: scanning first "
+					+ ACTIVE_NAVIGATION_HORIZON_KM + " km ("
+					+ horizonLocations.size() + " of " + initial.getImmutableAllLocations().size()
+					+ " locations), total route cameras=" + totalRouteCameraCount
+					+ ", budget=" + ACTIVE_NAVIGATION_BUDGET_MS + "ms");
+		}
+
 		List<CameraAvoidanceHelper.RoadWithCameraCount> roadsWithCameras =
 				avoidanceHelper.collectAvoidRoadIdsWithCameraCountForRoute(initial,
 						avoidanceRadius);
+		if (activelyNavigating) {
+			int fullRoadCount = roadsWithCameras.size();
+			roadsWithCameras = filterRoadsToHorizon(initial, roadsWithCameras, ACTIVE_NAVIGATION_HORIZON_KM);
+			log.info("FlockFree horizon road filtering: " + roadsWithCameras.size()
+					+ " of " + fullRoadCount + " camera-adjacent roads within "
+					+ ACTIVE_NAVIGATION_HORIZON_KM + " km horizon");
+		}
 		log.info("FlockFree found " + roadsWithCameras.size() + " camera-adjacent roads on route");
 		if (Algorithms.isEmpty(roadsWithCameras)) {
 			avoidanceHelper.recordAvoidanceSkipped(CameraAvoidanceHelper.AvoidanceStatus.SKIPPED_NO_ROAD_IDS);
 			return null;
 		}
 		int originalRouteCameraCount = avoidanceHelper.findCamerasNearRouteLocations(
-				initial.getImmutableAllLocations(), avoidanceRadius).size();
+				scanLocations, avoidanceRadius).size();
 		if (originalRouteCameraCount <= 0) {
 			log.warn("FlockFree avoidance skipped: road mapping found camera roads but route exposure scan found none");
 			avoidanceHelper.recordAvoidanceSkipped(CameraAvoidanceHelper.AvoidanceStatus.SKIPPED_NO_ROAD_IDS);
 			return null;
+		}
+		if (activelyNavigating && totalRouteCameraCount >= 0) {
+			log.info("FlockFree horizon segment has " + originalRouteCameraCount
+					+ " cameras (full route has " + totalRouteCameraCount + " cameras)");
 		}
 
 		// roadsWithCameras is sorted DESCENDING by cameraCount (most cameras first).
@@ -312,7 +349,9 @@ public class RouteProvider {
 		List<List<CameraAvoidanceHelper.RoadWithCameraCount>> tiers =
 				buildBlockTiers(severitySorted, TIER_SIZE);
 		log.info("FlockFree starting tier-based avoidance (" + tiers.size() + " tiers of max "
-				+ TIER_SIZE + ", budget " + FLOCKFREE_OPTIONAL_ROUTING_BUDGET_MS + "ms)");
+				+ TIER_SIZE + ", budget "
+				+ (activelyNavigating ? ACTIVE_NAVIGATION_BUDGET_MS : FLOCKFREE_OPTIONAL_ROUTING_BUDGET_MS)
+				+ "ms" + (activelyNavigating ? ", horizon mode" : "") + ")");
 
 		Set<Long> blockedIds = new LinkedHashSet<>();
 		RouteCalculationResult bestRoute = null;
@@ -903,18 +942,93 @@ public class RouteProvider {
 		return FLOCKFREE_BALANCED_MAX_AVOIDANCE_DISTANCE_MULTIPLIER;
 	}
 
+	private boolean isActivelyNavigating(@NonNull RouteCalculationParams params) {
+		if (params.ctx == null) {
+			return false;
+		}
+		RoutingHelper routingHelper = params.ctx.getRoutingHelper();
+		if (routingHelper == null) {
+			return false;
+		}
+		// Active navigation: user is in following mode AND this is a recalculation
+		// (not an initial route preview)
+		return routingHelper.isFollowingMode() && params.previousToRecalculate != null;
+	}
+
+	private List<Location> getHorizonRouteLocations(@NonNull List<Location> allLocations, int maxKm) {
+		if (allLocations.isEmpty()) {
+			return allLocations;
+		}
+		double maxDistanceMeters = maxKm * 1000.0;
+		double accumulated = 0.0;
+		List<Location> horizon = new ArrayList<>();
+		horizon.add(allLocations.get(0));
+		for (int i = 1; i < allLocations.size(); i++) {
+			Location prev = allLocations.get(i - 1);
+			Location curr = allLocations.get(i);
+			accumulated += prev.distanceTo(curr);
+			horizon.add(curr);
+			if (accumulated >= maxDistanceMeters) {
+				break;
+			}
+		}
+		return horizon;
+	}
+
+	/**
+	 * Filters the list of camera-adjacent roads to only include roads within the first maxKm of the route.
+	 * Uses the route segment distances to accumulate distance and stops including roads past the horizon.
+	 */
+	private List<CameraAvoidanceHelper.RoadWithCameraCount> filterRoadsToHorizon(
+			@NonNull RouteCalculationResult route,
+			@NonNull List<CameraAvoidanceHelper.RoadWithCameraCount> allRoads,
+			int maxKm) {
+		List<RouteSegmentResult> segments = route.getOriginalRoute();
+		if (segments == null || segments.isEmpty()) {
+			return allRoads; // can't filter, return as-is
+		}
+		double maxDistanceMeters = maxKm * 1000.0;
+		double accumulated = 0.0;
+		Set<Long> horizonRoadIds = new HashSet<>();
+		for (RouteSegmentResult seg : segments) {
+			if (seg == null || seg.getObject() == null) {
+				continue;
+			}
+			horizonRoadIds.add(seg.getObject().getId());
+			accumulated += seg.getDistance();
+			if (accumulated >= maxDistanceMeters) {
+				break;
+			}
+		}
+		List<CameraAvoidanceHelper.RoadWithCameraCount> filtered = new ArrayList<>();
+		for (CameraAvoidanceHelper.RoadWithCameraCount rwc : allRoads) {
+			if (horizonRoadIds.contains(rwc.roadId)) {
+				filtered.add(rwc);
+			}
+		}
+		return filtered;
+	}
+
 	private boolean isFlockFreeOptionalRoutingBudgetExceeded(@NonNull RouteCalculationParams params) {
 		if (params.calculationProgress == null || params.calculationProgress.routeCalculationStartTime <= 0) {
 			return false;
 		}
+		long budget = isActivelyNavigating(params)
+				? ACTIVE_NAVIGATION_BUDGET_MS
+				: FLOCKFREE_OPTIONAL_ROUTING_BUDGET_MS;
 		return System.currentTimeMillis() - params.calculationProgress.routeCalculationStartTime
-				> FLOCKFREE_OPTIONAL_ROUTING_BUDGET_MS;
+				> budget;
 	}
 
 	private void startFlockFreeOptionalRoutingProgress(@NonNull RouteCalculationParams params) {
 		if (params.calculationProgress != null) {
-			params.calculationProgress.startPostRouteWork(FLOCKFREE_OPTIONAL_AVOIDANCE_STEPS,
-					FLOCKFREE_OPTIONAL_STEP_EXPECTED_MS);
+			if (isActivelyNavigating(params)) {
+				params.calculationProgress.startPostRouteWork(ACTIVE_NAVIGATION_AVOIDANCE_STEPS,
+						ACTIVE_NAVIGATION_STEP_EXPECTED_MS);
+			} else {
+				params.calculationProgress.startPostRouteWork(FLOCKFREE_OPTIONAL_AVOIDANCE_STEPS,
+						FLOCKFREE_OPTIONAL_STEP_EXPECTED_MS);
+			}
 		}
 	}
 

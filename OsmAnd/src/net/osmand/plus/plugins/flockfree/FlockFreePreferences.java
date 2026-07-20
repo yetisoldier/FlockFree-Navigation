@@ -44,6 +44,12 @@ public final class FlockFreePreferences {
     public static final String NAVIGATION_TILT_ANGLE = "navigation_tilt_angle";
     public static final String BUILDING_TRANSPARENCY_ENABLED = "building_transparency_enabled";
 
+    // OSM Overpass second source preferences
+    public static final String OSM_REFRESH_ENABLED = "flockfree_osm_refresh_enabled";
+    public static final String OSM_REFRESH_INTERVAL_DAYS = "flockfree_osm_refresh_interval_days";
+    public static final String OSM_LAST_REFRESH_TIME = "flockfree_osm_last_refresh_time";
+    public static final String OSM_OVERPASS_ENDPOINT = "flockfree_osm_overpass_endpoint";
+
     // Default values
     public static final boolean DEFAULT_CAMERA_SHOW_LAYER = true;
     public static final boolean DEFAULT_INCIDENTS_SHOW_LAYER = true;
@@ -66,6 +72,10 @@ public final class FlockFreePreferences {
     public static final boolean DEFAULT_FORCE_NIGHT_MAP = false;
     public static final boolean DEFAULT_NAVIGATION_TILT_ENABLED = true;
     public static final boolean DEFAULT_BUILDING_TRANSPARENCY_ENABLED = true;
+    public static final boolean DEFAULT_OSM_REFRESH_ENABLED = true;
+    public static final int DEFAULT_OSM_REFRESH_INTERVAL_DAYS = 7;
+    public static final long DEFAULT_OSM_LAST_REFRESH_TIME = 0L;
+    public static final String DEFAULT_OSM_OVERPASS_ENDPOINT = "https://overpass-api.de/api/interpreter";
     public static final float DEFAULT_NAVIGATION_TILT_ANGLE = 55f;
     public static final float MIN_NAVIGATION_TILT_ANGLE = 30f;
     public static final float MAX_NAVIGATION_TILT_ANGLE = 80f;
