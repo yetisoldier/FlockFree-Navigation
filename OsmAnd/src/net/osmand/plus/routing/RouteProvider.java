@@ -19,6 +19,7 @@ import net.osmand.plus.shared.SharedUtil;
 import net.osmand.binary.BinaryMapIndexReader;
 import net.osmand.binary.RouteDataObject;
 import net.osmand.data.LatLon;
+import net.osmand.data.QuadPointDouble;
 import net.osmand.gpx.GPXFile;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
@@ -516,6 +517,53 @@ public class RouteProvider {
 			}
 		}
 
+		// --- Stage 3: Dual-route motorway penalty approach ---
+		// If the greedy/tier avoidance didn't find sufficient improvement, try blocking
+		// only motorway/interstate segments near cameras. This forces the router to
+		// consider surface-street alternatives while still allowing non-camera highways.
+		if (bestRoute == null || bestRouteCameraCount >= originalRouteCameraCount) {
+			if (!isFlockFreeOptionalRoutingBudgetExceeded(params)) {
+				log.info("FlockFree dual-route: greedy avoidance found no improvement; trying motorway-penalized approach");
+				Set<Long> motorwayBlocks = identifyMotorwaySegmentsNearCameras(
+						initial, avoidanceHelper, avoidanceRadius);
+				if (!motorwayBlocks.isEmpty()) {
+					log.info("FlockFree dual-route: blocking " + motorwayBlocks.size()
+							+ " motorway segments near cameras");
+					RouteCalculationParams altParams = copyParamsForFlockFreeAvoidance(params, motorwayBlocks);
+					try {
+						beginFlockFreeOptionalRoutingStep(params, tierIteration);
+						RouteCalculationResult altRoute = findVectorMapsRoute(altParams, calcGPXRoute);
+						completeFlockFreeOptionalRoutingStep(params, tierIteration + 1);
+						if (altRoute.isCalculated()) {
+							int altCameraCount = avoidanceHelper.findCamerasNearRouteLocations(
+									altRoute.getImmutableAllLocations(), avoidanceRadius).size();
+							log.info("FlockFree dual-route: alternative has " + altCameraCount
+									+ " cameras vs original " + originalRouteCameraCount
+									+ ", best so far " + bestRouteCameraCount);
+							if (altCameraCount < bestRouteCameraCount) {
+								bestRoute = altRoute;
+								bestRouteBlockedIds = new LinkedHashSet<>(motorwayBlocks);
+								bestRouteCameraCount = altCameraCount;
+								bestRouteBlockedSize = motorwayBlocks.size();
+								log.info("FlockFree dual-route: using motorway-penalized route as Privacy option");
+							} else {
+								log.info("FlockFree dual-route: alternative has " + altCameraCount
+										+ " cameras, not better than best (" + bestRouteCameraCount + "); discarding");
+							}
+						} else {
+							log.info("FlockFree dual-route: alternative route not calculated; discarding");
+						}
+					} catch (IOException e) {
+						log.warn("FlockFree dual-route: motorway-penalized route threw", e);
+					}
+				} else {
+					log.info("FlockFree dual-route: no motorway segments found near cameras on original route");
+				}
+			} else {
+				log.info("FlockFree dual-route skipped: optional reroute budget exceeded");
+			}
+		}
+
 		// All avoidance iterations exhausted — fall back to best route found so far
 		restoreFlockFreeProgressState(params, originalMissingMaps);
 		finishFlockFreeOptionalRoutingProgress(params);
@@ -554,6 +602,95 @@ public class RouteProvider {
 		// 3 if at road centerline, 0 if 100m+ away
 		double distanceWeight = Math.max(0, (100.0 - distanceToRoad) / 100.0) * 3.0;
 		return cameraWeight + directionWeight + distanceWeight;
+	}
+
+	/**
+	 * Identifies motorway/interstate road segments on the route that are near cameras.
+	 * Returns a set of road IDs suitable for temporary blocking to encourage surface-street alternatives.
+	 *
+	 * @param route    The original calculated route
+	 * @param helper   The camera avoidance helper for camera lookups
+	 * @param radius  Search radius in meters
+	 * @return Set of motorway road IDs near cameras
+	 */
+	private Set<Long> identifyMotorwaySegmentsNearCameras(
+			@NonNull RouteCalculationResult route,
+			@NonNull CameraAvoidanceHelper helper,
+			int radius) {
+		List<RouteSegmentResult> segments = route.getOriginalRoute();
+		List<Location> locations = route.getImmutableAllLocations();
+		if (segments == null || locations == null || locations.isEmpty()) {
+			return new HashSet<>();
+		}
+		List<CameraData.CameraPoint> cameras = helper.findCamerasNearRouteLocations(locations, radius);
+		if (cameras.isEmpty()) {
+			return new HashSet<>();
+		}
+		Set<Long> motorwayIds = new HashSet<>();
+		for (CameraData.CameraPoint camera : cameras) {
+			int cameraX31 = MapUtils.get31TileNumberX(camera.lon);
+			int cameraY31 = MapUtils.get31TileNumberY(camera.lat);
+			for (RouteSegmentResult seg : segments) {
+				RouteDataObject obj = seg.getObject();
+				if (obj == null) {
+					continue;
+				}
+				if (!isMotorwayType(obj)) {
+					continue;
+				}
+				if (isCameraNearSegment(obj, seg, cameraX31, cameraY31, radius)) {
+					motorwayIds.add(obj.getId());
+				}
+			}
+		}
+		return motorwayIds;
+	}
+
+	/**
+	 * Checks if a RouteDataObject represents a motorway or trunk road.
+	 * These are high-speed roads (interstates, expressways) that the dual-route
+	 * approach should consider penalizing near cameras.
+	 */
+	private boolean isMotorwayType(@NonNull RouteDataObject obj) {
+		String highway = obj.getHighway();
+		if (highway == null) {
+			return false;
+		}
+		return "motorway".equals(highway)
+				|| "motorway_link".equals(highway)
+				|| "trunk".equals(highway)
+				|| "trunk_link".equals(highway);
+	}
+
+	/**
+	 * Checks if a camera point (in 31-bit tile coordinates) is near any point on
+	 * the given road segment's geometry, within the specified radius in meters.
+	 * This mirrors the geometry check in CameraAvoidanceHelper.isCameraNearRoadGeometry
+	 * but is self-contained here because that helper method is private.
+	 */
+	private boolean isCameraNearSegment(@NonNull RouteDataObject obj,
+									   @NonNull RouteSegmentResult seg,
+									   int cameraX31, int cameraY31, int radiusMeters) {
+		int startPointIndex = Math.min(seg.getStartPointIndex(), seg.getEndPointIndex());
+		int endPointIndex = Math.max(seg.getEndPointIndex(), seg.getStartPointIndex());
+		for (int j = startPointIndex; j <= endPointIndex; j++) {
+			int pointX31 = obj.getPoint31XTile(j);
+			int pointY31 = obj.getPoint31YTile(j);
+			if (MapUtils.squareRootDist31(pointX31, pointY31, cameraX31, cameraY31) <= radiusMeters) {
+				return true;
+			}
+			if (j > startPointIndex) {
+				QuadPointDouble projection = MapUtils.getProjectionPoint31(cameraX31, cameraY31,
+						obj.getPoint31XTile(j - 1), obj.getPoint31YTile(j - 1),
+						pointX31, pointY31);
+				double distance = MapUtils.squareRootDist31((int) projection.x, (int) projection.y,
+						cameraX31, cameraY31);
+				if (distance <= radiusMeters) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	/**
