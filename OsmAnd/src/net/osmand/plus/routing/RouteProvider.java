@@ -518,11 +518,10 @@ public class RouteProvider {
 		}
 
 		// --- Stage 3: Dual-route motorway penalty approach ---
-		// If the greedy/tier avoidance didn't find sufficient improvement, try blocking
-		// only motorway/interstate segments near cameras. This forces the router to
-		// consider surface-street alternatives while still allowing non-camera highways.
-		if (bestRoute == null || bestRouteCameraCount >= originalRouteCameraCount) {
-			if (!isFlockFreeOptionalRoutingBudgetExceeded(params)) {
+		// Always try motorway-penalized route as an alternative, even if greedy found
+		// some improvement. The dual-route may find a much better result (e.g. surface
+		// streets with 3 cameras vs greedy's 6 cameras on highway).
+		if (!isFlockFreeOptionalRoutingBudgetExceeded(params)) {
 				log.info("FlockFree dual-route: greedy avoidance found no improvement; trying motorway-penalized approach");
 				Set<Long> motorwayBlocks = identifyMotorwaySegmentsNearCameras(
 						initial, avoidanceHelper, avoidanceRadius);
@@ -562,7 +561,6 @@ public class RouteProvider {
 			} else {
 				log.info("FlockFree dual-route skipped: optional reroute budget exceeded");
 			}
-		}
 
 		// All avoidance iterations exhausted — fall back to best route found so far
 		restoreFlockFreeProgressState(params, originalMissingMaps);
