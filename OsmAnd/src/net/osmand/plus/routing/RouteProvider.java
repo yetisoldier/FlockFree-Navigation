@@ -277,6 +277,9 @@ public class RouteProvider {
 			return null;
 		}
 		int avoidanceRadius = plugin.CAMERA_AVOIDANCE_RADIUS.get();
+		// Use a wider radius for blocking road segments than for scanning cameras.
+		// This prevents the router from using parallel roads just outside the scan radius.
+		int blockRadius = (int) (avoidanceRadius * 1.5); // 50% wider for blocking
 		boolean activelyNavigating = isActivelyNavigating(params);
 
 		// Determine scan locations: use horizon-limited subset during active navigation
@@ -298,7 +301,7 @@ public class RouteProvider {
 
 		List<CameraAvoidanceHelper.RoadWithCameraCount> roadsWithCameras =
 				avoidanceHelper.collectAvoidRoadIdsWithCameraCountForRoute(initial,
-						avoidanceRadius);
+						blockRadius);
 		if (activelyNavigating) {
 			int fullRoadCount = roadsWithCameras.size();
 			roadsWithCameras = filterRoadsToHorizon(initial, roadsWithCameras, ACTIVE_NAVIGATION_HORIZON_KM);
