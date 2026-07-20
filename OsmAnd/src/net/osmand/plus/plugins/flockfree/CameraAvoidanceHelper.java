@@ -118,16 +118,22 @@ public class CameraAvoidanceHelper {
         lastPartialRemainingCameraCount = 0;
     }
 
-    public synchronized void recordAvoidanceFallback(int roadCount) {
+    public synchronized void recordAvoidanceFallback(int roadCount, int originalCameraCount,
+                                                       int originalRouteTimeSeconds,
+                                                       int originalRouteDistanceMeters) {
         lastAvoidanceStatus = AvoidanceStatus.FALLBACK;
         lastAvoidanceRoadCount = roadCount;
         lastAvoidanceCameraCount = 0;
-        lastAvoidanceOriginalTimeSeconds = UNKNOWN_ROUTE_TIME_SECONDS;
-        lastAvoidanceOriginalDistanceMeters = 0;
-        lastAvoidanceOriginalCameraCount = 0;
+        lastAvoidanceOriginalTimeSeconds = Math.max(0, originalRouteTimeSeconds);
+        lastAvoidanceOriginalDistanceMeters = Math.max(0, originalRouteDistanceMeters);
+        lastAvoidanceOriginalCameraCount = Math.max(0, originalCameraCount);
         lastPartialBlockedRoadCount = 0;
         lastPartialTotalCameraRoadCount = 0;
         lastPartialRemainingCameraCount = 0;
+    }
+
+    public synchronized void recordAvoidanceFallback(int roadCount) {
+        recordAvoidanceFallback(roadCount, 0, UNKNOWN_ROUTE_TIME_SECONDS, 0);
     }
 
     public synchronized void recordAvoidanceSkipped(@NonNull AvoidanceStatus status) {
@@ -244,7 +250,8 @@ public class CameraAvoidanceHelper {
 
     public synchronized boolean hasLastAvoidanceComparison() {
         return (lastAvoidanceStatus == AvoidanceStatus.APPLIED
-                || lastAvoidanceStatus == AvoidanceStatus.PARTIAL_APPLIED)
+                || lastAvoidanceStatus == AvoidanceStatus.PARTIAL_APPLIED
+                || lastAvoidanceStatus == AvoidanceStatus.FALLBACK)
                 && lastAvoidanceOriginalCameraCount > 0
                 && lastAvoidanceOriginalTimeSeconds > 0
                 && lastAvoidanceOriginalDistanceMeters > 0;

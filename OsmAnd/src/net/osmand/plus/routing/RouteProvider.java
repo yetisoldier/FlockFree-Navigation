@@ -83,9 +83,9 @@ public class RouteProvider {
 	// Reserved for a future bounded multi-pass route scan; inactive in the current production path.
 	private static final int MAX_AVOIDANCE_PASSES = 0;
 	private static final long FLOCKFREE_OPTIONAL_ROUTING_BUDGET_MS = 15_000L;
-	private static final int FLOCKFREE_MAX_AVOIDANCE_EXTRA_TIME_SECONDS = 10 * 60;
-	private static final double FLOCKFREE_MAX_AVOIDANCE_TIME_MULTIPLIER = 1.20d;
-	private static final double FLOCKFREE_MAX_AVOIDANCE_DISTANCE_MULTIPLIER = 1.25d;
+	private static final int FLOCKFREE_MAX_AVOIDANCE_EXTRA_TIME_SECONDS = 15 * 60;
+	private static final double FLOCKFREE_MAX_AVOIDANCE_TIME_MULTIPLIER = 1.50d;
+	private static final double FLOCKFREE_MAX_AVOIDANCE_DISTANCE_MULTIPLIER = 1.50d;
 	private static final int FLOCKFREE_OPTIONAL_AVOIDANCE_STEPS = 1 + MAX_RELAXATION_ITERATIONS;
 	private static final long FLOCKFREE_OPTIONAL_STEP_EXPECTED_MS =
 			FLOCKFREE_OPTIONAL_ROUTING_BUDGET_MS / FLOCKFREE_OPTIONAL_AVOIDANCE_STEPS;
@@ -296,7 +296,7 @@ public class RouteProvider {
 				? params.calculationProgress.missingMapsCalculationResult : null;
 		if (isFlockFreeOptionalRoutingBudgetExceeded(params)) {
 			log.info("FlockFree avoidance skipped: initial route calculation already exceeded optional reroute budget");
-			avoidanceHelper.recordAvoidanceFallback(blockedIds.size());
+			avoidanceHelper.recordAvoidanceFallback(blockedIds.size(), originalRouteCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters);
 			return null;
 		}
 		startFlockFreeOptionalRoutingProgress(params);
@@ -332,7 +332,7 @@ public class RouteProvider {
 			log.warn("FlockFree temporary camera avoidance threw; returning original route", e);
 			restoreFlockFreeProgressState(params, originalMissingMaps);
 			finishFlockFreeOptionalRoutingProgress(params);
-			avoidanceHelper.recordAvoidanceFallback(blockedIds.size());
+			avoidanceHelper.recordAvoidanceFallback(blockedIds.size(), originalRouteCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters);
 			log.warn("FlockFree temporary camera avoidance failed; returning original route");
 			return null;
 		}
@@ -393,7 +393,7 @@ public class RouteProvider {
 				log.warn("FlockFree relaxation iteration " + (i + 1) + " threw", e);
 				restoreFlockFreeProgressState(params, originalMissingMaps);
 				finishFlockFreeOptionalRoutingProgress(params);
-				avoidanceHelper.recordAvoidanceFallback(blockedIds.size());
+				avoidanceHelper.recordAvoidanceFallback(blockedIds.size(), originalRouteCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters);
 				log.warn("FlockFree temporary camera avoidance failed; returning original route");
 				return null;
 			}
@@ -402,7 +402,7 @@ public class RouteProvider {
 		// All relaxation iterations exhausted
 		restoreFlockFreeProgressState(params, originalMissingMaps);
 		finishFlockFreeOptionalRoutingProgress(params);
-		avoidanceHelper.recordAvoidanceFallback(blockedIds.size());
+		avoidanceHelper.recordAvoidanceFallback(blockedIds.size(), originalRouteCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters);
 		log.warn("FlockFree iterative relaxation exhausted after " + MAX_RELAXATION_ITERATIONS
 				+ " iterations; returning original route");
 		return null;

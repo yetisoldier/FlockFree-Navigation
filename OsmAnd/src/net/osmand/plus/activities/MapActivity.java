@@ -1301,8 +1301,12 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 		}
 		boolean navigationUiActive = isFlockFreeNavigationUiActive();
 		boolean showFlockFreeControls = visible && !navigationUiActive;
+		boolean routePlanningMode = app.getRoutingHelper().isRoutePlanningMode();
 		AndroidUiHelper.updateVisibility(flockFreeSearchBar, showFlockFreeControls);
 		AndroidUiHelper.updateVisibility(flockFreeLayersButton, showFlockFreeControls);
+		// Keep the navigation actions chip bar (Routes, gas, coffee, etc.) visible during route planning
+		// so the user can tap "Routes" to see the Fastest vs Flock-safe comparison dialog
+		AndroidUiHelper.updateVisibility(flockFreeNavigationActions, routePlanningMode);
 		// Chip visibility is managed by SearchAlongRouteChips (route listener + update loop)
 		View trafficLegend = findViewById(R.id.flockfree_traffic_legend);
 		if (trafficLegend != null) {
