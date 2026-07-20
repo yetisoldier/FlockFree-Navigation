@@ -657,7 +657,9 @@ public class RouteProvider {
 		return "motorway".equals(highway)
 				|| "motorway_link".equals(highway)
 				|| "trunk".equals(highway)
-				|| "trunk_link".equals(highway);
+				|| "trunk_link".equals(highway)
+			|| "primary".equals(highway)
+			|| "primary_link".equals(highway);
 	}
 
 	/**
