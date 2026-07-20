@@ -79,10 +79,10 @@ public class RouteProvider {
 
 	private static final org.apache.commons.logging.Log log = PlatformUtil.getLog(RouteProvider.class);
 	private static final int MIN_STRAIGHT_DIST = 50000;
-	private static final int MAX_RELAXATION_ITERATIONS = 4;
+	private static final int MAX_RELAXATION_ITERATIONS = 15;
 	// Reserved for a future bounded multi-pass route scan; inactive in the current production path.
 	private static final int MAX_AVOIDANCE_PASSES = 0;
-	private static final long FLOCKFREE_OPTIONAL_ROUTING_BUDGET_MS = 15_000L;
+	private static final long FLOCKFREE_OPTIONAL_ROUTING_BUDGET_MS = 30_000L;
 	private static final int FLOCKFREE_MAX_AVOIDANCE_EXTRA_TIME_SECONDS = 15 * 60;
 	private static final double FLOCKFREE_MAX_AVOIDANCE_TIME_MULTIPLIER = 1.50d;
 	private static final double FLOCKFREE_MAX_AVOIDANCE_DISTANCE_MULTIPLIER = 1.50d;
@@ -279,14 +279,13 @@ public class RouteProvider {
 			return null;
 		}
 
-		// Build the full blocked set from all camera-adjacent roads
-		Set<Long> blockedIds = new LinkedHashSet<>();
+		// roadsWithCameras is sorted DESCENDING by cameraCount (most cameras first).
+		// Greedy incremental: add roads one at a time, starting with the highest camera count.
+		int totalCameraRoadCount = roadsWithCameras.size();
 		int originalRoadAssociationCount = 0;
 		for (CameraAvoidanceHelper.RoadWithCameraCount rwc : roadsWithCameras) {
-			blockedIds.add(rwc.roadId);
 			originalRoadAssociationCount += rwc.cameraCount;
 		}
-		int totalCameraRoadCount = roadsWithCameras.size();
 		int originalRouteTimeSeconds = initial.getLeftTime(null);
 		int originalRouteDistanceMeters = initial.getWholeDistance();
 		log.info("FlockFree original route exposure: " + originalRouteCameraCount
@@ -296,101 +295,94 @@ public class RouteProvider {
 				? params.calculationProgress.missingMapsCalculationResult : null;
 		if (isFlockFreeOptionalRoutingBudgetExceeded(params)) {
 			log.info("FlockFree avoidance skipped: initial route calculation already exceeded optional reroute budget");
-			avoidanceHelper.recordAvoidanceFallback(blockedIds.size(), originalRouteCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters);
+			avoidanceHelper.recordAvoidanceFallback(0, originalRouteCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters);
 			return null;
 		}
 		startFlockFreeOptionalRoutingProgress(params);
 
-		// --- Attempt 1: full avoidance (all camera-adjacent roads blocked) ---
-		RouteCalculationParams avoidedParams = copyParamsForFlockFreeAvoidance(params, blockedIds);
-		try {
-			beginFlockFreeOptionalRoutingStep(params, 0);
-			RouteCalculationResult avoided = findVectorMapsRoute(avoidedParams, calcGPXRoute);
-			completeFlockFreeOptionalRoutingStep(params, 1);
-			if (avoided.isCalculated()) {
-				// Count cameras on the avoidance route before accepting it
-				int avoidedCameraCount = avoidanceHelper.findCamerasNearRouteLocations(
-						avoided.getImmutableAllLocations(), avoidanceRadius).size();
-				log.info("FlockFree full avoidance route has " + avoidedCameraCount
-						+ " cameras (original had " + originalRouteCameraCount + ")");
-				String rejectionReason = getFlockFreeAvoidanceRejectionReason(avoided, avoidedCameraCount,
-						originalRouteCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters);
-				if (Algorithms.isEmpty(rejectionReason)) {
-					log.info("FlockFree recalculated route with " + blockedIds.size()
-							+ " temporary avoid road ids (full avoidance, "
-							+ avoidedCameraCount + " cameras vs " + originalRouteCameraCount + " original)");
-					avoidanceHelper.recordAvoidanceApplied(blockedIds.size(), originalRouteCameraCount,
-							avoidedCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters);
-					finishFlockFreeOptionalRoutingProgress(params);
-					return new FlockFreeRouteVariant(avoided, avoidedParams.temporaryImpassableRoadIds);
-				} else {
-					log.info("FlockFree full avoidance route rejected: " + rejectionReason
-							+ "; falling through to relaxation");
-				}
-			}
-		} catch (IOException e) {
-			log.warn("FlockFree temporary camera avoidance threw; returning original route", e);
-			restoreFlockFreeProgressState(params, originalMissingMaps);
-			finishFlockFreeOptionalRoutingProgress(params);
-			avoidanceHelper.recordAvoidanceFallback(blockedIds.size(), originalRouteCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters);
-			log.warn("FlockFree temporary camera avoidance failed; returning original route");
-			return null;
-		}
+		// --- Greedy incremental avoidance: add one road at a time ---
+		log.info("FlockFree starting greedy incremental avoidance (max "
+				+ MAX_RELAXATION_ITERATIONS + " iterations, budget "
+				+ FLOCKFREE_OPTIONAL_ROUTING_BUDGET_MS + "ms)");
 
-		// --- Iterative relaxation: unblock least-camera-impactful roads one at a time ---
-		log.info("FlockFree full avoidance failed; starting iterative relaxation (max "
-				+ MAX_RELAXATION_ITERATIONS + " iterations)");
+		Set<Long> blockedIds = new LinkedHashSet<>();
+		RouteCalculationResult bestRoute = null;
+		Set<Long> bestRouteBlockedIds = null;
+		int bestRouteCameraCount = originalRouteCameraCount;
+		int bestRouteBlockedSize = 0;
 
-		// roadsWithCameras is sorted DESCENDING by cameraCount, so the last entries
-		// have the LOWEST camera counts — those are the ones we unblock first.
-		int unblockedRoadAssociationCount = 0;
-		for (int i = 0; i < MAX_RELAXATION_ITERATIONS && !roadsWithCameras.isEmpty(); i++) {
-			// Remove the road with the lowest camera count from the blocked set
-			CameraAvoidanceHelper.RoadWithCameraCount unblocked = roadsWithCameras.remove(roadsWithCameras.size() - 1);
-			blockedIds.remove(unblocked.roadId);
-			unblockedRoadAssociationCount += unblocked.cameraCount;
-
-			log.info("FlockFree relaxation iteration " + (i + 1)
-					+ ": unblocking roadId=" + unblocked.roadId
-					+ " (camera-road associations=" + unblocked.cameraCount + ")"
-					+ ", remaining blocked=" + blockedIds.size());
+		for (int i = 0; i < MAX_RELAXATION_ITERATIONS && i < totalCameraRoadCount; i++) {
 			if (isFlockFreeOptionalRoutingBudgetExceeded(params)) {
-				log.info("FlockFree relaxation stopped: optional reroute budget exceeded");
+				log.info("FlockFree greedy avoidance stopped: optional reroute budget exceeded at iteration " + (i + 1));
 				finishFlockFreeOptionalRoutingProgress(params);
 				break;
 			}
 
-			avoidedParams = copyParamsForFlockFreeAvoidance(params, blockedIds);
+			// Add the next highest-camera-count road to the blocked set
+			CameraAvoidanceHelper.RoadWithCameraCount toBlock = roadsWithCameras.get(i);
+			blockedIds.add(toBlock.roadId);
+
+			log.info("FlockFree greedy iteration " + (i + 1)
+					+ ": blocking roadId=" + toBlock.roadId
+					+ " (camera-road associations=" + toBlock.cameraCount + ")"
+					+ ", total blocked=" + blockedIds.size()
+					+ "/" + totalCameraRoadCount);
+
+			RouteCalculationParams avoidedParams = copyParamsForFlockFreeAvoidance(params, blockedIds);
 			try {
-				beginFlockFreeOptionalRoutingStep(params, i + 1);
+				beginFlockFreeOptionalRoutingStep(params, i);
 				RouteCalculationResult avoided = findVectorMapsRoute(avoidedParams, calcGPXRoute);
-				completeFlockFreeOptionalRoutingStep(params, i + 2);
+				completeFlockFreeOptionalRoutingStep(params, i + 1);
 				if (avoided.isCalculated()) {
-					// Count cameras on the relaxed route before accepting it
-					int relaxedCameraCount = avoidanceHelper.findCamerasNearRouteLocations(
-							avoided.getImmutableAllLocations(),
-							avoidanceRadius).size();
-					String rejectionReason = getFlockFreeAvoidanceRejectionReason(avoided, relaxedCameraCount,
-							originalRouteCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters);
-					if (!Algorithms.isEmpty(rejectionReason)) {
-						log.info("FlockFree relaxation iteration " + (i + 1)
-								+ " route rejected: " + rejectionReason + "; continuing");
-						continue;
+					int avoidedCameraCount = avoidanceHelper.findCamerasNearRouteLocations(
+							avoided.getImmutableAllLocations(), avoidanceRadius).size();
+					log.info("FlockFree greedy iteration " + (i + 1)
+							+ " route has " + avoidedCameraCount
+							+ " cameras (original had " + originalRouteCameraCount + ")");
+
+					if (avoidedCameraCount < originalRouteCameraCount) {
+						// Route has fewer cameras — check if within limits
+						String rejectionReason = getFlockFreeAvoidanceRejectionReason(avoided, avoidedCameraCount,
+								originalRouteCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters);
+						if (Algorithms.isEmpty(rejectionReason)) {
+							// Route is viable — track as best and continue to find better routes
+							log.info("FlockFree greedy iteration " + (i + 1)
+									+ " accepted: blocked " + blockedIds.size()
+									+ " of " + totalCameraRoadCount + " camera roads"
+									+ ", cameras on route=" + avoidedCameraCount
+									+ " vs original " + originalRouteCameraCount
+									+ "; continuing to search for better avoidance");
+							if (avoidedCameraCount < bestRouteCameraCount) {
+								bestRoute = avoided;
+								bestRouteBlockedIds = new LinkedHashSet<>(blockedIds);
+								bestRouteCameraCount = avoidedCameraCount;
+								bestRouteBlockedSize = blockedIds.size();
+							}
+						} else {
+							// Has fewer cameras but exceeds time/distance limits
+							log.info("FlockFree greedy iteration " + (i + 1)
+									+ " route has fewer cameras but rejected: " + rejectionReason
+									+ "; continuing to block more roads");
+							// Track as best route if it has fewer cameras than current best
+							if (avoidedCameraCount < bestRouteCameraCount) {
+								bestRoute = avoided;
+								bestRouteBlockedIds = new LinkedHashSet<>(blockedIds);
+								bestRouteCameraCount = avoidedCameraCount;
+								bestRouteBlockedSize = blockedIds.size();
+							}
+						}
+					} else {
+						// Route still has same camera count — need to block more roads
+						log.info("FlockFree greedy iteration " + (i + 1)
+								+ " route has same cameras (" + avoidedCameraCount
+								+ "); adding more roads to blocked set");
 					}
-					log.info("FlockFree relaxation succeeded after " + (i + 1)
-							+ " iteration(s); blocked " + blockedIds.size()
-							+ " of " + totalCameraRoadCount + " camera roads"
-							+ ", cameras on route=" + relaxedCameraCount
-							+ ", unblocked camera-road associations=" + unblockedRoadAssociationCount);
-					avoidanceHelper.recordAvoidancePartial(blockedIds.size(),
-							totalCameraRoadCount, relaxedCameraCount,
-							originalRouteCameraCount, originalRouteTimeSeconds,
-							originalRouteDistanceMeters);
-					finishFlockFreeOptionalRoutingProgress(params);
-					return new FlockFreeRouteVariant(avoided, avoidedParams.temporaryImpassableRoadIds);
+				} else {
+					log.info("FlockFree greedy iteration " + (i + 1)
+							+ " route not calculated; continuing to block more roads");
 				}
 			} catch (IOException e) {
-				log.warn("FlockFree relaxation iteration " + (i + 1) + " threw", e);
+				log.warn("FlockFree greedy iteration " + (i + 1) + " threw", e);
 				restoreFlockFreeProgressState(params, originalMissingMaps);
 				finishFlockFreeOptionalRoutingProgress(params);
 				avoidanceHelper.recordAvoidanceFallback(blockedIds.size(), originalRouteCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters);
@@ -399,11 +391,21 @@ public class RouteProvider {
 			}
 		}
 
-		// All relaxation iterations exhausted
+		// All greedy iterations exhausted — fall back to best route found so far
 		restoreFlockFreeProgressState(params, originalMissingMaps);
 		finishFlockFreeOptionalRoutingProgress(params);
+		if (bestRoute != null) {
+			log.info("FlockFree greedy avoidance exhausted; using best partial route with "
+					+ bestRouteCameraCount + " cameras (original had " + originalRouteCameraCount + ")"
+					+ ", blocked " + bestRouteBlockedSize + " of " + totalCameraRoadCount + " roads");
+			avoidanceHelper.recordAvoidancePartial(bestRouteBlockedSize,
+					totalCameraRoadCount, bestRouteCameraCount,
+					originalRouteCameraCount, originalRouteTimeSeconds,
+					originalRouteDistanceMeters);
+			return new FlockFreeRouteVariant(bestRoute, bestRouteBlockedIds);
+		}
 		avoidanceHelper.recordAvoidanceFallback(blockedIds.size(), originalRouteCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters);
-		log.warn("FlockFree iterative relaxation exhausted after " + MAX_RELAXATION_ITERATIONS
+		log.warn("FlockFree greedy avoidance exhausted after " + MAX_RELAXATION_ITERATIONS
 				+ " iterations; returning original route");
 		return null;
 	}
