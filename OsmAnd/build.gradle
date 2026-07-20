@@ -32,9 +32,9 @@ android {
 
 		publishing {
 			storeFile file("../keystores/flockfree-release.keystore")
-			storePassword System.getenv("FLOCKFREE_KEYSTORE_PASSWORD") ?: "FLOCKFREE_CHANGE_ME_2026"
+			storePassword System.getenv("FLOCKFREE_KEYSTORE_PASSWORD") ?: project.findProperty("flockfreeKeystorePassword") ?: "FLOCKFREE_CHANGE_ME_2026"
 			keyAlias "flockfree"
-			keyPassword System.getenv("FLOCKFREE_KEYSTORE_PASSWORD") ?: "FLOCKFREE_CHANGE_ME_2026"
+			keyPassword System.getenv("FLOCKFREE_KEYSTORE_PASSWORD") ?: project.findProperty("flockfreeKeystorePassword") ?: "FLOCKFREE_CHANGE_ME_2026"
 		}
 	}
 
