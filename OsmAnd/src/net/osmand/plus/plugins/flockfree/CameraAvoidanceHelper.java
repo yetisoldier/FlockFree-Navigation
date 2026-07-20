@@ -19,13 +19,15 @@ import org.apache.commons.logging.Log;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Collections;
+import java.util.Objects;
 
 /**
  * Helps avoid known Flock camera locations during route calculation.
@@ -69,6 +71,62 @@ public class CameraAvoidanceHelper {
             this.cameraCount = cameraCount;
         }
     }
+
+    // ---- Route-association cache ----
+
+    private static final int MAX_CACHE_ENTRIES = 20;
+    private static final long CACHE_TTL_MS = 5 * 60 * 1000L; // 5 minutes
+
+    /** Cache key: route fingerprint + dataset version + avoidance radius. */
+    private static final class RouteCacheKey {
+        final String routeHash;
+        final int datasetVersion;
+        final int radiusMeters;
+
+        RouteCacheKey(String routeHash, int datasetVersion, int radiusMeters) {
+            this.routeHash = routeHash;
+            this.datasetVersion = datasetVersion;
+            this.radiusMeters = radiusMeters;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof RouteCacheKey)) return false;
+            RouteCacheKey k = (RouteCacheKey) o;
+            return datasetVersion == k.datasetVersion
+                    && radiusMeters == k.radiusMeters
+                    && Objects.equals(routeHash, k.routeHash);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(routeHash, datasetVersion, radiusMeters);
+        }
+    }
+
+    /** Cached camera-to-road associations for a single route. */
+    private static final class CameraRoadAssociations {
+        final List<RoadWithCameraCount> roadsWithCameras;
+        final int cameraCount;
+        final long createdAtMs;
+
+        CameraRoadAssociations(List<RoadWithCameraCount> roadsWithCameras, int cameraCount, long createdAtMs) {
+            this.roadsWithCameras = roadsWithCameras;
+            this.cameraCount = cameraCount;
+            this.createdAtMs = createdAtMs;
+        }
+    }
+
+    private final LinkedHashMap<RouteCacheKey, CameraRoadAssociations> associationCache =
+            new LinkedHashMap<RouteCacheKey, CameraRoadAssociations>(MAX_CACHE_ENTRIES, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<RouteCacheKey, CameraRoadAssociations> eldest) {
+                    return size() > MAX_CACHE_ENTRIES;
+                }
+            };
+
+    // ---- End route-association cache ----
 
     private final OsmandApplication app;
     private final FlockFreePlugin plugin;
@@ -358,9 +416,59 @@ public class CameraAvoidanceHelper {
     }
 
     /**
+     * Computes a compact hash string from the route's segment road IDs and their order.
+     * This creates a unique fingerprint for a route so that identical routes can reuse
+     * cached camera-to-road associations without recomputation.
+     *
+     * @param roads the route segments
+     * @return a hash string, or null if roads is null/empty
+     */
+    @Nullable
+    private String hashRouteSegments(@NonNull List<RouteSegmentResult> roads) {
+        if (roads.isEmpty()) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < roads.size(); i++) {
+            RouteSegmentResult road = roads.get(i);
+            RouteDataObject obj = road.getObject();
+            long roadId = obj != null ? obj.getId() : 0L;
+            sb.append(roadId).append('|');
+        }
+        return Integer.toHexString(sb.hashCode());
+    }
+
+    /**
+     * Returns a dataset version proxy: camera count + hourly bucket of current time.
+     * Since CameraData does not expose a version number, this combination ensures
+     * the cache invalidates when camera data changes (count changes) or after one hour
+     * (time bucket changes).
+     *
+     * @param cameraData the camera data source
+     * @return an integer representing the current dataset version
+     */
+    private int getDatasetVersion(@NonNull CameraData cameraData) {
+        int cameraCount = cameraData.getCameraCount();
+        long hourBucket = System.currentTimeMillis() / (60 * 60 * 1000L);
+        return Objects.hash(cameraCount, hourBucket);
+    }
+
+    /**
+     * Clears the route-association cache. Should be called when camera data is refreshed
+     * or when the avoidance radius changes.
+     */
+    public synchronized void clearAssociationCache() {
+        associationCache.clear();
+        LOG.info("FlockFree route-association cache cleared");
+    }
+
+    /**
      * Collects Flock-camera-adjacent road IDs paired with the number of cameras that mapped to each road.
      * The list is sorted by cameraCount DESCENDING (most Flock cameras first), so the RouteProvider
      * can iteratively unblock the least-impactful roads first when full avoidance fails.
+     *
+     * Results are cached keyed by route fingerprint + dataset version + radius, with a 5-minute TTL
+     * and LRU eviction at 20 entries.
      *
      * @param route        The calculated route
      * @param radiusMeters  Radius in meters to search around the route
@@ -369,17 +477,35 @@ public class CameraAvoidanceHelper {
     @NonNull
     public List<RoadWithCameraCount> collectAvoidRoadIdsWithCameraCountForRoute(
             @NonNull RouteCalculationResult route, int radiusMeters) {
-        List<RoadWithCameraCount> result = new ArrayList<>();
         CameraData cameraData = plugin.getCameraData();
         if (!isAvoidanceEnabled() || !cameraData.isDataLoaded()) {
-            return result;
+            return new ArrayList<>();
         }
 
         List<RouteSegmentResult> roads = route.getOriginalRoute();
         List<Location> locations = route.getImmutableAllLocations();
         if (roads == null || roads.size() < 3 || locations == null || locations.isEmpty()) {
-            return result;
+            return new ArrayList<>();
         }
+
+        // --- Cache lookup ---
+        String routeHash = hashRouteSegments(roads);
+        int datasetVersion = getDatasetVersion(cameraData);
+        if (routeHash != null) {
+            RouteCacheKey cacheKey = new RouteCacheKey(routeHash, datasetVersion, radiusMeters);
+            CameraRoadAssociations cached = associationCache.get(cacheKey);
+            if (cached != null) {
+                long age = System.currentTimeMillis() - cached.createdAtMs;
+                if (age < CACHE_TTL_MS) {
+                    LOG.info("FlockFree route-association cache HIT (age=" + age + "ms, entries=" + associationCache.size() + ")");
+                    return new ArrayList<>(cached.roadsWithCameras);
+                } else {
+                    associationCache.remove(cacheKey);
+                    LOG.info("FlockFree route-association cache STALE (age=" + age + "ms, evicting)");
+                }
+            }
+        }
+        // --- End cache lookup ---
 
         List<CameraData.CameraPoint> cameras = findCamerasNearRouteLocations(locations, radiusMeters);
 
@@ -456,6 +582,7 @@ public class CameraAvoidanceHelper {
         }
 
         // Build sorted list: most cameras first (most important to block)
+        List<RoadWithCameraCount> result = new ArrayList<>();
         for (Map.Entry<Long, Integer> entry : roadIdToCameraCount.entrySet()) {
             result.add(new RoadWithCameraCount(entry.getKey(), entry.getValue()));
         }
@@ -467,6 +594,17 @@ public class CameraAvoidanceHelper {
                     + ", omnidirectional: " + omnidirectionalCount
                     + ")");
         }
+
+        // --- Cache store ---
+        if (routeHash != null) {
+            RouteCacheKey cacheKey = new RouteCacheKey(routeHash, datasetVersion, radiusMeters);
+            CameraRoadAssociations associations = new CameraRoadAssociations(
+                    new ArrayList<>(result), cameras.size(), System.currentTimeMillis());
+            associationCache.put(cacheKey, associations);
+            LOG.info("FlockFree route-association cache STORE (entries=" + associationCache.size() + ")");
+        }
+        // --- End cache store ---
+
         return result;
     }
 

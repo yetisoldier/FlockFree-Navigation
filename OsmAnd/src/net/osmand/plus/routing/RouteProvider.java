@@ -17,6 +17,7 @@ import net.osmand.PlatformUtil;
 import net.osmand.ResultMatcher;
 import net.osmand.plus.shared.SharedUtil;
 import net.osmand.binary.BinaryMapIndexReader;
+import net.osmand.binary.RouteDataObject;
 import net.osmand.data.LatLon;
 import net.osmand.gpx.GPXFile;
 import net.osmand.plus.OsmandApplication;
@@ -82,6 +83,9 @@ public class RouteProvider {
 	private static final int MAX_RELAXATION_ITERATIONS = 15;
 	// Reserved for a future bounded multi-pass route scan; inactive in the current production path.
 	private static final int MAX_AVOIDANCE_PASSES = 0;
+
+	/** Number of roads to block per tier in staged tier-based avoidance. */
+	private static final int TIER_SIZE = 3;
 	private static final long FLOCKFREE_OPTIONAL_ROUTING_BUDGET_MS = 30_000L;
 	private static final double FLOCKFREE_BALANCED_MAX_AVOIDANCE_TIME_MULTIPLIER = 1.50d;
 	private static final double FLOCKFREE_BALANCED_MAX_AVOIDANCE_DISTANCE_MULTIPLIER = 1.50d;
@@ -283,7 +287,6 @@ public class RouteProvider {
 		}
 
 		// roadsWithCameras is sorted DESCENDING by cameraCount (most cameras first).
-		// Greedy incremental: add roads one at a time, starting with the highest camera count.
 		int totalCameraRoadCount = roadsWithCameras.size();
 		int originalRoadAssociationCount = 0;
 		for (CameraAvoidanceHelper.RoadWithCameraCount rwc : roadsWithCameras) {
@@ -303,59 +306,59 @@ public class RouteProvider {
 		}
 		startFlockFreeOptionalRoutingProgress(params);
 
-		// --- Greedy incremental avoidance: add one road at a time ---
-		log.info("FlockFree starting greedy incremental avoidance (max "
-				+ MAX_RELAXATION_ITERATIONS + " iterations, budget "
-				+ FLOCKFREE_OPTIONAL_ROUTING_BUDGET_MS + "ms)");
+		// --- Stage 1: Tier-based avoidance (block TIER_SIZE roads at a time) ---
+		List<CameraAvoidanceHelper.RoadWithCameraCount> severitySorted =
+				computeSeveritySortedRoads(roadsWithCameras, initial, plugin, avoidanceRadius);
+		List<List<CameraAvoidanceHelper.RoadWithCameraCount>> tiers =
+				buildBlockTiers(severitySorted, TIER_SIZE);
+		log.info("FlockFree starting tier-based avoidance (" + tiers.size() + " tiers of max "
+				+ TIER_SIZE + ", budget " + FLOCKFREE_OPTIONAL_ROUTING_BUDGET_MS + "ms)");
 
 		Set<Long> blockedIds = new LinkedHashSet<>();
 		RouteCalculationResult bestRoute = null;
 		Set<Long> bestRouteBlockedIds = null;
 		int bestRouteCameraCount = originalRouteCameraCount;
 		int bestRouteBlockedSize = 0;
+		int tierIteration = 0;
 
-		for (int i = 0; i < MAX_RELAXATION_ITERATIONS && i < totalCameraRoadCount; i++) {
+		for (int tierIdx = 0; tierIdx < tiers.size() && tierIteration < MAX_RELAXATION_ITERATIONS; tierIdx++) {
 			if (isFlockFreeOptionalRoutingBudgetExceeded(params)) {
-				log.info("FlockFree greedy avoidance stopped: optional reroute budget exceeded at iteration " + (i + 1));
+				log.info("FlockFree tier avoidance stopped: optional reroute budget exceeded at tier " + (tierIdx + 1));
 				finishFlockFreeOptionalRoutingProgress(params);
 				break;
 			}
 
-			// Add the next highest-camera-count road to the blocked set
-			CameraAvoidanceHelper.RoadWithCameraCount toBlock = roadsWithCameras.get(i);
-			blockedIds.add(toBlock.roadId);
+			List<CameraAvoidanceHelper.RoadWithCameraCount> tier = tiers.get(tierIdx);
+			for (CameraAvoidanceHelper.RoadWithCameraCount rwc : tier) {
+				blockedIds.add(rwc.roadId);
+			}
 
-			log.info("FlockFree greedy iteration " + (i + 1)
-					+ ": blocking roadId=" + toBlock.roadId
-					+ " (camera-road associations=" + toBlock.cameraCount + ")"
-					+ ", total blocked=" + blockedIds.size()
+			tierIteration++;
+			log.info("FlockFree tier " + (tierIdx + 1) + " (iteration " + tierIteration + ")"
+					+ ": blocking " + tier.size() + " roads, total blocked=" + blockedIds.size()
 					+ "/" + totalCameraRoadCount);
 
 			RouteCalculationParams avoidedParams = copyParamsForFlockFreeAvoidance(params, blockedIds);
 			try {
-				beginFlockFreeOptionalRoutingStep(params, i);
+				beginFlockFreeOptionalRoutingStep(params, tierIteration - 1);
 				RouteCalculationResult avoided = findVectorMapsRoute(avoidedParams, calcGPXRoute);
-				completeFlockFreeOptionalRoutingStep(params, i + 1);
+				completeFlockFreeOptionalRoutingStep(params, tierIteration);
 				if (avoided.isCalculated()) {
 					int avoidedCameraCount = avoidanceHelper.findCamerasNearRouteLocations(
 							avoided.getImmutableAllLocations(), avoidanceRadius).size();
-					log.info("FlockFree greedy iteration " + (i + 1)
-							+ " route has " + avoidedCameraCount
+					log.info("FlockFree tier " + (tierIdx + 1) + " route has " + avoidedCameraCount
 							+ " cameras (original had " + originalRouteCameraCount + ")");
 
 					if (avoidedCameraCount < originalRouteCameraCount) {
-						// Route has fewer cameras — check if within limits
 						String rejectionReason = getFlockFreeAvoidanceRejectionReason(avoided, avoidedCameraCount,
 								originalRouteCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters,
 								plugin.getAvoidanceMode());
 						if (Algorithms.isEmpty(rejectionReason)) {
-							// Route is viable — track as best and continue to find better routes
-							log.info("FlockFree greedy iteration " + (i + 1)
+							log.info("FlockFree tier " + (tierIdx + 1)
 									+ " accepted: blocked " + blockedIds.size()
 									+ " of " + totalCameraRoadCount + " camera roads"
 									+ ", cameras on route=" + avoidedCameraCount
-									+ " vs original " + originalRouteCameraCount
-									+ "; continuing to search for better avoidance");
+									+ " vs original " + originalRouteCameraCount);
 							if (avoidedCameraCount < bestRouteCameraCount) {
 								bestRoute = avoided;
 								bestRouteBlockedIds = new LinkedHashSet<>(blockedIds);
@@ -363,11 +366,9 @@ public class RouteProvider {
 								bestRouteBlockedSize = blockedIds.size();
 							}
 						} else {
-							// Has fewer cameras but exceeds time/distance limits
-							log.info("FlockFree greedy iteration " + (i + 1)
+							log.info("FlockFree tier " + (tierIdx + 1)
 									+ " route has fewer cameras but rejected: " + rejectionReason
-									+ "; continuing to block more roads");
-							// Track as best route if it has fewer cameras than current best
+									+ "; continuing to next tier");
 							if (avoidedCameraCount < bestRouteCameraCount) {
 								bestRoute = avoided;
 								bestRouteBlockedIds = new LinkedHashSet<>(blockedIds);
@@ -376,17 +377,16 @@ public class RouteProvider {
 							}
 						}
 					} else {
-						// Route still has same camera count — need to block more roads
-						log.info("FlockFree greedy iteration " + (i + 1)
+						log.info("FlockFree tier " + (tierIdx + 1)
 								+ " route has same cameras (" + avoidedCameraCount
-								+ "); adding more roads to blocked set");
+								+ "); expanding to next tier");
 					}
 				} else {
-					log.info("FlockFree greedy iteration " + (i + 1)
-							+ " route not calculated; continuing to block more roads");
+					log.info("FlockFree tier " + (tierIdx + 1)
+							+ " route not calculated; continuing to next tier");
 				}
 			} catch (IOException e) {
-				log.warn("FlockFree greedy iteration " + (i + 1) + " threw", e);
+				log.warn("FlockFree tier " + (tierIdx + 1) + " threw", e);
 				restoreFlockFreeProgressState(params, originalMissingMaps);
 				finishFlockFreeOptionalRoutingProgress(params);
 				avoidanceHelper.recordAvoidanceFallback(blockedIds.size(), originalRouteCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters);
@@ -395,11 +395,90 @@ public class RouteProvider {
 			}
 		}
 
-		// All greedy iterations exhausted — fall back to best route found so far
+		// --- Stage 2: Single-road fallback if tier-based approach didn't find a viable route ---
+		if (bestRoute == null && bestRouteCameraCount >= originalRouteCameraCount) {
+			log.info("FlockFree tier-based avoidance found no improvement; falling back to single-road greedy approach");
+			blockedIds.clear();
+			for (int i = 0; i < MAX_RELAXATION_ITERATIONS && i < totalCameraRoadCount; i++) {
+				if (isFlockFreeOptionalRoutingBudgetExceeded(params)) {
+					log.info("FlockFree single-road fallback stopped: budget exceeded at iteration " + (i + 1));
+					finishFlockFreeOptionalRoutingProgress(params);
+					break;
+				}
+
+				CameraAvoidanceHelper.RoadWithCameraCount toBlock = severitySorted.get(i);
+				blockedIds.add(toBlock.roadId);
+
+				log.info("FlockFree single-road fallback iteration " + (i + 1)
+						+ ": blocking roadId=" + toBlock.roadId
+						+ " (camera-road associations=" + toBlock.cameraCount + ")"
+						+ ", total blocked=" + blockedIds.size()
+						+ "/" + totalCameraRoadCount);
+
+				RouteCalculationParams avoidedParams = copyParamsForFlockFreeAvoidance(params, blockedIds);
+				try {
+					beginFlockFreeOptionalRoutingStep(params, i);
+					RouteCalculationResult avoided = findVectorMapsRoute(avoidedParams, calcGPXRoute);
+					completeFlockFreeOptionalRoutingStep(params, i + 1);
+					if (avoided.isCalculated()) {
+						int avoidedCameraCount = avoidanceHelper.findCamerasNearRouteLocations(
+								avoided.getImmutableAllLocations(), avoidanceRadius).size();
+						log.info("FlockFree single-road fallback iteration " + (i + 1)
+								+ " route has " + avoidedCameraCount
+								+ " cameras (original had " + originalRouteCameraCount + ")");
+
+						if (avoidedCameraCount < originalRouteCameraCount) {
+							String rejectionReason = getFlockFreeAvoidanceRejectionReason(avoided, avoidedCameraCount,
+									originalRouteCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters,
+									plugin.getAvoidanceMode());
+							if (Algorithms.isEmpty(rejectionReason)) {
+								log.info("FlockFree single-road fallback iteration " + (i + 1)
+										+ " accepted: blocked " + blockedIds.size()
+										+ " of " + totalCameraRoadCount + " camera roads"
+										+ ", cameras on route=" + avoidedCameraCount
+										+ " vs original " + originalRouteCameraCount);
+								if (avoidedCameraCount < bestRouteCameraCount) {
+									bestRoute = avoided;
+									bestRouteBlockedIds = new LinkedHashSet<>(blockedIds);
+									bestRouteCameraCount = avoidedCameraCount;
+									bestRouteBlockedSize = blockedIds.size();
+								}
+							} else {
+								log.info("FlockFree single-road fallback iteration " + (i + 1)
+										+ " route has fewer cameras but rejected: " + rejectionReason
+										+ "; continuing to block more roads");
+								if (avoidedCameraCount < bestRouteCameraCount) {
+									bestRoute = avoided;
+									bestRouteBlockedIds = new LinkedHashSet<>(blockedIds);
+									bestRouteCameraCount = avoidedCameraCount;
+									bestRouteBlockedSize = blockedIds.size();
+								}
+							}
+						} else {
+							log.info("FlockFree single-road fallback iteration " + (i + 1)
+									+ " route has same cameras (" + avoidedCameraCount
+									+ "); adding more roads to blocked set");
+						}
+					} else {
+						log.info("FlockFree single-road fallback iteration " + (i + 1)
+								+ " route not calculated; continuing to block more roads");
+					}
+				} catch (IOException e) {
+					log.warn("FlockFree single-road fallback iteration " + (i + 1) + " threw", e);
+					restoreFlockFreeProgressState(params, originalMissingMaps);
+					finishFlockFreeOptionalRoutingProgress(params);
+					avoidanceHelper.recordAvoidanceFallback(blockedIds.size(), originalRouteCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters);
+					log.warn("FlockFree temporary camera avoidance failed; returning original route");
+					return null;
+				}
+			}
+		}
+
+		// All avoidance iterations exhausted — fall back to best route found so far
 		restoreFlockFreeProgressState(params, originalMissingMaps);
 		finishFlockFreeOptionalRoutingProgress(params);
 		if (bestRoute != null) {
-			log.info("FlockFree greedy avoidance exhausted; using best partial route with "
+			log.info("FlockFree avoidance exhausted; using best partial route with "
 					+ bestRouteCameraCount + " cameras (original had " + originalRouteCameraCount + ")"
 					+ ", blocked " + bestRouteBlockedSize + " of " + totalCameraRoadCount + " roads");
 			avoidanceHelper.recordAvoidancePartial(bestRouteBlockedSize,
@@ -409,9 +488,177 @@ public class RouteProvider {
 			return new FlockFreeRouteVariant(bestRoute, bestRouteBlockedIds);
 		}
 		avoidanceHelper.recordAvoidanceFallback(blockedIds.size(), originalRouteCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters);
-		log.warn("FlockFree greedy avoidance exhausted after " + MAX_RELAXATION_ITERATIONS
-				+ " iterations; returning original route");
+		log.warn("FlockFree avoidance exhausted after tier-based + single-road fallback"
+				+ "; returning original route");
 		return null;
+	}
+
+	/**
+	 * Computes a severity score for a road-camera association.
+	 * Higher score means the road is more important to block.
+	 *
+	 * @param cameraCount    Number of cameras associated with this road
+	 * @param bearingDelta    Angular difference between camera bearing and route bearing (0-60 degrees)
+	 * @param distanceToRoad  Distance from camera to road centerline in meters
+	 * @return severity score (higher = more important to block)
+	 */
+	private double computeRoadSeverity(int cameraCount, float bearingDelta, double distanceToRoad) {
+		// cameraCount: more cameras = higher severity
+		double cameraWeight = cameraCount * 10.0;
+		// bearingDelta: smaller delta (better direction match) = higher severity
+		// 0 if at window edge (60°), 5 if perfect match (0°)
+		double directionWeight = (1.0 - (bearingDelta / 60.0)) * 5.0;
+		// distanceToRoad: closer to road = higher severity
+		// 3 if at road centerline, 0 if 100m+ away
+		double distanceWeight = Math.max(0, (100.0 - distanceToRoad) / 100.0) * 3.0;
+		return cameraWeight + directionWeight + distanceWeight;
+	}
+
+	/**
+	 * Computes severity scores for all road-camera associations and returns roads sorted
+	 * by severity descending. Severity combines camera count, direction match quality,
+	 * and distance from camera to road centerline.
+	 *
+	 * @param roadsWithCameras List of road-camera associations (sorted by cameraCount desc)
+	 * @param initial          The original calculated route
+	 * @param plugin           FlockFree plugin for camera data access
+	 * @param avoidanceRadius  Camera avoidance radius in meters
+	 * @return List of RoadWithCameraCount sorted by severity score descending
+	 */
+	@NonNull
+	private List<CameraAvoidanceHelper.RoadWithCameraCount> computeSeveritySortedRoads(
+			@NonNull List<CameraAvoidanceHelper.RoadWithCameraCount> roadsWithCameras,
+			@NonNull RouteCalculationResult initial,
+			@NonNull FlockFreePlugin plugin,
+			int avoidanceRadius) {
+		List<RouteSegmentResult> roads = initial.getOriginalRoute();
+		if (roads == null || roads.size() < 3) {
+			log.info("FlockFree severity scoring: no route segments available, using camera-count sort");
+			return roadsWithCameras;
+		}
+
+		// Get cameras near the route for bearing/distance lookups
+		List<Location> locations = initial.getImmutableAllLocations();
+		List<CameraData.CameraPoint> cameras = plugin.getAvoidanceHelper()
+				.findCamerasNearRouteLocations(locations, avoidanceRadius);
+		if (cameras.isEmpty()) {
+			log.info("FlockFree severity scoring: no cameras found near route, using camera-count sort");
+			return roadsWithCameras;
+		}
+
+		// Build a map from roadId to route segments for quick lookup
+		Map<Long, List<RouteSegmentResult>> roadIdToSegments = new HashMap<>();
+		for (int i = 1; i < roads.size() - 1; i++) {
+			RouteSegmentResult seg = roads.get(i);
+			if (seg == null || seg.getObject() == null) continue;
+			Long roadId = seg.getObject().getId();
+			roadIdToSegments.computeIfAbsent(roadId, k -> new ArrayList<>()).add(seg);
+		}
+
+		// Compute severity score for each road
+		List<Double> severities = new ArrayList<>();
+		for (CameraAvoidanceHelper.RoadWithCameraCount rwc : roadsWithCameras) {
+			List<RouteSegmentResult> segments = roadIdToSegments.get(rwc.roadId);
+			if (segments == null || segments.isEmpty()) {
+				// No segment data available; fall back to camera-count-only severity
+				severities.add(rwc.cameraCount * 10.0);
+				continue;
+			}
+
+			float bestBearingDelta = 60f; // worst case: at window edge
+			double bestDistance = 100.0;  // worst case: 100m away
+
+			for (RouteSegmentResult seg : segments) {
+				RouteDataObject obj = seg.getObject();
+				if (obj == null) continue;
+
+				// Compute segment bearing
+				int startX = obj.getPoint31XTile(0);
+				int startY = obj.getPoint31YTile(0);
+				int endX = obj.getPoint31XTile(obj.getPointsLength() - 1);
+				int endY = obj.getPoint31YTile(obj.getPointsLength() - 1);
+				double startLat = MapUtils.get31LatitudeY(startY);
+				double startLon = MapUtils.get31LongitudeX(startX);
+				double endLat = MapUtils.get31LatitudeY(endY);
+				double endLon = MapUtils.get31LongitudeX(endX);
+				double dLon = endLon - startLon;
+				double y = Math.sin(Math.toRadians(dLon)) * Math.cos(Math.toRadians(endLat));
+				double x = Math.cos(Math.toRadians(startLat)) * Math.sin(Math.toRadians(endLat))
+						- Math.sin(Math.toRadians(startLat)) * Math.cos(Math.toRadians(endLat)) * Math.cos(Math.toRadians(dLon));
+				double segBearing = (Math.toDegrees(Math.atan2(y, x)) + 360) % 360;
+
+				// Find nearest camera and compute bearing delta + distance
+				double segMidLat = (startLat + endLat) / 2;
+				double segMidLon = (startLon + endLon) / 2;
+
+				for (CameraData.CameraPoint cam : cameras) {
+					double camDist = MapUtils.getDistance(segMidLat, segMidLon, cam.lat, cam.lon);
+					if (camDist > avoidanceRadius) continue;
+
+					float camBearing = cam.getBearing();
+					if (camBearing > 0f) {
+						float delta = (float) Math.abs(camBearing - segBearing);
+						if (delta > 180f) delta = 360f - delta;
+						if (delta < bestBearingDelta) {
+							bestBearingDelta = delta;
+						}
+					}
+
+					if (camDist < bestDistance) {
+						bestDistance = camDist;
+					}
+				}
+			}
+
+			double severity = computeRoadSeverity(rwc.cameraCount, bestBearingDelta, bestDistance);
+			log.info("FlockFree severity: roadId=" + rwc.roadId
+					+ " cameras=" + rwc.cameraCount
+					+ " bearingDelta=" + String.format("%.1f", bestBearingDelta)
+					+ " distance=" + String.format("%.1f", bestDistance)
+					+ " severity=" + String.format("%.2f", severity));
+			severities.add(severity);
+		}
+
+		// Create indexed list and sort by severity descending
+		List<Integer> indices = new ArrayList<>();
+		for (int i = 0; i < roadsWithCameras.size(); i++) {
+			indices.add(i);
+		}
+		indices.sort((a, b) -> Double.compare(severities.get(b), severities.get(a)));
+
+		List<CameraAvoidanceHelper.RoadWithCameraCount> sorted = new ArrayList<>();
+		for (int idx : indices) {
+			sorted.add(roadsWithCameras.get(idx));
+		}
+		log.info("FlockFree severity sorting complete: " + sorted.size()
+				+ " roads sorted by severity (" + roadsWithCameras.size() + " input)");
+		return sorted;
+	}
+
+	/**
+	 * Groups roads into tiers of maxTierSize each for staged blocking.
+	 * Tier 1 contains the highest-severity roads (block these first).
+	 * Tier 2 contains the next highest, etc.
+	 *
+	 * @param roadsWithCameras List of roads sorted by severity descending
+	 * @param maxTierSize      Maximum number of roads per tier
+	 * @return List of tiers, each containing up to maxTierSize roads
+	 */
+	@NonNull
+	private List<List<CameraAvoidanceHelper.RoadWithCameraCount>> buildBlockTiers(
+			@NonNull List<CameraAvoidanceHelper.RoadWithCameraCount> roadsWithCameras,
+			int maxTierSize) {
+		List<List<CameraAvoidanceHelper.RoadWithCameraCount>> tiers = new ArrayList<>();
+		if (maxTierSize <= 0) {
+			maxTierSize = TIER_SIZE;
+		}
+		for (int i = 0; i < roadsWithCameras.size(); i += maxTierSize) {
+			int end = Math.min(i + maxTierSize, roadsWithCameras.size());
+			tiers.add(new ArrayList<>(roadsWithCameras.subList(i, end)));
+		}
+		log.info("FlockFree built " + tiers.size() + " tiers (max " + maxTierSize + " roads each)"
+				+ " from " + roadsWithCameras.size() + " camera-adjacent roads");
+		return tiers;
 	}
 
 	/**
