@@ -45,7 +45,11 @@ public class CameraData {
     private static final long WEEK_MS = FlockFreePreferences.REFRESH_INTERVAL_MS;
     private static final long MAX_GEOJSON_BYTES = 128L * 1024 * 1024;
     private static final double SPATIAL_CELL_DEGREES = 0.05d;
-    private static final String FLOCK_MATCH_TOKEN = "flock";
+
+    /** Known Flock manufacturer name variants for matching (case-insensitive). */
+    private static final String[] FLOCK_MANUFACTURER_ALIASES = {
+        "flock", "flock safety", "flock group inc", "flock group"
+    };
 
     private final OsmandApplication app;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -188,6 +192,7 @@ public class CameraData {
             String key = (cam.osmId != null && cam.osmType != null)
                     ? cam.osmType + ":" + cam.osmId
                     : Math.round(cam.lat * 1_000_000d) + ":" + Math.round(cam.lon * 1_000_000d)
+                      + ":" + (cam.manufacturer != null ? cam.manufacturer : "")
                       + ":" + (cam.brand != null ? cam.brand : "")
                       + ":" + (cam.direction != null ? cam.direction : "");
             if (seen.add(key)) {
@@ -340,8 +345,10 @@ public class CameraData {
                 point.lon = lon;
                 point.osmId = optProperty(props, "osmId", "osm_id");
                 point.osmType = optProperty(props, "osmType", "osm_type");
+                point.manufacturer = optProperty(props, "manufacturer", null);
                 point.brand = optProperty(props, "brand", null);
                 point.direction = optProperty(props, "direction", null);
+                point.bearing = parseBearing(point.direction);
                 point.operator = optProperty(props, "operator", null);
                 point.mountType = optProperty(props, "mountType", "mount_type");
                 point.surveillanceZone = optProperty(props, "surveillanceZone", "surveillance_zone");
@@ -355,6 +362,7 @@ public class CameraData {
                 String dedupKey = (point.osmId != null && point.osmType != null)
                         ? point.osmType + ":" + point.osmId
                         : Math.round(lat * 1_000_000d) + ":" + Math.round(lon * 1_000_000d)
+                          + ":" + (point.manufacturer != null ? point.manufacturer : "")
                           + ":" + (point.brand != null ? point.brand : "")
                           + ":" + (point.direction != null ? point.direction : "");
                 if (!seenKeys.add(dedupKey)) {
@@ -617,11 +625,36 @@ public class CameraData {
     }
 
     public static boolean isFlockCamera(@NonNull CameraPoint point) {
-        return containsFlockToken(point.brand) || containsFlockToken(point.operator);
+        // Primary: check manufacturer (OSM canonical tag)
+        if (matchesFlockAlias(point.manufacturer)) {
+            return true;
+        }
+        // Secondary: check brand
+        if (matchesFlockAlias(point.brand)) {
+            return true;
+        }
+        // Tertiary: check operator
+        return matchesFlockAlias(point.operator);
     }
 
-    private static boolean containsFlockToken(@Nullable String value) {
-        return value != null && value.toLowerCase(Locale.US).contains(FLOCK_MATCH_TOKEN);
+    /**
+     * Checks whether the given value matches any known Flock manufacturer alias.
+     * Matching is case-insensitive and checks if the value contains any alias as a substring.
+     *
+     * @param value the string to check (may be null)
+     * @return true if the value matches a known Flock alias
+     */
+    private static boolean matchesFlockAlias(@Nullable String value) {
+        if (value == null) {
+            return false;
+        }
+        String lower = value.toLowerCase(Locale.US);
+        for (String alias : FLOCK_MANUFACTURER_ALIASES) {
+            if (lower.contains(alias)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String readGeoJsonFile(@NonNull File file) throws IOException {
@@ -706,17 +739,70 @@ public class CameraData {
                 && lon >= -180 && lon <= 180;
     }
 
+    /**
+     * Parses a bearing (compass degrees 1-360) from a direction string.
+     * Accepts numeric values like "270", "355", "0".
+     * Returns 0 for null/empty/unparseable values, meaning "no bearing data".
+     * 0 is also returned for literal "0" since we treat 0 as no-bearing per spec.
+     */
+    private static float parseBearing(@Nullable String direction) {
+        if (direction == null || direction.isEmpty()) {
+            return 0f;
+        }
+        try {
+            float val = Float.parseFloat(direction.trim());
+            if (val > 0 && val <= 360) {
+                return val;
+            }
+        } catch (NumberFormatException ignored) {
+        }
+        return 0f;
+    }
+
     public static class CameraPoint {
         public double lat;
         public double lon;
         @Nullable public String osmId;
         @Nullable public String osmType;
+        @Nullable public String manufacturer;
         @Nullable public String brand;
         @Nullable public String direction;
         @Nullable public String operator;
         @Nullable public String mountType;
         @Nullable public String surveillanceZone;
         @Nullable public String osmTimestamp;
+
+        /**
+         * Parsed bearing (compass degrees 1-360) derived from the {@code direction} string.
+         * 0 means no bearing data available (falls back to omnidirectional blocking).
+         */
+        public float bearing = 0f;
+
+        /**
+         * Returns the camera bearing, lazily parsing it from the {@code direction} string
+         * if the {@code bearing} field has not been set yet. This ensures bearing is
+         * available even when CameraPoint instances are created by CameraDatabaseHelper
+         * (which sets {@code direction} but not {@code bearing}).
+         *
+         * @return bearing in degrees (1-360), or 0 if no bearing data is available
+         */
+        public float getBearing() {
+            if (bearing != 0f) {
+                return bearing;
+            }
+            if (direction == null || direction.isEmpty()) {
+                return 0f;
+            }
+            try {
+                float val = Float.parseFloat(direction.trim());
+                if (val > 0 && val <= 360) {
+                    bearing = val;
+                    return val;
+                }
+            } catch (NumberFormatException ignored) {
+            }
+            return 0f;
+        }
     }
 
     private enum DataSource {

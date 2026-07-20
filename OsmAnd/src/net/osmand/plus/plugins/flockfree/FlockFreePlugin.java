@@ -69,6 +69,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     // Preferences
     public final OsmandPreference<Boolean> CAMERA_SHOW_LAYER;
     public final CommonPreference<Boolean> CAMERA_AVOIDANCE_ENABLED;
+    public final CommonPreference<String> AVOIDANCE_MODE;
     public final CommonPreference<Integer> CAMERA_AVOIDANCE_RADIUS;
     public final CommonPreference<Boolean> CAMERA_ALERTS_ENABLED;
     public final CommonPreference<Integer> CAMERA_ALERT_DISTANCE;
@@ -177,6 +178,9 @@ public class FlockFreePlugin extends OsmandPlugin {
         CAMERA_AVOIDANCE_ENABLED = registerBooleanPreference(
                 FlockFreePreferences.CAMERA_AVOIDANCE_ENABLED,
                 FlockFreePreferences.DEFAULT_CAMERA_AVOIDANCE_ENABLED).makeProfile().cache();
+        AVOIDANCE_MODE = registerStringPreference(
+                FlockFreePreferences.AVOIDANCE_MODE,
+                FlockFreePreferences.DEFAULT_AVOIDANCE_MODE).makeGlobal().cache();
         CAMERA_AVOIDANCE_RADIUS = registerIntPreference(
                 FlockFreePreferences.CAMERA_AVOIDANCE_RADIUS,
                 FlockFreePreferences.DEFAULT_CAMERA_AVOIDANCE_RADIUS).makeProfile().cache();
@@ -592,10 +596,20 @@ public class FlockFreePlugin extends OsmandPlugin {
         userInitiatedRouteSwitch = true;
     }
 
+    public String getAvoidanceMode() {
+        return AVOIDANCE_MODE.get();
+    }
+
+    public boolean isAvoidanceActive() {
+        String mode = getAvoidanceMode();
+        return "balanced".equals(mode) || "strict_privacy".equals(mode);
+    }
+
     public boolean isCameraAvoidanceActive() {
-        return cameraAvoidanceRuntimeOverride != null
-                ? cameraAvoidanceRuntimeOverride
-                : true;
+        if (cameraAvoidanceRuntimeOverride != null) {
+            return cameraAvoidanceRuntimeOverride;
+        }
+        return isAvoidanceActive();
     }
 
     public void clearCameraAvoidanceOverride() {

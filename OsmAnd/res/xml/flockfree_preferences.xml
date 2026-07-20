@@ -73,6 +73,11 @@
 		android:title="@string/flockfree_camera_avoidance_enabled" />
 
 	<net.osmand.plus.settings.preferences.ListPreferenceEx
+		android:key="flockfree_avoidance_mode"
+		android:layout="@layout/preference_with_descr"
+		android:title="@string/flockfree_avoidance_mode" />
+
+	<net.osmand.plus.settings.preferences.ListPreferenceEx
 		android:key="camera_avoidance_radius"
 		android:layout="@layout/preference_with_descr"
 		android:title="@string/flockfree_avoidance_radius"

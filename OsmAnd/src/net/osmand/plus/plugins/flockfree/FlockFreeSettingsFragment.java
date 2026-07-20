@@ -55,6 +55,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 	private static final Integer[] AVOIDANCE_RADIUS_VALUES = {50, 75, 100, 150, 200, 300, 500};
 	private static final Integer[] ALERT_DISTANCE_VALUES = {100, 200, 300, 500, 750, 1000};
 	private static final Float[] TILT_ANGLE_VALUES = {30f, 35f, 40f, 45f, 50f, 55f, 60f, 65f, 70f, 75f, 80f};
+	private static final String[] AVOIDANCE_MODE_VALUES = {"warnings_only", "balanced", "strict_privacy"};
 
 	private final FlockFreePlugin plugin = PluginsHelper.requirePlugin(FlockFreePlugin.class);
 	private final Handler statusRefreshHandler = new Handler(Looper.getMainLooper());
@@ -82,6 +83,7 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		setupNearestCameraLastCheckPreference();
 		setupSwitchPreference(plugin.CAMERA_AVOIDANCE_ENABLED.getId(),
 				R.string.flockfree_camera_avoidance_enabled_description);
+		setupAvoidanceModePreference();
 		setupDistancePreference(plugin.CAMERA_AVOIDANCE_RADIUS.getId(), AVOIDANCE_RADIUS_VALUES,
 				R.string.flockfree_avoidance_radius_description);
 		setupRouteLastCheckPreference();
@@ -127,6 +129,34 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		if (preference != null) {
 			preference.setDescription(descriptionId);
 		}
+	}
+
+	private void setupAvoidanceModePreference() {
+		ListPreferenceEx preference = findPreference(plugin.AVOIDANCE_MODE.getId());
+		if (preference != null) {
+			String[] entries = {
+					getString(R.string.flockfree_avoidance_mode_warnings_only),
+					getString(R.string.flockfree_avoidance_mode_balanced),
+					getString(R.string.flockfree_avoidance_mode_strict_privacy)
+			};
+			preference.setEntries(entries);
+			preference.setEntryValues(AVOIDANCE_MODE_VALUES);
+			preference.setDescription(R.string.flockfree_avoidance_mode_description);
+			updateAvoidanceModeSummary(preference);
+		}
+	}
+
+	private void updateAvoidanceModeSummary(@NonNull ListPreferenceEx preference) {
+		String mode = plugin.getAvoidanceMode();
+		String summary;
+		if ("warnings_only".equals(mode)) {
+			summary = getString(R.string.flockfree_avoidance_mode_warnings_only_desc);
+		} else if ("strict_privacy".equals(mode)) {
+			summary = getString(R.string.flockfree_avoidance_mode_strict_privacy_desc);
+		} else {
+			summary = getString(R.string.flockfree_avoidance_mode_balanced_desc);
+		}
+		preference.setSummary(summary);
 	}
 
 	private void setupCameraDataStatusPreference() {
@@ -384,6 +414,13 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 			}
 			return accepted;
 		}
+		if (plugin.AVOIDANCE_MODE.getId().equals(preference.getKey())) {
+			boolean accepted = super.onPreferenceChange(preference, newValue);
+			if (accepted) {
+				updateAvoidanceModeSummary((ListPreferenceEx) preference);
+			}
+			return accepted;
+		}
 		boolean accepted = super.onPreferenceChange(preference, newValue);
 		if (!accepted) {
 			return false;
@@ -534,6 +571,10 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 		setupNavigationTiltAnglePreference();
 		setupWifiScanStatusPreference();
 		setupAppUpdateLastCheckPreference();
+		ListPreferenceEx modePref = findPreference(plugin.AVOIDANCE_MODE.getId());
+		if (modePref != null) {
+			updateAvoidanceModeSummary(modePref);
+		}
 	}
 
 	private void startDynamicStatusRefresh() {

@@ -139,6 +139,14 @@
 	<string name="flockfree_camera_avoidance_routing">Flock Camera Avoidance Routing</string>
 	<string name="flockfree_camera_avoidance_enabled">Avoid Flock cameras (experimental)</string>
 	<string name="flockfree_camera_avoidance_enabled_description">Try a second offline route calculation that avoids road objects near known Flock cameras. Falls back to the original route if avoidance fails.</string>
+	<string name="flockfree_avoidance_mode">Camera avoidance mode</string>
+	<string name="flockfree_avoidance_mode_description">Choose how aggressively to reroute around Flock cameras</string>
+	<string name="flockfree_avoidance_mode_warnings_only">Warnings only</string>
+	<string name="flockfree_avoidance_mode_warnings_only_desc">Show camera count and alerts without rerouting</string>
+	<string name="flockfree_avoidance_mode_balanced">Balanced</string>
+	<string name="flockfree_avoidance_mode_balanced_desc">Reroute to avoid cameras when detour is reasonable (max 15 min / 1.5x distance)</string>
+	<string name="flockfree_avoidance_mode_strict_privacy">Strict privacy</string>
+	<string name="flockfree_avoidance_mode_strict_privacy_desc">Allow larger detours to avoid cameras (max 30 min / 2.0x distance)</string>
 	<string name="flockfree_avoidance_radius">Avoidance radius</string>
 	<string name="flockfree_avoidance_radius_description">Route corridor radius used for Flock camera checks.</string>
 	<string name="flockfree_avoidance_radius_default_summary">100 meters</string>

@@ -37,6 +37,14 @@ public class CameraAvoidanceHelper {
     private static final Log LOG = PlatformUtil.getLog(CameraAvoidanceHelper.class);
     private static final int UNKNOWN_ROUTE_TIME_SECONDS = -1;
 
+    /**
+     * Half-window in degrees for direction-aware camera filtering.
+     * A camera blocks a road segment only if the route bearing is within ±this many degrees
+     * of the camera's facing bearing. Set to 60 for a 120° total acceptance window.
+     * When camera bearing is unavailable (0), falls back to omnidirectional blocking.
+     */
+    private static final float DIRECTION_MATCH_WINDOW_DEGREES = 60f;
+
     public enum AvoidanceStatus {
         NONE,
         APPLIED,
@@ -379,10 +387,18 @@ public class CameraAvoidanceHelper {
         // For each Flock camera, block ALL route segments within the radius, not just
         // the single nearest one. This prevents the router from simply using
         // an adjacent road in the same corridor and still passing near the camera.
+        // Direction-aware filtering: if the camera has a bearing (1-360), only block
+        // road segments whose travel direction is within ±DIRECTION_MATCH_WINDOW_DEGREES
+        // of the camera's facing bearing. If the camera has no bearing data (0),
+        // fall back to omnidirectional blocking (block all segments within radius).
         Map<Long, Integer> roadIdToCameraCount = new HashMap<>();
+        int directionFilteredCount = 0;
+        int omnidirectionalCount = 0;
         for (CameraData.CameraPoint camera : cameras) {
             int cameraX31 = MapUtils.get31TileNumberX(camera.lon);
             int cameraY31 = MapUtils.get31TileNumberY(camera.lat);
+            float cameraBearing = camera.getBearing();
+            boolean hasBearing = cameraBearing > 0f;
             boolean matchedAny = false;
             for (int i = 0; i < roads.size(); i++) {
                 if (i == 0 || i == roads.size() - 1) {
@@ -394,6 +410,15 @@ public class CameraAvoidanceHelper {
                     continue;
                 }
                 if (isCameraNearRoadGeometry(road, cameraX31, cameraY31, radiusMeters)) {
+                    // Direction-aware filtering: skip this road segment if the camera has a bearing
+                    // and the route travel direction does not match the camera's facing direction.
+                    if (hasBearing) {
+                        float routeBearing = computeSegmentBearing(road);
+                        if (!isCameraFacingRouteSegment(cameraBearing, routeBearing, DIRECTION_MATCH_WINDOW_DEGREES)) {
+                            directionFilteredCount++;
+                            continue;
+                        }
+                    }
                     Long roadId = obj.getId();
                     roadIdToCameraCount.merge(roadId, 1, Integer::sum);
                     matchedAny = true;
@@ -410,11 +435,23 @@ public class CameraAvoidanceHelper {
                 if (roadIndex <= 0 || roadIndex >= roads.size() - 1) {
                     continue;
                 }
-                RouteDataObject object = roads.get(roadIndex).getObject();
+                RouteSegmentResult nearestRoad = roads.get(roadIndex);
+                RouteDataObject object = nearestRoad.getObject();
                 if (object != null) {
+                    // Apply direction-aware filtering to fallback search as well.
+                    if (hasBearing) {
+                        float routeBearing = computeSegmentBearing(nearestRoad);
+                        if (!isCameraFacingRouteSegment(cameraBearing, routeBearing, DIRECTION_MATCH_WINDOW_DEGREES)) {
+                            directionFilteredCount++;
+                            continue;
+                        }
+                    }
                     Long roadId = object.getId();
                     roadIdToCameraCount.merge(roadId, 1, Integer::sum);
                 }
+            }
+            if (!hasBearing) {
+                omnidirectionalCount++;
             }
         }
 
@@ -425,9 +462,63 @@ public class CameraAvoidanceHelper {
         result.sort(Collections.reverseOrder(Comparator.comparingInt(r -> r.cameraCount)));
 
         if (!result.isEmpty()) {
-            LOG.info("FlockFree collected " + result.size() + " Flock-camera-adjacent road ids with camera counts");
+            LOG.info("FlockFree collected " + result.size() + " Flock-camera-adjacent road ids with camera counts"
+                    + " (direction-filtered: " + directionFilteredCount
+                    + ", omnidirectional: " + omnidirectionalCount
+                    + ")");
         }
         return result;
+    }
+
+    /**
+     * Computes the compass bearing (0-360°) of travel along a route segment.
+     * Uses the segment's start and end coordinates to determine the direction of travel.
+     *
+     * @param road the route segment
+     * @return compass bearing in degrees (0-360), or 0 if bearing cannot be determined
+     */
+    private static float computeSegmentBearing(@NonNull RouteSegmentResult road) {
+        RouteDataObject obj = road.getObject();
+        if (obj == null) {
+            return 0f;
+        }
+        int startX = obj.getPoint31XTile(road.getStartPointIndex());
+        int startY = obj.getPoint31YTile(road.getStartPointIndex());
+        int endX = obj.getPoint31XTile(road.getEndPointIndex());
+        int endY = obj.getPoint31YTile(road.getEndPointIndex());
+        if (startX == endX && startY == endY) {
+            return 0f;
+        }
+        double startLat = MapUtils.get31LatitudeY(startY);
+        double startLon = MapUtils.get31LongitudeX(startX);
+        double endLat = MapUtils.get31LatitudeY(endY);
+        double endLon = MapUtils.get31LongitudeX(endX);
+        double dLon = endLon - startLon;
+        double y = Math.sin(Math.toRadians(dLon)) * Math.cos(Math.toRadians(endLat));
+        double x = Math.cos(Math.toRadians(startLat)) * Math.sin(Math.toRadians(endLat))
+                - Math.sin(Math.toRadians(startLat)) * Math.cos(Math.toRadians(endLat)) * Math.cos(Math.toRadians(dLon));
+        double bearing = Math.toDegrees(Math.atan2(y, x));
+        // Normalize to 0-360
+        bearing = (bearing + 360) % 360;
+        return (float) bearing;
+    }
+
+    /**
+     * Checks if a camera bearing matches the route segment's travel direction within a tolerance window.
+     * Handles 0/360° wraparound (e.g., 350° and 10° should match within a 60° window).
+     *
+     * @param cameraBearing  the camera's facing bearing in degrees (1-360)
+     * @param routeBearing   the route segment's travel bearing in degrees (0-360)
+     * @param windowDegrees  half-window in degrees (e.g., 60 means ±60° tolerance)
+     * @return true if the route bearing is within ±windowDegrees of the camera bearing
+     */
+    private static boolean isCameraFacingRouteSegment(float cameraBearing, float routeBearing, float windowDegrees) {
+        float diff = Math.abs(cameraBearing - routeBearing);
+        // Handle wraparound: 350° vs 10° should have diff=20, not 340
+        if (diff > 180f) {
+            diff = 360f - diff;
+        }
+        return diff <= windowDegrees;
     }
 
     private boolean isCameraNearRoadGeometry(@NonNull RouteSegmentResult road,

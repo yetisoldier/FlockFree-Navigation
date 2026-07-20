@@ -35,6 +35,7 @@ public final class FlockFreePreferences {
     public static final String VISUAL_DEFAULTS_MIGRATION_DONE = "visual_defaults_migration_done";
     public static final String CAMERA_AVOIDANCE_DEFAULTS_MIGRATION_DONE = "camera_avoidance_defaults_migration_done";
     public static final String TRAFFIC_DEFAULTS_MIGRATION_DONE = "traffic_defaults_migration_done";
+    public static final String AVOIDANCE_MODE = "flockfree_avoidance_mode";
     public static final String INCIDENTS_SHOW_LAYER = "incidents_show_layer";
     public static final String INCIDENTS_ALERTS_ENABLED = "incidents_alerts_enabled";
     public static final String ROUTE_COLOR_MIGRATION_DONE = "route_color_migration_done";
@@ -60,6 +61,7 @@ public final class FlockFreePreferences {
     public static final boolean DEFAULT_VISUAL_DEFAULTS_MIGRATION_DONE = false;
     public static final boolean DEFAULT_CAMERA_AVOIDANCE_DEFAULTS_MIGRATION_DONE = false;
     public static final boolean DEFAULT_TRAFFIC_DEFAULTS_MIGRATION_DONE = false;
+    public static final String DEFAULT_AVOIDANCE_MODE = "balanced"; // values: "warnings_only", "balanced", "strict_privacy"
     public static final boolean DEFAULT_ROUTE_COLOR_MIGRATION_DONE = false;
     public static final boolean DEFAULT_FORCE_NIGHT_MAP = false;
     public static final boolean DEFAULT_NAVIGATION_TILT_ENABLED = true;

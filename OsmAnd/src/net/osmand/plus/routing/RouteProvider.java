@@ -83,9 +83,12 @@ public class RouteProvider {
 	// Reserved for a future bounded multi-pass route scan; inactive in the current production path.
 	private static final int MAX_AVOIDANCE_PASSES = 0;
 	private static final long FLOCKFREE_OPTIONAL_ROUTING_BUDGET_MS = 30_000L;
-	private static final int FLOCKFREE_MAX_AVOIDANCE_EXTRA_TIME_SECONDS = 15 * 60;
-	private static final double FLOCKFREE_MAX_AVOIDANCE_TIME_MULTIPLIER = 1.50d;
-	private static final double FLOCKFREE_MAX_AVOIDANCE_DISTANCE_MULTIPLIER = 1.50d;
+	private static final double FLOCKFREE_BALANCED_MAX_AVOIDANCE_TIME_MULTIPLIER = 1.50d;
+	private static final double FLOCKFREE_BALANCED_MAX_AVOIDANCE_DISTANCE_MULTIPLIER = 1.50d;
+	private static final int FLOCKFREE_BALANCED_MAX_AVOIDANCE_EXTRA_TIME_SECONDS = 15 * 60;
+	private static final double FLOCKFREE_STRICT_MAX_AVOIDANCE_TIME_MULTIPLIER = 2.00d;
+	private static final double FLOCKFREE_STRICT_MAX_AVOIDANCE_DISTANCE_MULTIPLIER = 2.00d;
+	private static final int FLOCKFREE_STRICT_MAX_AVOIDANCE_EXTRA_TIME_SECONDS = 30 * 60;
 	private static final int FLOCKFREE_OPTIONAL_AVOIDANCE_STEPS = 1 + MAX_RELAXATION_ITERATIONS;
 	private static final long FLOCKFREE_OPTIONAL_STEP_EXPECTED_MS =
 			FLOCKFREE_OPTIONAL_ROUTING_BUDGET_MS / FLOCKFREE_OPTIONAL_AVOIDANCE_STEPS;
@@ -343,7 +346,8 @@ public class RouteProvider {
 					if (avoidedCameraCount < originalRouteCameraCount) {
 						// Route has fewer cameras — check if within limits
 						String rejectionReason = getFlockFreeAvoidanceRejectionReason(avoided, avoidedCameraCount,
-								originalRouteCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters);
+								originalRouteCameraCount, originalRouteTimeSeconds, originalRouteDistanceMeters,
+								plugin.getAvoidanceMode());
 						if (Algorithms.isEmpty(rejectionReason)) {
 							// Route is viable — track as best and continue to find better routes
 							log.info("FlockFree greedy iteration " + (i + 1)
@@ -592,7 +596,8 @@ public class RouteProvider {
 	                                                    int candidateCameraCount,
 	                                                    int originalCameraCount,
 	                                                    int originalRouteTimeSeconds,
-	                                                    int originalRouteDistanceMeters) {
+	                                                    int originalRouteDistanceMeters,
+	                                                    @NonNull String avoidanceMode) {
 		if (candidateCameraCount >= originalCameraCount) {
 			return candidateCameraCount + " cameras is not fewer than original " + originalCameraCount;
 		}
@@ -602,7 +607,7 @@ public class RouteProvider {
 		int candidateRouteTimeSeconds = candidate.getLeftTime(null);
 		if (originalRouteTimeSeconds > 0 && candidateRouteTimeSeconds > 0) {
 			int extraTimeSeconds = candidateRouteTimeSeconds - originalRouteTimeSeconds;
-			int maxExtraTimeSeconds = getFlockFreeMaxAvoidanceExtraTimeSeconds(originalRouteTimeSeconds);
+			int maxExtraTimeSeconds = getFlockFreeMaxAvoidanceExtraTimeSeconds(originalRouteTimeSeconds, avoidanceMode);
 			if (extraTimeSeconds > maxExtraTimeSeconds) {
 				return "extra time " + extraTimeSeconds + "s exceeds "
 						+ maxExtraTimeSeconds + "s";
@@ -610,8 +615,9 @@ public class RouteProvider {
 		}
 		int candidateRouteDistanceMeters = candidate.getWholeDistance();
 		if (originalRouteDistanceMeters > 0 && candidateRouteDistanceMeters > 0) {
+			double distanceMultiplier = getMaxAvoidanceDistanceMultiplier(avoidanceMode);
 			int maxDistanceMeters = (int) Math.ceil(
-					originalRouteDistanceMeters * FLOCKFREE_MAX_AVOIDANCE_DISTANCE_MULTIPLIER);
+					originalRouteDistanceMeters * distanceMultiplier);
 			if (candidateRouteDistanceMeters > maxDistanceMeters) {
 				return "distance " + candidateRouteDistanceMeters + "m exceeds max "
 						+ maxDistanceMeters + "m";
@@ -620,10 +626,34 @@ public class RouteProvider {
 		return "";
 	}
 
-	private int getFlockFreeMaxAvoidanceExtraTimeSeconds(int originalRouteTimeSeconds) {
+	private int getFlockFreeMaxAvoidanceExtraTimeSeconds(int originalRouteTimeSeconds,
+	                                                     @NonNull String avoidanceMode) {
+		double timeMultiplier = getMaxAvoidanceTimeMultiplier(avoidanceMode);
+		int maxConstantSeconds = getMaxAvoidanceExtraTimeSeconds(avoidanceMode);
 		int percentageAllowanceSeconds = (int) Math.ceil(
-				originalRouteTimeSeconds * (FLOCKFREE_MAX_AVOIDANCE_TIME_MULTIPLIER - 1d));
-		return Math.max(FLOCKFREE_MAX_AVOIDANCE_EXTRA_TIME_SECONDS, percentageAllowanceSeconds);
+				originalRouteTimeSeconds * (timeMultiplier - 1d));
+		return Math.max(maxConstantSeconds, percentageAllowanceSeconds);
+	}
+
+	private int getMaxAvoidanceExtraTimeSeconds(@NonNull String avoidanceMode) {
+		if ("strict_privacy".equals(avoidanceMode)) {
+			return FLOCKFREE_STRICT_MAX_AVOIDANCE_EXTRA_TIME_SECONDS;
+		}
+		return FLOCKFREE_BALANCED_MAX_AVOIDANCE_EXTRA_TIME_SECONDS;
+	}
+
+	private double getMaxAvoidanceTimeMultiplier(@NonNull String avoidanceMode) {
+		if ("strict_privacy".equals(avoidanceMode)) {
+			return FLOCKFREE_STRICT_MAX_AVOIDANCE_TIME_MULTIPLIER;
+		}
+		return FLOCKFREE_BALANCED_MAX_AVOIDANCE_TIME_MULTIPLIER;
+	}
+
+	private double getMaxAvoidanceDistanceMultiplier(@NonNull String avoidanceMode) {
+		if ("strict_privacy".equals(avoidanceMode)) {
+			return FLOCKFREE_STRICT_MAX_AVOIDANCE_DISTANCE_MULTIPLIER;
+		}
+		return FLOCKFREE_BALANCED_MAX_AVOIDANCE_DISTANCE_MULTIPLIER;
 	}
 
 	private boolean isFlockFreeOptionalRoutingBudgetExceeded(@NonNull RouteCalculationParams params) {

@@ -45,7 +45,7 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 
 	private static final Log LOG = PlatformUtil.getLog(CameraDatabaseHelper.class);
 
-	private static final int DATABASE_VERSION = 2;
+	private static final int DATABASE_VERSION = 3;
 	private static final String DATABASE_NAME = "flockfree_cameras.db";
 	private static final String TABLE_NAME = "cameras";
 	private static final double MIN_LAT = -90d;
@@ -57,6 +57,7 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 	private static final String COL_LON = "lon";
 	private static final String COL_OSM_ID = "osm_id";
 	private static final String COL_OSM_TYPE = "osm_type";
+	private static final String COL_MANUFACTURER = "manufacturer";
 	private static final String COL_BRAND = "brand";
 	private static final String COL_DIRECTION = "direction";
 	private static final String COL_OPERATOR = "operator";
@@ -64,7 +65,8 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 	private static final String COL_SURVEILLANCE_ZONE = "surveillance_zone";
 	private static final String COL_OSM_TIMESTAMP = "osm_timestamp";
 	private static final String FLOCK_SELECTION =
-			"(LOWER(COALESCE(" + COL_BRAND + ", '')) LIKE '%flock%' OR " +
+			"(LOWER(COALESCE(" + COL_MANUFACTURER + ", '')) LIKE '%flock%' OR " +
+			"LOWER(COALESCE(" + COL_BRAND + ", '')) LIKE '%flock%' OR " +
 			"LOWER(COALESCE(" + COL_OPERATOR + ", '')) LIKE '%flock%')";
 
 	private static final String CREATE_TABLE_SQL =
@@ -73,6 +75,7 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 			COL_LON + " REAL NOT NULL, " +
 			COL_OSM_ID + " TEXT, " +
 			COL_OSM_TYPE + " TEXT, " +
+			COL_MANUFACTURER + " TEXT, " +
 			COL_BRAND + " TEXT, " +
 			COL_DIRECTION + " TEXT, " +
 			COL_OPERATOR + " TEXT, " +
@@ -100,8 +103,11 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 
 	@Override
 	public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
-		db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME);
-		onCreate(db);
+		if (oldVersion < 3) {
+			// v3: add manufacturer column for OSM canonical tag
+			db.execSQL("ALTER TABLE " + TABLE_NAME + " ADD COLUMN " + COL_MANUFACTURER + " TEXT");
+			LOG.info("Camera database upgraded: added manufacturer column");
+		}
 		LOG.info("Camera database upgraded from " + oldVersion + " to " + newVersion);
 	}
 
@@ -122,11 +128,12 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 				if (!CameraData.isFlockCamera(cam)) {
 					continue;
 				}
-				ContentValues values = new ContentValues(10);
+				ContentValues values = new ContentValues(11);
 				values.put(COL_LAT, cam.lat);
 				values.put(COL_LON, cam.lon);
 				putIfNotNull(values, COL_OSM_ID, cam.osmId);
 				putIfNotNull(values, COL_OSM_TYPE, cam.osmType);
+				putIfNotNull(values, COL_MANUFACTURER, cam.manufacturer);
 				putIfNotNull(values, COL_BRAND, cam.brand);
 				putIfNotNull(values, COL_DIRECTION, cam.direction);
 				putIfNotNull(values, COL_OPERATOR, cam.operator);
@@ -332,6 +339,7 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 		point.lon = cursor.getDouble(cursor.getColumnIndexOrThrow(COL_LON));
 		point.osmId = getStringOrNull(cursor, COL_OSM_ID);
 		point.osmType = getStringOrNull(cursor, COL_OSM_TYPE);
+		point.manufacturer = getStringOrNull(cursor, COL_MANUFACTURER);
 		point.brand = getStringOrNull(cursor, COL_BRAND);
 		point.direction = getStringOrNull(cursor, COL_DIRECTION);
 		point.operator = getStringOrNull(cursor, COL_OPERATOR);
