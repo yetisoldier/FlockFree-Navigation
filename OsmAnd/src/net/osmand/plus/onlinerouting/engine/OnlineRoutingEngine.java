@@ -162,6 +162,16 @@ public abstract class OnlineRoutingEngine implements Cloneable {
 		return "GET";
 	}
 
+	/** Override to set custom connect timeout (ms). 0 = use default. */
+	public int getConnectTimeout() {
+		return 0;
+	}
+
+	/** Override to set custom read timeout (ms). 0 = use default. */
+	public int getReadTimeout() {
+		return 0;
+	}
+
 	@Nullable
 	public Map<String, String> getRequestHeaders() {
 		return null;

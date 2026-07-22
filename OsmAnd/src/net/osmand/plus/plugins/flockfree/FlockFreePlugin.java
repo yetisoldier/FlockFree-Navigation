@@ -11,6 +11,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 
 import net.osmand.Location;
+import net.osmand.data.LatLon;
 import net.osmand.PlatformUtil;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
@@ -21,6 +22,9 @@ import net.osmand.plus.plugins.flockfree.cyd.CydDetectionCandidate;
 import net.osmand.plus.plugins.flockfree.cyd.CydHardwareManager;
 import net.osmand.plus.plugins.flockfree.wifi.WifiScannerManager;
 import net.osmand.plus.routing.RouteCalculationResult;
+import net.osmand.plus.routing.RouteCalculationParams;
+import net.osmand.plus.routing.RoutingHelper;
+import net.osmand.plus.routing.RouteDirectionInfo;
 import net.osmand.plus.plugins.flockfree.widgets.CameraProximityWidget;
 import net.osmand.plus.plugins.flockfree.widgets.BuildingTransparencyController;
 import net.osmand.plus.plugins.flockfree.widgets.NavigationTiltController;
@@ -31,6 +35,11 @@ import net.osmand.plus.quickaction.actions.ToggleCameraAlertsAction;
 import net.osmand.plus.quickaction.actions.AddCameraAction;
 import net.osmand.plus.render.RendererRegistry;
 import net.osmand.plus.settings.backend.ApplicationMode;
+import net.osmand.plus.onlinerouting.OnlineRoutingHelper;
+import net.osmand.plus.onlinerouting.EngineParameter;
+import net.osmand.plus.onlinerouting.engine.EngineType;
+import net.osmand.plus.onlinerouting.engine.OnlineRoutingEngine;
+import net.osmand.plus.onlinerouting.engine.FlockFreeEngine;
 import net.osmand.plus.settings.backend.preferences.CommonPreference;
 import net.osmand.plus.settings.backend.preferences.OsmandPreference;
 import net.osmand.plus.helpers.DayNightHelper;
@@ -59,6 +68,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -169,7 +179,12 @@ public class FlockFreePlugin extends OsmandPlugin {
     private BuildingTransparencyController buildingTransparencyController;
     private RouteComparisonInfo lastRouteComparisonInfo;
     private boolean privacyRouteActive = true;
-    private boolean userInitiatedRouteSwitch = false;
+    // Cached routes for online comparison switching (no recalc needed)
+    private List<Location> cachedPrivacyRouteLocations;
+    private List<RouteDirectionInfo> cachedPrivacyRouteDirections;
+    private List<Location> cachedFastestRouteLocations;
+    private List<RouteDirectionInfo> cachedFastestRouteDirections;
+    private volatile boolean userInitiatedRouteSwitch = false;
     private Boolean cameraAvoidanceRuntimeOverride = null;  // null = use preference, true/false = temporary override
     private long lastCameraAlertTimeMs;
     private String lastCameraAlertKey;
@@ -1553,6 +1568,14 @@ public class FlockFreePlugin extends OsmandPlugin {
         if (!newRoute) {
             return;
         }
+        
+        // Check if this is an online FlockFree route — fetch fastest route for comparison
+        RouteCalculationResult onlineRoute = app.getRoutingHelper().getRoute();
+        if (!userInitiatedRouteSwitch && onlineRoute != null && onlineRoute.isCalculated() && isOnlineFlockFreeEngine()) {
+            maybeFetchOnlineFastestRouteForComparison(onlineRoute);
+            // Still let camera avoidance logic run below if it's active
+        }
+        
         boolean preserveComparison = false;
         boolean avoidActive = isCameraAvoidanceActive();
         if (!avoidActive) {
@@ -1658,6 +1681,184 @@ public class FlockFreePlugin extends OsmandPlugin {
                 mapActivity.getMapRouteInfoMenu().updateMenu();
             }
         });
+    }
+
+    
+    /**
+     * Switch displayed route between fastest and privacy without server recalculation.
+     * Uses cached routes from the background fetch.
+     */
+    public void switchOnlineRoute(boolean toPrivacy) {
+        List<Location> routeLocs = toPrivacy ? cachedPrivacyRouteLocations : cachedFastestRouteLocations;
+        List<RouteDirectionInfo> directions = toPrivacy ? cachedPrivacyRouteDirections : cachedFastestRouteDirections;
+        if (routeLocs == null || routeLocs.isEmpty()) return;
+        
+        RoutingHelper helper = app.getRoutingHelper();
+        RouteCalculationParams params = new RouteCalculationParams();
+        params.ctx = app;
+        params.mode = app.getSettings().APPLICATION_MODE.get();
+        params.leftSide = app.getSettings().DRIVING_REGION.get().leftHandDriving;
+        
+        RouteCalculationResult newRoute = new RouteCalculationResult(
+                routeLocs, directions, params, null, false);
+        
+        privacyRouteActive = toPrivacy;
+        userInitiatedRouteSwitch = true;
+        FlockFreeEngine.setViewingFastest(!toPrivacy);
+        helper.replaceRoute(newRoute);
+        refreshRouteInfoMenuIfVisible();
+    }
+    
+    private boolean isOnlineFlockFreeEngine() {
+        ApplicationMode mode = app.getSettings().APPLICATION_MODE.get();
+        String routingProfile = mode.getRoutingProfile();
+        if (routingProfile == null) return false;
+        OnlineRoutingHelper helper = app.getOnlineRoutingHelper();
+        OnlineRoutingEngine engine = helper.getEngineByKey(routingProfile);
+        if (engine == null) return false;
+        boolean isFlockFree = engine instanceof FlockFreeEngine
+                || (engine.getTypeName() != null && engine.getTypeName().contains("FLOCKFREE"));
+        if (isFlockFree && engine instanceof FlockFreeEngine) {
+            ((FlockFreeEngine) engine).setAppContext(app);
+        }
+        return isFlockFree;
+    }
+    
+    /**
+     * When using the online FlockFree Privacy engine, fetch a fastest route (car_fast_ch)
+     * from the server in the background for side-by-side comparison.
+     * Counts cameras on both routes and builds RouteComparisonInfo.
+     */
+    private void maybeFetchOnlineFastestRouteForComparison(@Nullable RouteCalculationResult privacyRoute) {
+        if (privacyRoute == null || !privacyRoute.isCalculated()) return;
+        
+        // Check if the current routing engine is FlockFree Privacy (online)
+        ApplicationMode mode = app.getSettings().APPLICATION_MODE.get();
+        String routingProfile = mode.getRoutingProfile();
+        LOG.info("FlockFree online comparison: routingProfile=" + routingProfile);
+        OnlineRoutingHelper helper = app.getOnlineRoutingHelper();
+        OnlineRoutingEngine engine = helper.getEngineByKey(routingProfile);
+        LOG.info("FlockFree online comparison: engine=" + (engine != null ? engine.getTypeName() : "null"));
+        if (engine == null) return;
+        boolean isFlockFree = engine instanceof FlockFreeEngine 
+                || (engine.getName(app) != null && engine.getName(app).contains("FlockFree"))
+                || (engine.getTypeName() != null && engine.getTypeName().contains("FLOCKFREE"));
+        LOG.info("FlockFree online comparison: isFlockFree=" + isFlockFree);
+        if (!isFlockFree) return;
+        
+        // Get the route points as LatLon list
+        List<Location> routeLocs = privacyRoute.getImmutableAllLocations();
+        if (routeLocs == null || routeLocs.size() < 2) return;
+        List<LatLon> path = new ArrayList<>();
+        for (Location loc : routeLocs) {
+            path.add(new LatLon(loc.getLatitude(), loc.getLongitude()));
+        }
+        
+        // Fetch fastest route in background
+        new Thread(() -> {
+            try {
+                LOG.info("FlockFree online comparison: starting background fastest route fetch");
+                // Build a fastest route request (car_fast_ch)
+                HashMap<String, String> params = new HashMap<>();
+                params.put(EngineParameter.CUSTOM_URL.name(), "https://router.antonson.co/route");
+                params.put(EngineParameter.VEHICLE_KEY.name(), "car_fast_ch");
+                params.put(EngineParameter.CUSTOM_NAME.name(), "FlockFree Fast");
+                params.put(EngineParameter.NAME_INDEX.name(), "0");
+                OnlineRoutingEngine fastEngine = EngineType.FLOCKFREE_TYPE.newInstance(params);
+                
+                String url = fastEngine.getFullUrl(path, null);
+                String method = fastEngine.getHTTPMethod();
+                String body = fastEngine.getRequestBody(path, null);
+                Map<String, String> headers = fastEngine.getRequestHeaders();
+                String content = helper.makeRequest(url, method, body, headers);
+                LOG.info("FlockFree online comparison: fastest route response received, length=" + (content != null ? content.length() : 0));
+                
+                OnlineRoutingEngine.OnlineRoutingResponse fastResponse = fastEngine.responseByContent(app, content, false, true, null);
+                if (fastResponse == null || Algorithms.isEmpty(fastResponse.getRoute())) return;
+                
+                // Cache both routes for instant switching
+                cachedFastestRouteLocations = new ArrayList<>(fastResponse.getRoute());
+                cachedFastestRouteDirections = fastResponse.getDirections();
+                cachedPrivacyRouteLocations = new ArrayList<>(routeLocs);
+                cachedPrivacyRouteDirections = new ArrayList<>(app.getRoutingHelper().getRouteDirections());
+                
+                // Count cameras on both routes
+                CameraData cameraData = getCameraData();
+                int fastCameraCount = 0;
+                int privacyCameraCount = 0;
+                if (cameraData != null && cameraData.isDataLoaded()) {
+                    fastCameraCount = countCamerasOnRoute(fastResponse.getRoute());
+                    privacyCameraCount = countCamerasOnRoute(routeLocs);
+                }
+                
+                // Build comparison info
+                int fastDistance = (int) calculateRouteDistance(fastResponse.getRoute());
+                int fastTime = (int) calculateRouteTime(fastResponse);
+                int privacyDistance = (int) privacyRoute.getWholeDistance();
+                int privacyTime = privacyRoute.getLeftTime(null);
+                
+                RouteComparisonInfo comparisonInfo = new RouteComparisonInfo(
+                        fastDistance, fastTime, fastCameraCount,
+                        privacyDistance, privacyTime, privacyCameraCount);
+                
+                app.runInUIThread(() -> {
+                    setLastRouteComparisonInfo(comparisonInfo);
+                    setPrivacyRouteActive(true);
+                    refreshRouteInfoMenuIfVisible();
+                });
+            } catch (Exception e) {
+                LOG.error("Error fetching online fastest route for comparison", e);
+            }
+        }).start();
+    }
+    
+    private int countCamerasNearRoute(List<Location> routeLocations) {
+        if (routeLocations == null || routeLocations.isEmpty()) return 0;
+        CameraData cameraData = getCameraData();
+        if (cameraData == null || !cameraData.isDataLoaded()) return 0;
+        
+        // Calculate bounding box
+        double minLat = 90, maxLat = -90, minLon = 180, maxLon = -180;
+        for (Location loc : routeLocations) {
+            minLat = Math.min(minLat, loc.getLatitude());
+            maxLat = Math.max(maxLat, loc.getLatitude());
+            minLon = Math.min(minLon, loc.getLongitude());
+            maxLon = Math.max(maxLon, loc.getLongitude());
+        }
+        
+        // Query cameras in the route area
+        List<CameraData.CameraPoint> cameras = cameraData.getMergedCamerasInBoundingBox(
+                maxLat, minLon, minLat, maxLon);
+        return cameras != null ? cameras.size() : 0;
+    }
+    
+    private int countCamerasOnRoute(List<Location> routeLocations) {
+        if (routeLocations == null || routeLocations.isEmpty()) return 0;
+        CameraAvoidanceHelper helper = getAvoidanceHelper();
+        if (helper == null) return 0;
+        int radiusMeters = 91; // ~300ft matching cone range
+        List<CameraData.CameraPoint> cameras = helper.findCamerasNearRouteLocations(routeLocations, radiusMeters);
+        return cameras != null ? cameras.size() : 0;
+    }
+    
+    private double calculateRouteDistance(List<Location> route) {
+        double total = 0;
+        for (int i = 1; i < route.size(); i++) {
+            float[] results = new float[1];
+            Location.distanceBetween(
+                    route.get(i - 1).getLatitude(), route.get(i - 1).getLongitude(),
+                    route.get(i).getLatitude(), route.get(i).getLongitude(), results);
+            total += results[0];
+        }
+        return total;
+    }
+    
+    private double calculateRouteTime(OnlineRoutingEngine.OnlineRoutingResponse response) {
+        // Estimate time based on distance and average speed (rough approximation)
+        // The server returns time in the route response, but we don't have it here
+        // Use the distance / average speed (50 mph = 22 m/s as rough estimate)
+        double distance = calculateRouteDistance(response.getRoute());
+        return distance / 22.0; // seconds
     }
 
     private void updateLastRouteComparisonInfo(@NonNull CameraAvoidanceHelper helper,

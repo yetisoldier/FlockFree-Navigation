@@ -131,6 +131,11 @@ public class RoutingHelper {
 		this.route = route;
 	}
 
+	// Public wrapper for FlockFree online route switching
+	public void replaceRoute(@NonNull RouteCalculationResult newRoute) {
+		setRoute(newRoute);
+	}
+
 	long getDeviateFromRouteDetected() {
 		return deviateFromRouteDetected;
 	}

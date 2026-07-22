@@ -92,6 +92,8 @@ import net.osmand.plus.routing.RoutingHelper;
 import net.osmand.plus.routing.RoutingHelperUtils;
 import net.osmand.plus.routing.TransportRoutingHelper;
 import net.osmand.plus.settings.backend.ApplicationMode;
+import net.osmand.plus.onlinerouting.OnlineRoutingHelper;
+import net.osmand.plus.onlinerouting.engine.OnlineRoutingEngine;
 import net.osmand.plus.settings.backend.OsmAndAppCustomization;
 import net.osmand.plus.settings.backend.OsmandSettings;
 import net.osmand.plus.settings.backend.preferences.CommonPreference;
@@ -544,9 +546,20 @@ public class MapRouteInfoMenu implements IRouteInformationListener, CardListener
 							plugin.isPrivacyRouteActive());
 					card.setListener(this);
 					card.setSelectionListener(privacyRoute -> {
-						plugin.setPrivacyRouteActive(privacyRoute);
-						plugin.setCameraAvoidanceEnabled(privacyRoute);
-						app.getRoutingHelper().recalculateRouteDueToSettingsChange(true);
+						// Check if we're using the online FlockFree engine
+						ApplicationMode mode = app.getSettings().APPLICATION_MODE.get();
+						String routingProfile = mode.getRoutingProfile();
+						OnlineRoutingHelper onlineHelper = app.getOnlineRoutingHelper();
+						OnlineRoutingEngine engine = onlineHelper.getEngineByKey(routingProfile);
+						if (engine != null && engine.getTypeName() != null && engine.getTypeName().contains("FLOCKFREE")) {
+							// Online engine: swap cached routes without recalculation
+							plugin.switchOnlineRoute(privacyRoute);
+						} else {
+							// Offline engine: toggle camera avoidance
+							plugin.setPrivacyRouteActive(privacyRoute);
+							plugin.setCameraAvoidanceEnabled(privacyRoute);
+							app.getRoutingHelper().recalculateRouteDueToSettingsChange(true);
+						}
 					});
 					menuCards.add(card);
 				} else {

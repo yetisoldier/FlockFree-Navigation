@@ -9,6 +9,8 @@ import net.osmand.osm.io.NetworkUtils;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.Version;
 import net.osmand.plus.onlinerouting.engine.EngineType;
+import net.osmand.plus.onlinerouting.engine.FlockFreeEngine;
+import net.osmand.plus.onlinerouting.EngineParameter;
 import net.osmand.plus.onlinerouting.engine.OnlineRoutingEngine;
 import net.osmand.plus.onlinerouting.engine.OnlineRoutingEngine.OnlineRoutingResponse;
 import net.osmand.plus.routing.RouteCalculationParams;
@@ -53,6 +55,7 @@ public class OnlineRoutingHelper {
 		this.app = app;
 		this.settings = app.getSettings();
 		this.cachedEngines = loadSavedEngines();
+		autoRegisterFlockFreeEngine();
 	}
 
 	@NonNull
@@ -112,12 +115,19 @@ public class OnlineRoutingHelper {
 		@Nullable RouteCalculationProgress calculationProgress = params.calculationProgress;
 		@Nullable Float startBearing = params.start.hasBearing() ? params.start.getBearing() : null;
 
+		// Set app context on FlockFreeEngine so getRequestBody can access camera data
+		if (engine instanceof FlockFreeEngine) {
+			((FlockFreeEngine) engine).setAppContext(app);
+		}
+
 		if (params.gpxFile == null || initialCalculation) {
 			String url = engine.getFullUrl(path, startBearing);
 			String method = engine.getHTTPMethod();
 			String body = engine.getRequestBody(path, startBearing);
 			Map<String, String> headers = engine.getRequestHeaders();
-			String content = makeRequest(url, method, body, headers);
+			int connectTimeout = engine.getConnectTimeout();
+			int readTimeout = engine.getReadTimeout();
+			String content = makeRequest(url, method, body, headers, connectTimeout, readTimeout);
 			return engine.responseByContent(app, content, leftSideNavigation, initialCalculation, calculationProgress);
 		} else {
 			return engine.responseByGpxFile(app, params.gpxFile, initialCalculation, calculationProgress); // run 2nd phase
@@ -133,13 +143,21 @@ public class OnlineRoutingHelper {
 	public String makeRequest(@NonNull String url, @NonNull String method,
 							  @Nullable String body, @Nullable Map<String, String> headers)
 			throws IOException {
+		return makeRequest(url, method, body, headers, AndroidNetworkUtils.CONNECT_TIMEOUT, AndroidNetworkUtils.READ_TIMEOUT);
+	}
+
+	@NonNull
+	public String makeRequest(@NonNull String url, @NonNull String method,
+							  @Nullable String body, @Nullable Map<String, String> headers,
+							  int connectTimeout, int readTimeout)
+			throws IOException {
 		long tm = System.currentTimeMillis();
 		LOG.info("Calling online routing: " + url);
 		HttpURLConnection connection = NetworkUtils.getHttpURLConnection(url);
 		connection.setRequestProperty("User-Agent", Version.getFullVersion(app));
 		connection.setRequestMethod(method);
-		connection.setConnectTimeout(AndroidNetworkUtils.CONNECT_TIMEOUT);
-		connection.setReadTimeout(AndroidNetworkUtils.READ_TIMEOUT);
+		connection.setConnectTimeout(connectTimeout > 0 ? connectTimeout : AndroidNetworkUtils.CONNECT_TIMEOUT);
+		connection.setReadTimeout(readTimeout > 0 ? readTimeout : AndroidNetworkUtils.READ_TIMEOUT);
 		// set custom headers
 		if (headers != null) {
 			for (String key :  headers.keySet()) {
@@ -288,5 +306,57 @@ public class OnlineRoutingHelper {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Auto-register the FlockFree routing engine on first launch so users don't
+	 * need to manually configure it. Creates two engines:
+	 * - FlockFree Fast (car_fast_ch) for fastest routing
+	 * - FlockFree Privacy (car_dynamic_lm) for camera-aware routing
+	 */
+	private void autoRegisterFlockFreeEngine() {
+		String fastKey = OnlineRoutingEngine.ONLINE_ROUTING_ENGINE_PREFIX + "flockfree_fast";
+		String privacyKey = OnlineRoutingEngine.ONLINE_ROUTING_ENGINE_PREFIX + "flockfree_privacy";
+
+		boolean hasFast = false;
+		boolean hasPrivacy = false;
+		for (String key : cachedEngines.keySet()) {
+			if (key.equals(fastKey)) hasFast = true;
+			if (key.equals(privacyKey)) hasPrivacy = true;
+		}
+
+		if (!hasFast) {
+			HashMap<String, String> params = new HashMap<>();
+			params.put(EngineParameter.KEY.name(), fastKey);
+			params.put(EngineParameter.CUSTOM_URL.name(), "https://router.antonson.co/route");
+			params.put(EngineParameter.VEHICLE_KEY.name(), "car_fast_ch");
+			params.put(EngineParameter.CUSTOM_NAME.name(), "FlockFree Fast");
+			params.put(EngineParameter.NAME_INDEX.name(), "0");
+			params.put(EngineParameter.USE_ROUTING_FALLBACK.name(), "true");
+			OnlineRoutingEngine engine = EngineType.FLOCKFREE_TYPE.newInstance(params);
+			if (engine instanceof FlockFreeEngine) {
+				((FlockFreeEngine) engine).setAppContext(app);
+			}
+			cachedEngines.put(fastKey, engine);
+		}
+
+		if (!hasPrivacy) {
+			HashMap<String, String> params = new HashMap<>();
+			params.put(EngineParameter.KEY.name(), privacyKey);
+			params.put(EngineParameter.CUSTOM_URL.name(), "https://router.antonson.co/route");
+			params.put(EngineParameter.VEHICLE_KEY.name(), "car_dynamic_lm");
+			params.put(EngineParameter.CUSTOM_NAME.name(), "FlockFree Privacy");
+			params.put(EngineParameter.NAME_INDEX.name(), "1");
+			params.put(EngineParameter.USE_ROUTING_FALLBACK.name(), "true");
+			OnlineRoutingEngine engine = EngineType.FLOCKFREE_TYPE.newInstance(params);
+			if (engine instanceof FlockFreeEngine) {
+				((FlockFreeEngine) engine).setAppContext(app);
+			}
+			cachedEngines.put(privacyKey, engine);
+		}
+
+		if (!hasFast || !hasPrivacy) {
+			saveCacheToSettings();
+		}
 	}
 }
