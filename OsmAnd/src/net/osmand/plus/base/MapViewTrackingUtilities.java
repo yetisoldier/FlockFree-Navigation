@@ -65,6 +65,7 @@ public class MapViewTrackingUtilities implements OsmAndLocationListener, IMapLoc
 	private static final long MOVE_ANIMATION_TIME = 500;
 	private static final float FLOCKFREE_LANDSCAPE_NAVIGATION_MAP_RATIO_X = 0.65f;
 	private static final float FLOCKFREE_PATROL_AUTO_FOLLOW_MIN_SPEED_MPS = 2.0f;
+	private static final float HIGH_SPEED_ANIMATION_THRESHOLD_MPS = 15.0f; // FlockFree: skip position animation above this speed (~34 mph)
 	public static final int AUTO_ZOOM_DEFAULT_CHANGE_ZOOM = 4500;
 	private static final float DELAY_TO_ROTATE_AFTER_RESET_ROTATION = 1000f;
 	public static final long KEEP_VIEWPOINT_AFTER_SURFACE_HIT = 5000;
@@ -428,6 +429,10 @@ public class MapViewTrackingUtilities implements OsmAndLocationListener, IMapLoc
 	}
 
 	private boolean animateMyLocation(@NonNull Location location) {
+		// FlockFree: skip position animation at high speed to reduce perceived GPS lag
+		if (location.hasSpeed() && location.getSpeed() > HIGH_SPEED_ANIMATION_THRESHOLD_MPS) {
+			return false;
+		}
 		return settings.ANIMATE_MY_LOCATION.get() && !movingToMyLocation;
 	}
 

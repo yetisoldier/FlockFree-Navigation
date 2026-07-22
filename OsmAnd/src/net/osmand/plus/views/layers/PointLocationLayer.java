@@ -76,6 +76,7 @@ public class PointLocationLayer extends OsmandMapLayer
 	private static final long MAX_LOCATION_ANIMATION_DURATION_MS = 1_200L;
 	private static final long MAX_LOCATION_PREDICTION_INTERVAL_MS = 5_000L;
 	private static final long STALE_LOCATION_ANIMATION_GAP_MS = 10_000L;
+	private static final float HIGH_SPEED_ANIMATION_THRESHOLD_MPS = 15.0f; // FlockFree: skip position animation above this speed (~34 mph)
 	private static final long LOCATION_CADENCE_LOG_INTERVAL_MS = 5_000L;
 	protected static final int MIN_ZOOM = 3;
 	protected static final int RADIUS = 7;
@@ -786,8 +787,10 @@ public class PointLocationLayer extends OsmandMapLayer
 			boolean dataChanged = !MapUtils.areLatLonEqual(prevLocation, markerLocation, HIGH_LATLON_PRECISION);
 			if (dataChanged) {
 				long movingTime = prevLocation != null ? Math.max(0, markerLocation.getTime() - prevLocation.getTime()) : 0;
-				boolean animatePosition = settings.ANIMATE_MY_LOCATION.get();
-				long animationDuration = userInterruptingMovingToMyLocation ? 0
+				// FlockFree: skip position animation at high speed to reduce perceived GPS lag
+				boolean highSpeed = markerLocation.hasSpeed() && markerLocation.getSpeed() > HIGH_SPEED_ANIMATION_THRESHOLD_MPS;
+				boolean animatePosition = settings.ANIMATE_MY_LOCATION.get() && !highSpeed;
+				long animationDuration = userInterruptingMovingToMyLocation || highSpeed ? 0
 						: isAnimateMyLocation() ? getLocationAnimationDuration(movingTime) : 0;
 				Integer interpolationPercent = settings.LOCATION_INTERPOLATION_PERCENT.get();
 				boolean recentLocationGap = movingTime > 0 && movingTime <= STALE_LOCATION_ANIMATION_GAP_MS;

@@ -660,7 +660,8 @@ public class OsmAndLocationProvider implements SensorEventListener {
 		} else if (getLocationSimulation().isRouteAnimating()) {
 			routingHelper.setCurrentLocation(location, false);
 		} else {
-			updatedLocation = snapTrackingLocationToRoad(location, routingHelper);
+			// FlockFree: skip snap-to-road during free-driving to reduce GPS update latency;
+			// snap-to-road only applies during active route following (handled above)
 		}
 		return updatedLocation;
 	}
