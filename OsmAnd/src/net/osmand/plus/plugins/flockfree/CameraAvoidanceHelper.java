@@ -575,11 +575,11 @@ public class CameraAvoidanceHelper {
                 if (searchResult == null) {
                     continue;
                 }
-                int roadIndex = searchResult.getRoadIndex();
-                if (roadIndex <= 0 || roadIndex >= roads.size() - 1) {
+                int matchedRoadIndex = searchResult.getRoadIndex();
+                if (matchedRoadIndex <= 0 || matchedRoadIndex >= roads.size() - 1) {
                     continue;
                 }
-                RouteDataObject object = roads.get(roadIndex).getObject();
+                RouteDataObject object = roads.get(matchedRoadIndex).getObject();
                 if (object != null) {
                     result.add(object.getId());
                 }
@@ -736,11 +736,11 @@ public class CameraAvoidanceHelper {
                 if (searchResult == null) {
                     continue;
                 }
-                int roadIndex = searchResult.getRoadIndex();
-                if (roadIndex <= 0 || roadIndex >= roads.size() - 1) {
+                int matchedRoadIndex = searchResult.getRoadIndex();
+                if (matchedRoadIndex <= 0 || matchedRoadIndex >= roads.size() - 1) {
                     continue;
                 }
-                RouteSegmentResult nearestRoad = roads.get(roadIndex);
+                RouteSegmentResult nearestRoad = roads.get(matchedRoadIndex);
                 RouteDataObject object = nearestRoad.getObject();
                 if (object != null) {
                     // Apply direction-aware filtering to fallback search as well.
