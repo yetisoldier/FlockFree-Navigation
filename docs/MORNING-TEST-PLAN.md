@@ -179,7 +179,7 @@ adb shell monkey -p com.yetiwurks.flockfree 1
 
 ## Known Non-Goals For This Morning
 
-- Do not expect camera avoidance to work for BRouter or online routing. The iterative relaxation reroute path only applies to OsmAnd offline vector routing.
+- Do not expect the offline iterative relaxation path to work for BRouter or generic online engines. The dedicated FlockFree GraphHopper engine uses its own camera-penalty model and should show paired Fastest/Privacy preview choices.
 - Iterative relaxation caps at 4 retry iterations. In very dense camera areas, it may still fall back to the original route if no partial route can be found within 4 unblocking steps.
 - Do not expect sync. Current source has a foreground service source path with permission-gated background scan restart plus scan/connect/request status/simulate from settings, can create a local phone/map-center test marker when hardware is absent, can scan again from the map when CYD BLE is enabled and idle, and can review recent GPS-backed detections from the map; those candidates are persisted only in app-private local storage.
 - Do not expect the camera database to be the final spatial architecture. Current source has Flock-filtered app-private SQLite persistence plus an in-memory fallback mirror; a geohash/tile store is still later work.

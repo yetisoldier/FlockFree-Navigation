@@ -18,18 +18,19 @@ import net.osmand.router.TurnType;
 import net.osmand.shared.gpx.GpxFile;
 import net.osmand.util.Algorithms;
 import net.osmand.util.GeoPolylineParserUtil;
+import net.osmand.util.MapUtils;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static net.osmand.plus.onlinerouting.engine.EngineType.GRAPHHOPPER_TYPE;
 import static net.osmand.util.Algorithms.isEmpty;
 
 /**
@@ -52,29 +53,40 @@ public class FlockFreeEngine extends JsonOnlineRoutingEngine {
 	private static final String PROFILE_FAST = "car_fast_ch";
 	private static final String PROFILE_PRIVACY = "car_dynamic_lm";
 
-	// App reference for accessing camera data (set when engine is used)
-	private static OsmandApplication sApp;
-	private static boolean sViewingFastest = false;
+	private static final int MAX_CAMERA_PENALTY_AREAS = 500;
+
+	// App reference for accessing camera data (set when this engine instance is used).
+	@Nullable
+	private OsmandApplication app;
+	@Nullable
+	private volatile String profileOverride;
 
 	/** Override to set custom connect timeout (ms). 0 = use default. */
 	public int getConnectTimeout() {
-		return 3000;
+		return 10_000;
 	}
 
 	/** Override to set custom read timeout (ms). 0 = use default. */
 	public int getReadTimeout() {
-		return 5000;
+		return 30_000;
 	}
 
 	/** Set by FlockFreePlugin when user switches routes via comparison card */
-	public static void setViewingFastest(boolean viewing) { sViewingFastest = viewing; }
+	public void setViewingFastest(boolean viewing) {
+		profileOverride = viewing ? PROFILE_FAST : PROFILE_PRIVACY;
+	}
 
 	/**
 	 * Set the app context so getRequestBody can access camera data.
 	 * Called by FlockFreePlugin before route calculation.
 	 */
 	public void setAppContext(@NonNull OsmandApplication app) {
-		sApp = app;
+		this.app = app;
+	}
+
+	public boolean isPrivacyProfile() {
+		String profile = profileOverride != null ? profileOverride : getVehicleKeyForUrl();
+		return PROFILE_PRIVACY.equals(profile);
 	}
 
 	// Camera cone parameters
@@ -88,7 +100,7 @@ public class FlockFreeEngine extends JsonOnlineRoutingEngine {
 	@NonNull
 	@Override
 	public OnlineRoutingEngine getType() {
-		return GRAPHHOPPER_TYPE;
+		return EngineType.FLOCKFREE_TYPE;
 	}
 
 	@Override
@@ -161,8 +173,8 @@ public class FlockFreeEngine extends JsonOnlineRoutingEngine {
 			profile = PROFILE_FAST;
 		}
 		// If user switched to fastest via comparison card, override profile
-		if (sViewingFastest) {
-			profile = PROFILE_FAST;
+		if (profileOverride != null) {
+			profile = profileOverride;
 		}
 
 		JSONObject body = new JSONObject();
@@ -221,10 +233,9 @@ public class FlockFreeEngine extends JsonOnlineRoutingEngine {
 	private JSONObject buildCameraPenaltyModel(@NonNull List<LatLon> path) {
 		if (path.isEmpty()) return null;
 
-		// Get camera data from the FlockFree plugin
-		// Note: we need the app context to access the plugin, but getRequestBody
-		// doesn't receive it. We'll use a static reference to the application.
-		OsmandApplication app = sApp;
+		// getRequestBody does not receive a context, so OnlineRoutingHelper attaches
+		// the application to this engine instance immediately before the request.
+		OsmandApplication app = this.app;
 		if (app == null) return null;
 
 		// Get camera data from the FlockFree plugin
@@ -252,6 +263,16 @@ public class FlockFreeEngine extends JsonOnlineRoutingEngine {
 		List<CameraData.CameraPoint> cameras = cameraData.getMergedCamerasInBoundingBox(
 				maxLat, minLon, minLat, maxLon);
 		if (Algorithms.isEmpty(cameras)) return null;
+		if (cameras.size() > MAX_CAMERA_PENALTY_AREAS) {
+			cameras = new ArrayList<>(cameras);
+			cameras.sort(Comparator
+					.comparingDouble((CameraData.CameraPoint camera) -> distanceToPath(camera, path))
+					.thenComparingDouble(camera -> camera.lat)
+					.thenComparingDouble(camera -> camera.lon));
+			LOG.info("FlockFree online camera model trimmed from " + cameras.size()
+					+ " to " + MAX_CAMERA_PENALTY_AREAS + " nearest route-corridor cameras");
+			cameras = new ArrayList<>(cameras.subList(0, MAX_CAMERA_PENALTY_AREAS));
+		}
 
 		try {
 			JSONObject customModel = new JSONObject();
@@ -301,6 +322,23 @@ public class FlockFreeEngine extends JsonOnlineRoutingEngine {
 		} catch (JSONException e) {
 			return null;
 		}
+	}
+
+	private double distanceToPath(@NonNull CameraData.CameraPoint camera, @NonNull List<LatLon> path) {
+		if (path.size() == 1) {
+			LatLon point = path.get(0);
+			return MapUtils.getDistance(camera.lat, camera.lon, point.getLatitude(), point.getLongitude());
+		}
+		double nearestDistance = Double.MAX_VALUE;
+		for (int i = 1; i < path.size(); i++) {
+			LatLon from = path.get(i - 1);
+			LatLon to = path.get(i);
+			nearestDistance = Math.min(nearestDistance, MapUtils.getOrthogonalDistance(
+					camera.lat, camera.lon,
+					from.getLatitude(), from.getLongitude(),
+					to.getLatitude(), to.getLongitude()));
+		}
+		return nearestDistance;
 	}
 
 	/**
@@ -367,7 +405,7 @@ public class FlockFreeEngine extends JsonOnlineRoutingEngine {
 	public OnlineRoutingResponse responseByContent(@NonNull OsmandApplication app, @NonNull String content,
 	                                               boolean leftSideNavigation, boolean initialCalculation,
 	                                               @Nullable RouteCalculationProgress calculationProgress) throws JSONException {
-		sApp = app; // Cache for getRequestBody
+		this.app = app;
 		return super.responseByContent(app, content, leftSideNavigation, initialCalculation, calculationProgress);
 	}
 

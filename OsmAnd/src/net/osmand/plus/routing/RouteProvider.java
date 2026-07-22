@@ -81,13 +81,16 @@ public class RouteProvider {
 
 	private static final org.apache.commons.logging.Log log = PlatformUtil.getLog(RouteProvider.class);
 	private static final int MIN_STRAIGHT_DIST = 50000;
-	private static final int MAX_RELAXATION_ITERATIONS = 15;
+	/** Maximum number of optional full route searches across all avoidance strategies. */
+	private static final int MAX_AVOIDANCE_ROUTE_ATTEMPTS = 4;
+	private static final int MAX_TIER_ATTEMPTS = 2;
+	private static final int MAX_SINGLE_ROAD_ATTEMPTS = 1;
 	// Reserved for a future bounded multi-pass route scan; inactive in the current production path.
 	private static final int MAX_AVOIDANCE_PASSES = 0;
 
 	/** Number of roads to block per tier in staged tier-based avoidance. */
 	private static final int TIER_SIZE = 3;
-	private static final long FLOCKFREE_OPTIONAL_ROUTING_BUDGET_MS = 30_000L;
+	private static final long FLOCKFREE_OPTIONAL_ROUTING_BUDGET_MS = 15_000L;
 	/** Only scan cameras in the next N km of route during active navigation. */
 	private static final int ACTIVE_NAVIGATION_HORIZON_KM = 10;
 	/** Tighter time budget for avoidance replanning during active driving. */
@@ -98,10 +101,10 @@ public class RouteProvider {
 	private static final double FLOCKFREE_STRICT_MAX_AVOIDANCE_TIME_MULTIPLIER = 2.00d;
 	private static final double FLOCKFREE_STRICT_MAX_AVOIDANCE_DISTANCE_MULTIPLIER = 2.00d;
 	private static final int FLOCKFREE_STRICT_MAX_AVOIDANCE_EXTRA_TIME_SECONDS = 30 * 60;
-	private static final int FLOCKFREE_OPTIONAL_AVOIDANCE_STEPS = 1 + MAX_RELAXATION_ITERATIONS;
+	private static final int FLOCKFREE_OPTIONAL_AVOIDANCE_STEPS = MAX_AVOIDANCE_ROUTE_ATTEMPTS;
 	private static final long FLOCKFREE_OPTIONAL_STEP_EXPECTED_MS =
 			FLOCKFREE_OPTIONAL_ROUTING_BUDGET_MS / FLOCKFREE_OPTIONAL_AVOIDANCE_STEPS;
-	private static final int ACTIVE_NAVIGATION_AVOIDANCE_STEPS = 1 + MAX_RELAXATION_ITERATIONS;
+	private static final int ACTIVE_NAVIGATION_AVOIDANCE_STEPS = MAX_AVOIDANCE_ROUTE_ATTEMPTS;
 	private static final long ACTIVE_NAVIGATION_STEP_EXPECTED_MS =
 			ACTIVE_NAVIGATION_BUDGET_MS / ACTIVE_NAVIGATION_AVOIDANCE_STEPS;
 
@@ -364,7 +367,7 @@ public class RouteProvider {
 		int bestRouteBlockedSize = 0;
 		int tierIteration = 0;
 
-		for (int tierIdx = 0; tierIdx < tiers.size() && tierIteration < MAX_RELAXATION_ITERATIONS; tierIdx++) {
+		for (int tierIdx = 0; tierIdx < tiers.size() && tierIteration < MAX_TIER_ATTEMPTS; tierIdx++) {
 			if (isFlockFreeOptionalRoutingBudgetExceeded(params)) {
 				log.info("FlockFree tier avoidance stopped: optional reroute budget exceeded at tier " + (tierIdx + 1));
 				finishFlockFreeOptionalRoutingProgress(params);
@@ -412,12 +415,6 @@ public class RouteProvider {
 							log.info("FlockFree tier " + (tierIdx + 1)
 									+ " route has fewer cameras but rejected: " + rejectionReason
 									+ "; continuing to next tier");
-							if (avoidedCameraCount < bestRouteCameraCount) {
-								bestRoute = avoided;
-								bestRouteBlockedIds = new LinkedHashSet<>(blockedIds);
-								bestRouteCameraCount = avoidedCameraCount;
-								bestRouteBlockedSize = blockedIds.size();
-							}
 						}
 					} else {
 						log.info("FlockFree tier " + (tierIdx + 1)
@@ -442,7 +439,8 @@ public class RouteProvider {
 		if (bestRoute == null && bestRouteCameraCount >= originalRouteCameraCount) {
 			log.info("FlockFree tier-based avoidance found no improvement; falling back to single-road greedy approach");
 			blockedIds.clear();
-			for (int i = 0; i < MAX_RELAXATION_ITERATIONS && i < totalCameraRoadCount; i++) {
+			for (int i = 0; i < totalCameraRoadCount && i < MAX_SINGLE_ROAD_ATTEMPTS
+					&& tierIteration < MAX_AVOIDANCE_ROUTE_ATTEMPTS; i++) {
 				if (isFlockFreeOptionalRoutingBudgetExceeded(params)) {
 					log.info("FlockFree single-road fallback stopped: budget exceeded at iteration " + (i + 1));
 					finishFlockFreeOptionalRoutingProgress(params);
@@ -460,9 +458,10 @@ public class RouteProvider {
 
 				RouteCalculationParams avoidedParams = copyParamsForFlockFreeAvoidance(params, blockedIds);
 				try {
-					beginFlockFreeOptionalRoutingStep(params, i);
+					tierIteration++;
+					beginFlockFreeOptionalRoutingStep(params, tierIteration - 1);
 					RouteCalculationResult avoided = findVectorMapsRoute(avoidedParams, calcGPXRoute);
-					completeFlockFreeOptionalRoutingStep(params, i + 1);
+					completeFlockFreeOptionalRoutingStep(params, tierIteration);
 					if (avoided.isCalculated()) {
 						int avoidedCameraCount = avoidanceHelper.findCamerasNearRouteLocations(
 								avoided.getImmutableAllLocations(), avoidanceRadius).size();
@@ -490,12 +489,6 @@ public class RouteProvider {
 								log.info("FlockFree single-road fallback iteration " + (i + 1)
 										+ " route has fewer cameras but rejected: " + rejectionReason
 										+ "; continuing to block more roads");
-								if (avoidedCameraCount < bestRouteCameraCount) {
-									bestRoute = avoided;
-									bestRouteBlockedIds = new LinkedHashSet<>(blockedIds);
-									bestRouteCameraCount = avoidedCameraCount;
-									bestRouteBlockedSize = blockedIds.size();
-								}
 							}
 						} else {
 							log.info("FlockFree single-road fallback iteration " + (i + 1)
@@ -521,7 +514,8 @@ public class RouteProvider {
 		// Always try motorway-penalized route as an alternative, even if greedy found
 		// some improvement. The dual-route may find a much better result (e.g. surface
 		// streets with 3 cameras vs greedy's 6 cameras on highway).
-		if (!isFlockFreeOptionalRoutingBudgetExceeded(params)) {
+		if (tierIteration < MAX_AVOIDANCE_ROUTE_ATTEMPTS
+				&& !isFlockFreeOptionalRoutingBudgetExceeded(params)) {
 				log.info("FlockFree dual-route: greedy avoidance found no improvement; trying motorway-penalized approach");
 				Set<Long> motorwayBlocks = identifyMotorwaySegmentsNearCameras(
 						initial, avoidanceHelper, avoidanceRadius);
@@ -530,21 +524,27 @@ public class RouteProvider {
 							+ " motorway segments near cameras");
 					RouteCalculationParams altParams = copyParamsForFlockFreeAvoidance(params, motorwayBlocks);
 					try {
-						beginFlockFreeOptionalRoutingStep(params, tierIteration);
+						tierIteration++;
+						beginFlockFreeOptionalRoutingStep(params, tierIteration - 1);
 						RouteCalculationResult altRoute = findVectorMapsRoute(altParams, calcGPXRoute);
-						completeFlockFreeOptionalRoutingStep(params, tierIteration + 1);
+						completeFlockFreeOptionalRoutingStep(params, tierIteration);
 						if (altRoute.isCalculated()) {
 							int altCameraCount = avoidanceHelper.findCamerasNearRouteLocations(
 									altRoute.getImmutableAllLocations(), avoidanceRadius).size();
 							log.info("FlockFree dual-route: alternative has " + altCameraCount
 									+ " cameras vs original " + originalRouteCameraCount
 									+ ", best so far " + bestRouteCameraCount);
-							if (altCameraCount < bestRouteCameraCount) {
+							String rejectionReason = getFlockFreeAvoidanceRejectionReason(altRoute,
+									altCameraCount, originalRouteCameraCount, originalRouteTimeSeconds,
+									originalRouteDistanceMeters, plugin.getAvoidanceMode());
+							if (altCameraCount < bestRouteCameraCount && Algorithms.isEmpty(rejectionReason)) {
 								bestRoute = altRoute;
 								bestRouteBlockedIds = new LinkedHashSet<>(motorwayBlocks);
 								bestRouteCameraCount = altCameraCount;
 								bestRouteBlockedSize = motorwayBlocks.size();
 								log.info("FlockFree dual-route: using motorway-penalized route as Privacy option");
+							} else if (!Algorithms.isEmpty(rejectionReason)) {
+								log.info("FlockFree dual-route: candidate rejected: " + rejectionReason);
 							} else {
 								log.info("FlockFree dual-route: alternative has " + altCameraCount
 										+ " cameras, not better than best (" + bestRouteCameraCount + "); discarding");
@@ -559,13 +559,22 @@ public class RouteProvider {
 					log.info("FlockFree dual-route: no motorway segments found near cameras on original route");
 				}
 			} else {
-				log.info("FlockFree dual-route skipped: optional reroute budget exceeded");
+				log.info("FlockFree dual-route skipped: optional reroute attempt or time budget exhausted");
 			}
 
 		// All avoidance iterations exhausted — fall back to best route found so far
 		restoreFlockFreeProgressState(params, originalMissingMaps);
 		finishFlockFreeOptionalRoutingProgress(params);
 		if (bestRoute != null) {
+			String finalRejectionReason = getFlockFreeAvoidanceRejectionReason(bestRoute,
+					bestRouteCameraCount, originalRouteCameraCount, originalRouteTimeSeconds,
+					originalRouteDistanceMeters, plugin.getAvoidanceMode());
+			if (!Algorithms.isEmpty(finalRejectionReason)) {
+				log.warn("FlockFree discarded final privacy candidate: " + finalRejectionReason);
+				avoidanceHelper.recordAvoidanceFallback(bestRouteBlockedSize, originalRouteCameraCount,
+						originalRouteTimeSeconds, originalRouteDistanceMeters);
+				return null;
+			}
 			log.info("FlockFree avoidance exhausted; using best partial route with "
 					+ bestRouteCameraCount + " cameras (original had " + originalRouteCameraCount + ")"
 					+ ", blocked " + bestRouteBlockedSize + " of " + totalCameraRoadCount + " roads");

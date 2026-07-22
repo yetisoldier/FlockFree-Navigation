@@ -13,13 +13,12 @@ those cameras to OsmAnd road object IDs, and runs a second offline route
 calculation with those road IDs marked as temporary impassable roads. The
 privacy route is accepted only if a fresh scan shows fewer Flock camera
 exposures than the original route. If the accepted route still has Flock
-camera exposure, it also has to stay within the current detour guardrails: no
-more than the greater of 10 minutes or 20 percent extra time, and no more than
-25 percent extra distance.
-A route that reduces exposure to zero cameras is always accepted. If full
-avoidance cannot produce a better route, FlockFree progressively unblocks the
-least camera-impactful roads and tries again up to 4 times. If none of those
-attempts improves the route, the original route is kept.
+camera exposure, it also has to stay within the selected mode's detour
+guardrails. A route that reduces exposure to zero cameras is always accepted.
+FlockFree uses a bounded staged search: up to two severity-tier attempts, one
+single-road fallback, and one motorway alternative. No more than four optional
+full route searches are allowed. If none produces an acceptable improvement,
+the original route is kept.
 
 The implementation is intentionally conservative:
 
@@ -114,8 +113,14 @@ normal offline OsmAnd route has been calculated:
 3. `maybeRecalculateWithFlockFreeTraffic(...)` optionally adjusts for live
    traffic while preserving camera-avoidance road blocks.
 
-Avoidance does not run for online routing, BRouter routing, straight-line
-routing, direct-to routing, or GPX-only routes that do not use OsmAnd routing.
+This iterative road-blocking path does not run for generic online routing,
+BRouter routing, straight-line routing, direct-to routing, or GPX-only routes.
+The dedicated FlockFree online engine is a separate supported path: it sends a
+bounded GraphHopper `custom_model` containing directional camera penalty areas,
+calculates the missing Fastest or Privacy counterpart in the background, and
+publishes both routes to the preview comparison card with distance, time, and
+camera exposure. Requests outside the self-hosted server's map coverage fall
+back to offline routing when fallback is enabled.
 It also skips lightweight follow-me recalculations where only the start point
 changed, because those would otherwise trigger expensive second-pass reroutes
 while driving.
@@ -181,12 +186,11 @@ cause multiple adjacent route road objects to be blocked when they are within
 the radius. That prevents the router from simply shifting onto the next parallel
 road in the same camera corridor.
 
-The sorted road association list is also what enables relaxation. Roads with
-more camera associations are kept blocked longer; roads with fewer camera
-associations are the first candidates to unblock when full avoidance cannot
-find a viable route.
+The sorted road association list drives staged blocking. Roads with more camera
+associations are tried first so the small route-search budget targets the
+highest-impact corridors.
 
-## Full Avoidance Pass
+## Temporary Avoidance Passes
 
 After collecting camera-adjacent road IDs, `RouteProvider` builds a copy of the
 original `RouteCalculationParams` using `copyParamsForFlockFreeAvoidance(...)`.
@@ -206,8 +210,8 @@ configuration.router.setImpassableRoads(...)
 This makes the Flock road blocks temporary and per-calculation. They are not
 stored in the user's Avoid Roads list.
 
-The full avoidance pass blocks every Flock camera-adjacent road ID found on the
-initial route and runs `findVectorMapsRoute(...)` again. If OsmAnd finds a
+Each staged pass blocks a selected set of Flock camera-adjacent road IDs and
+runs `findVectorMapsRoute(...)` again. If OsmAnd finds a
 candidate route, FlockFree does not accept it blindly. It scans the candidate
 route for Flock cameras again and accepts the route only when the candidate has
 fewer actual Flock camera exposures than the original route baseline and stays
@@ -217,38 +221,20 @@ route reaches zero Flock camera exposure.
 If the route is not calculated, throws an exception, or has an equal-or-worse
 camera count, FlockFree keeps looking instead of replacing the route. The same
 happens when a non-zero-camera candidate improves exposure but exceeds the
-greater of 10 minutes or 20 percent extra time, or exceeds 25 percent extra
-distance.
+selected Balanced or Strict Privacy guardrails.
 
-## Iterative Relaxation
+## Bounded Staged Search
 
-Full avoidance can be too strict. In dense camera areas, blocking every
-camera-adjacent road can make the route impossible or force an unreasonable
-detour. FlockFree handles that with iterative relaxation.
+Blocking every camera-adjacent road can make a route impossible or force an
+unreasonable detour. FlockFree instead applies a fixed search budget:
 
-The relaxation loop is capped at 4 iterations:
+1. Up to two cumulative severity-tier attempts, blocking the most important
+   camera roads first.
+2. If those find no acceptable improvement, one single-road fallback.
+3. If budget remains, one motorway/primary-road alternative.
+4. Every candidate is rescanned and must pass the common acceptance guardrails.
 
-```java
-MAX_RELAXATION_ITERATIONS = 4
-```
-
-Because the road list is sorted by camera count descending, the least
-camera-impactful roads are at the end. Each relaxation iteration:
-
-1. Removes one lowest-camera road from the blocked set.
-2. Recalculates an OsmAnd route with the remaining road IDs still blocked.
-3. Scans the candidate route for Flock cameras.
-4. Accepts the route only if it improves on the actual route exposure baseline
-   and passes the same detour guardrails as full avoidance.
-5. Continues if the candidate is not better or the detour is too large.
-
-If a relaxed route is accepted, the user-facing status is recorded as partial
-avoidance. The accepted route still avoids the most camera-dense road objects,
-but it allows enough lower-impact roads back into the graph for OsmAnd to find a
-usable route.
-
-If all relaxation attempts fail, FlockFree records a fallback and keeps the
-original route.
+The four-attempt cap applies across all strategies, not separately to each one.
 
 ## Acceptance Rules
 
@@ -275,8 +261,10 @@ and diagnostics.
 
 The current detour guardrails for non-zero-camera avoidance routes are:
 
-- Maximum extra time: the greater of 10 minutes or 20 percent of original route time.
-- Maximum extra distance: 25 percent.
+- Balanced: maximum extra time is the greater of 15 minutes or 50 percent;
+  maximum distance is 1.5x the original.
+- Strict Privacy: maximum extra time is the greater of 30 minutes or 100 percent;
+  maximum distance is 2x the original.
 - Zero-camera candidate route: always accepted.
 
 ## Optional Routing Budget
@@ -318,7 +306,7 @@ rescan an avoidance route, add newly discovered camera-adjacent roads, and rerun
 avoidance. That helper is not part of the active route-selection path in the
 current build, and `MAX_AVOIDANCE_PASSES` is set to `0`.
 
-The active behavior today is full avoidance plus iterative relaxation. Any
+The active behavior today is bounded staged blocking plus fallback strategies. Any
 future work that re-enables multi-pass avoidance should update this document and
 ensure the README does not overstate the production path.
 
@@ -329,9 +317,9 @@ toast and persist the result in the FlockFree settings screen.
 
 Important statuses:
 
-- `APPLIED`: full avoidance found and accepted a better route.
-- `PARTIAL_APPLIED`: relaxation accepted a better route after unblocking one or
-  more lower-impact roads.
+- `APPLIED`: avoidance found and accepted a better route.
+- `PARTIAL_APPLIED`: a staged or fallback candidate improved the route while
+  some camera exposure remained.
 - `FALLBACK`: avoidance failed, timed out, or did not improve the route, so the
   original route was kept.
 - `SKIPPED_PARTIAL`: the recalculation was a lightweight start-point update.
@@ -399,8 +387,8 @@ logic:
 6. Check logcat for:
 
    - `FlockFree found ... camera-adjacent roads on route`
-   - `FlockFree full avoidance route has ... cameras`
-   - `FlockFree recalculated route ...` or relaxation/fallback status
+   - `FlockFree tier ... route has ... cameras`
+   - `FlockFree avoidance exhausted ...` or fallback status
 
 7. Reopen FlockFree settings and confirm `Last route check` and the route
    tradeoff summary match the route behavior.

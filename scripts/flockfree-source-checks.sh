@@ -12,13 +12,17 @@ log() {
 
 find_first_jar() {
 	local pattern="$1"
-	find "$HOME/.gradle/caches/modules-2/files-2.1" -path "$pattern" -name '*.jar' 2>/dev/null \
+	{ find "$HOME/.gradle/caches/modules-2/files-2.1" -path "$pattern" -name '*.jar' 2>/dev/null || true; } \
 		| sort -V \
 		| tail -n 1
 }
 
 log "Git whitespace check"
-git diff --check
+if [[ "${FLOCKFREE_SKIP_GIT_DIFF_CHECK:-0}" == "1" ]]; then
+	echo "git diff check skipped by FLOCKFREE_SKIP_GIT_DIFF_CHECK"
+else
+	git diff --check
+fi
 
 log "XML parse check"
 python3 - <<'PY'
@@ -203,7 +207,7 @@ if "simulateDetection(getMapActivity())" not in fragment:
     raise SystemExit("settings simulate button does not pass map activity for map-center fallback")
 if "refreshData()" not in camera_data:
     raise SystemExit("missing CameraData.refreshData()")
-if '"flockfree/cameras.geojson"' not in camera_data:
+if '"flockfree/cameras.geojson.gz"' not in camera_data:
     raise SystemExit("missing packaged bundled camera seed asset path")
 print("preference wiring ok")
 PY
@@ -252,6 +256,11 @@ required_data = [
     "databaseHelper.getCamerasNear(lat, lon, radiusMeters)",
     "file.getName() + \".tmp\"",
     "Unable to replace camera cache file",
+    "if (!isFlockCamera(point))",
+    "return getCamerasInBoundingBox(top, left, bottom, right)",
+    "buildDedupGrid(primaryCameras)",
+    "isDuplicateOfPrimary(osmCam, primaryCameras, primaryGrid)",
+    "distance <= DEDUP_DISTANCE_METERS",
 ]
 missing_data = [item for item in required_data if item not in camera_data]
 if missing_data:
@@ -282,6 +291,11 @@ from pathlib import Path
 
 route_provider = Path("OsmAnd/src/net/osmand/plus/routing/RouteProvider.java").read_text()
 avoidance_helper = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/CameraAvoidanceHelper.java").read_text()
+flockfree_layer = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/FlockFreeLayer.java").read_text()
+flockfree_engine = Path("OsmAnd/src/net/osmand/plus/onlinerouting/engine/FlockFreeEngine.java").read_text()
+online_helper = Path("OsmAnd/src/net/osmand/plus/onlinerouting/OnlineRoutingHelper.java").read_text()
+map_tracking = Path("OsmAnd/src/net/osmand/plus/base/MapViewTrackingUtilities.java").read_text()
+location_layer = Path("OsmAnd/src/net/osmand/plus/views/layers/PointLocationLayer.java").read_text()
 plugin = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/FlockFreePlugin.java").read_text()
 route_menu = Path("OsmAnd/src/net/osmand/plus/routepreparationmenu/MapRouteInfoMenu.java").read_text()
 route_status_card = Path("OsmAnd/src/net/osmand/plus/routepreparationmenu/cards/FlockFreeRouteStatusCard.java").read_text()
@@ -294,15 +308,17 @@ required_route_tokens = [
     "int originalRoadAssociationCount = 0;",
     "originalRoadAssociationCount += rwc.cameraCount;",
     "getFlockFreeAvoidanceRejectionReason(",
-    "FLOCKFREE_MAX_AVOIDANCE_EXTRA_TIME_SECONDS = 10 * 60",
-    "FLOCKFREE_MAX_AVOIDANCE_TIME_MULTIPLIER = 1.20d",
-    "FLOCKFREE_MAX_AVOIDANCE_DISTANCE_MULTIPLIER = 1.25d",
+    "FLOCKFREE_BALANCED_MAX_AVOIDANCE_EXTRA_TIME_SECONDS = 15 * 60",
+    "FLOCKFREE_BALANCED_MAX_AVOIDANCE_TIME_MULTIPLIER = 1.50d",
+    "FLOCKFREE_BALANCED_MAX_AVOIDANCE_DISTANCE_MULTIPLIER = 1.50d",
+    "MAX_AVOIDANCE_ROUTE_ATTEMPTS = 4",
+    "FLOCKFREE_OPTIONAL_ROUTING_BUDGET_MS = 15_000L",
     "getFlockFreeMaxAvoidanceExtraTimeSeconds(",
-    "Math.max(FLOCKFREE_MAX_AVOIDANCE_EXTRA_TIME_SECONDS, percentageAllowanceSeconds)",
+    "Math.max(maxConstantSeconds, percentageAllowanceSeconds)",
     "candidateCameraCount >= originalCameraCount",
     "candidateCameraCount == 0",
-    "recordAvoidanceApplied(blockedIds.size(), originalRouteCameraCount,",
-    "recordAvoidancePartial(blockedIds.size(),",
+    "finalRejectionReason = getFlockFreeAvoidanceRejectionReason(bestRoute,",
+    "recordAvoidancePartial(bestRouteBlockedSize,",
     "originalRouteCameraCount, originalRouteTimeSeconds",
 ]
 missing_route = [item for item in required_route_tokens if item not in route_provider]
@@ -326,10 +342,51 @@ required_helper_tokens = [
     "lastPartialRemainingCameraCount = Math.max(0, remainingCameraCount);",
     "MapUtils.getProjectionPoint31(cameraX31, cameraY31",
     "isCameraNearRoadGeometry(",
+    "new RouteEdgeIndex(routePoints, radiusMeters)",
+    "new RouteRoadIndex(roads, radiusMeters)",
+    "getCandidateRoadIndexes(camera.lat, camera.lon)",
 ]
 missing_helper = [item for item in required_helper_tokens if item not in avoidance_helper]
 if missing_helper:
     raise SystemExit("missing route avoidance helper wiring:\n" + "\n".join(missing_helper))
+
+required_layer_tokens = [
+    "getCamerasForScreen(cameraData, screenArea, tileBox.getZoom())",
+    "if (isInBounds(screenArea, camera.lat, camera.lon))",
+    "drawClusters(canvas, tileBox, visibleCameras)",
+]
+missing_layer = [item for item in required_layer_tokens if item not in flockfree_layer]
+if missing_layer:
+    raise SystemExit("missing map-layer visibility filtering:\n" + "\n".join(missing_layer))
+
+required_online_tokens = [
+    "MAX_CAMERA_PENALTY_AREAS = 500",
+    "profileOverride = viewing ? PROFILE_FAST : PROFILE_PRIVACY",
+    "customModel.put(\"areas\", areas)",
+    "return 30_000",
+    "counterpartProfile = currentPrivacy ? \"car_fast_ch\" : \"car_dynamic_lm\"",
+    "path.addAll(app.getRoutingHelper().getIntermediatePoints())",
+    "generation != onlineComparisonGeneration.get()",
+    "mapView.refreshMap()",
+]
+online_text = "\n".join([flockfree_engine, plugin])
+missing_online = [item for item in required_online_tokens if item not in online_text]
+if missing_online:
+    raise SystemExit("missing paired online routing safeguards:\n" + "\n".join(missing_online))
+
+required_http_tokens = [
+    "connection.setFixedLengthStreamingMode(requestBytes.length)",
+    "try (OutputStream output = connection.getOutputStream())",
+    "connection.disconnect()",
+]
+missing_http = [item for item in required_http_tokens if item not in online_helper]
+if missing_http:
+    raise SystemExit("missing online HTTP resource safeguards:\n" + "\n".join(missing_http))
+
+if "HIGH_SPEED_ANIMATION_THRESHOLD_MPS" in map_tracking + location_layer:
+    raise SystemExit("high-speed tracking still disables animation and causes marker jumps")
+if "MAX_LOCATION_ANIMATION_DURATION_MS = 5_000L" not in location_layer:
+    raise SystemExit("location marker animation does not cover normal multi-second GPS cadence")
 
 required_status_card_tokens = [
     "hasRouteCheckSummaryForRouteMenu()",
@@ -351,9 +408,10 @@ if missing_status_card:
 required_doc_tokens = [
     "actual route exposure",
     "road association",
-    "10 minutes",
-    "20 percent",
-    "25 percent",
+    "Balanced",
+    "15 minutes",
+    "1.5x",
+    "Strict Privacy",
     "route-check status card",
     "source metadata identifies them as Flock-related",
 ]

@@ -1,6 +1,7 @@
 package net.osmand.plus.plugins.flockfree;
 
 import android.Manifest;
+import android.os.Build;
 import android.os.Handler;
 import java.util.List;
 import android.os.Looper;
@@ -455,9 +456,17 @@ public class FlockFreeSettingsFragment extends BaseSettingsFragment {
 	}
 
 	private boolean ensureWifiScanLocationReady(@NonNull MapActivity mapActivity) {
-		if (!AndroidUtils.hasPermission(mapActivity, Manifest.permission.ACCESS_FINE_LOCATION)) {
+		boolean fineLocationGranted = AndroidUtils.hasPermission(
+				mapActivity, Manifest.permission.ACCESS_FINE_LOCATION);
+		boolean nearbyWifiGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+				|| AndroidUtils.hasPermission(mapActivity, Manifest.permission.NEARBY_WIFI_DEVICES);
+		if (!fineLocationGranted || !nearbyWifiGranted) {
+			String[] permissions = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+					? new String[] {Manifest.permission.ACCESS_FINE_LOCATION,
+						Manifest.permission.NEARBY_WIFI_DEVICES}
+					: new String[] {Manifest.permission.ACCESS_FINE_LOCATION};
 			ActivityCompat.requestPermissions(mapActivity,
-					new String[] {Manifest.permission.ACCESS_FINE_LOCATION},
+					permissions,
 					WIFI_LOCATION_REQUEST_CODE);
 			app.showShortToastMessage(R.string.flockfree_wifi_scan_location_permission_requested);
 			return false;

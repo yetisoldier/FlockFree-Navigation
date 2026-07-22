@@ -38,6 +38,8 @@ public class CameraAvoidanceHelper {
 
     private static final Log LOG = PlatformUtil.getLog(CameraAvoidanceHelper.class);
     private static final int UNKNOWN_ROUTE_TIME_SECONDS = -1;
+    private static final double ROUTE_INDEX_CELL_DEGREES = 0.01d;
+    private static final int MAX_ROUTE_INDEX_ASSIGNMENTS = 200_000;
 
     /**
      * Half-window in degrees for direction-aware camera filtering.
@@ -115,6 +117,177 @@ public class CameraAvoidanceHelper {
             this.roadsWithCameras = roadsWithCameras;
             this.cameraCount = cameraCount;
             this.createdAtMs = createdAtMs;
+        }
+    }
+
+    private static final class RouteEdge {
+        final LatLon from;
+        final LatLon to;
+
+        RouteEdge(@NonNull LatLon from, @NonNull LatLon to) {
+            this.from = from;
+            this.to = to;
+        }
+    }
+
+    /**
+     * Exact route-corridor checks still use MapUtils; this index only narrows the
+     * edge candidates that need that relatively expensive calculation.
+     */
+    private static final class RouteEdgeIndex {
+        final List<RouteEdge> allEdges = new ArrayList<>();
+        final Map<Long, List<RouteEdge>> edgeGrid = new HashMap<>();
+        boolean usable = true;
+
+        RouteEdgeIndex(@NonNull List<LatLon> routePoints, int radiusMeters) {
+            double latOffset = radiusMeters / 100_000d;
+            int assignmentCount = 0;
+            for (int i = 1; i < routePoints.size(); i++) {
+                LatLon from = routePoints.get(i - 1);
+                LatLon to = routePoints.get(i);
+                RouteEdge edge = new RouteEdge(from, to);
+                allEdges.add(edge);
+
+                if (!usable || Math.abs(from.getLongitude() - to.getLongitude()) > 180d) {
+                    usable = false;
+                    continue;
+                }
+                double maxAbsLat = Math.min(89.9d, Math.max(
+                        Math.abs(from.getLatitude()), Math.abs(to.getLatitude())) + latOffset);
+                double cosLatitude = Math.max(0.01d, Math.cos(Math.toRadians(maxAbsLat)));
+                double lonOffset = radiusMeters / (100_000d * cosLatitude);
+                int minLatBucket = routeIndexBucket(
+                        Math.min(from.getLatitude(), to.getLatitude()) - latOffset, 90d);
+                int maxLatBucket = routeIndexBucket(
+                        Math.max(from.getLatitude(), to.getLatitude()) + latOffset, 90d);
+                int minLonBucket = routeIndexBucket(
+                        Math.min(from.getLongitude(), to.getLongitude()) - lonOffset, 180d);
+                int maxLonBucket = routeIndexBucket(
+                        Math.max(from.getLongitude(), to.getLongitude()) + lonOffset, 180d);
+                long edgeAssignments = (long) (maxLatBucket - minLatBucket + 1)
+                        * (maxLonBucket - minLonBucket + 1);
+                if (edgeAssignments > MAX_ROUTE_INDEX_ASSIGNMENTS
+                        || assignmentCount + edgeAssignments > MAX_ROUTE_INDEX_ASSIGNMENTS) {
+                    usable = false;
+                    edgeGrid.clear();
+                    continue;
+                }
+                assignmentCount += (int) edgeAssignments;
+                for (int latBucket = minLatBucket; latBucket <= maxLatBucket; latBucket++) {
+                    for (int lonBucket = minLonBucket; lonBucket <= maxLonBucket; lonBucket++) {
+                        edgeGrid.computeIfAbsent(routeIndexKey(latBucket, lonBucket), ignored -> new ArrayList<>())
+                                .add(edge);
+                    }
+                }
+            }
+            if (!usable) {
+                edgeGrid.clear();
+            }
+        }
+
+        @NonNull
+        List<RouteEdge> getCandidateEdges(double lat, double lon) {
+            if (!usable) {
+                return allEdges;
+            }
+            List<RouteEdge> candidates = edgeGrid.get(routeIndexKey(
+                    routeIndexBucket(lat, 90d), routeIndexBucket(lon, 180d)));
+            return candidates != null ? candidates : Collections.emptyList();
+        }
+
+        private static int routeIndexBucket(double coordinate, double offset) {
+            return (int) Math.floor((coordinate + offset) / ROUTE_INDEX_CELL_DEGREES);
+        }
+
+        private static long routeIndexKey(int latBucket, int lonBucket) {
+            return ((long) latBucket << 32) ^ (lonBucket & 0xffffffffL);
+        }
+    }
+
+    /** Spatial prefilter for route road geometries; exact 31-bit geometry checks remain authoritative. */
+    private static final class RouteRoadIndex {
+        final List<Integer> allRoadIndexes = new ArrayList<>();
+        final Map<Long, List<Integer>> roadGrid = new HashMap<>();
+        boolean usable = true;
+
+        RouteRoadIndex(@NonNull List<RouteSegmentResult> roads, int radiusMeters) {
+            int assignmentCount = 0;
+            for (int roadIndex = 1; roadIndex < roads.size() - 1; roadIndex++) {
+                RouteSegmentResult road = roads.get(roadIndex);
+                RouteDataObject object = road.getObject();
+                if (object == null) {
+                    continue;
+                }
+                allRoadIndexes.add(roadIndex);
+                if (!usable) {
+                    continue;
+                }
+
+                int start = Math.min(road.getStartPointIndex(), road.getEndPointIndex());
+                int end = Math.max(road.getStartPointIndex(), road.getEndPointIndex());
+                double minLat = Double.MAX_VALUE;
+                double maxLat = -Double.MAX_VALUE;
+                double minLon = Double.MAX_VALUE;
+                double maxLon = -Double.MAX_VALUE;
+                for (int pointIndex = start; pointIndex <= end; pointIndex++) {
+                    double lat = MapUtils.get31LatitudeY(object.getPoint31YTile(pointIndex));
+                    double lon = MapUtils.get31LongitudeX(object.getPoint31XTile(pointIndex));
+                    minLat = Math.min(minLat, lat);
+                    maxLat = Math.max(maxLat, lat);
+                    minLon = Math.min(minLon, lon);
+                    maxLon = Math.max(maxLon, lon);
+                }
+                if (maxLon - minLon > 180d) {
+                    usable = false;
+                    roadGrid.clear();
+                    continue;
+                }
+
+                double latOffset = radiusMeters / 100_000d;
+                double maxAbsLat = Math.min(89.9d, Math.max(Math.abs(minLat), Math.abs(maxLat)) + latOffset);
+                double cosLatitude = Math.max(0.01d, Math.cos(Math.toRadians(maxAbsLat)));
+                double lonOffset = radiusMeters / (100_000d * cosLatitude);
+                int minLatBucket = roadIndexBucket(minLat - latOffset, 90d);
+                int maxLatBucket = roadIndexBucket(maxLat + latOffset, 90d);
+                int minLonBucket = roadIndexBucket(minLon - lonOffset, 180d);
+                int maxLonBucket = roadIndexBucket(maxLon + lonOffset, 180d);
+                long roadAssignments = (long) (maxLatBucket - minLatBucket + 1)
+                        * (maxLonBucket - minLonBucket + 1);
+                if (roadAssignments > MAX_ROUTE_INDEX_ASSIGNMENTS
+                        || assignmentCount + roadAssignments > MAX_ROUTE_INDEX_ASSIGNMENTS) {
+                    usable = false;
+                    roadGrid.clear();
+                    continue;
+                }
+                assignmentCount += (int) roadAssignments;
+                for (int latBucket = minLatBucket; latBucket <= maxLatBucket; latBucket++) {
+                    for (int lonBucket = minLonBucket; lonBucket <= maxLonBucket; lonBucket++) {
+                        roadGrid.computeIfAbsent(routeIndexKey(latBucket, lonBucket), ignored -> new ArrayList<>())
+                                .add(roadIndex);
+                    }
+                }
+            }
+            if (!usable) {
+                roadGrid.clear();
+            }
+        }
+
+        @NonNull
+        List<Integer> getCandidateRoadIndexes(double lat, double lon) {
+            if (!usable) {
+                return allRoadIndexes;
+            }
+            List<Integer> candidates = roadGrid.get(routeIndexKey(
+                    roadIndexBucket(lat, 90d), roadIndexBucket(lon, 180d)));
+            return candidates != null ? candidates : Collections.emptyList();
+        }
+
+        private static int roadIndexBucket(double coordinate, double offset) {
+            return (int) Math.floor((coordinate + offset) / ROUTE_INDEX_CELL_DEGREES);
+        }
+
+        private static long routeIndexKey(int latBucket, int lonBucket) {
+            return ((long) latBucket << 32) ^ (lonBucket & 0xffffffffL);
         }
     }
 
@@ -342,8 +515,13 @@ public class CameraAvoidanceHelper {
         double[] bounds = getRouteCorridorBounds(routePoints, radiusMeters);
         List<CameraData.CameraPoint> candidates = cameraData.getCamerasInBoundingBox(
                 bounds[0], bounds[1], bounds[2], bounds[3]);
+        if (candidates.isEmpty()) {
+            return result;
+        }
+        RouteEdgeIndex routeEdgeIndex = routePoints.size() > 1
+                ? new RouteEdgeIndex(routePoints, radiusMeters) : null;
         for (CameraData.CameraPoint cam : candidates) {
-            if (isCameraNearRoute(cam, routePoints, radiusMeters)) {
+            if (isCameraNearRoute(cam, routePoints, routeEdgeIndex, radiusMeters)) {
                 result.add(cam);
             }
         }
@@ -375,14 +553,12 @@ public class CameraAvoidanceHelper {
         }
 
         List<CameraData.CameraPoint> cameras = findCamerasNearRouteLocations(locations, radiusMeters);
+        RouteRoadIndex roadIndex = cameras.isEmpty() ? null : new RouteRoadIndex(roads, radiusMeters);
         for (CameraData.CameraPoint camera : cameras) {
             int cameraX31 = MapUtils.get31TileNumberX(camera.lon);
             int cameraY31 = MapUtils.get31TileNumberY(camera.lat);
             boolean matchedAny = false;
-            for (int i = 0; i < roads.size(); i++) {
-                if (i == 0 || i == roads.size() - 1) {
-                    continue;
-                }
+            for (int i : roadIndex.getCandidateRoadIndexes(camera.lat, camera.lon)) {
                 RouteSegmentResult road = roads.get(i);
                 RouteDataObject obj = road.getObject();
                 if (obj == null) {
@@ -457,8 +633,10 @@ public class CameraAvoidanceHelper {
      * Clears the route-association cache. Should be called when camera data is refreshed
      * or when the avoidance radius changes.
      */
-    public synchronized void clearAssociationCache() {
-        associationCache.clear();
+    public void clearAssociationCache() {
+        synchronized (associationCache) {
+            associationCache.clear();
+        }
         LOG.info("FlockFree route-association cache cleared");
     }
 
@@ -493,15 +671,18 @@ public class CameraAvoidanceHelper {
         int datasetVersion = getDatasetVersion(cameraData);
         if (routeHash != null) {
             RouteCacheKey cacheKey = new RouteCacheKey(routeHash, datasetVersion, radiusMeters);
-            CameraRoadAssociations cached = associationCache.get(cacheKey);
-            if (cached != null) {
-                long age = System.currentTimeMillis() - cached.createdAtMs;
-                if (age < CACHE_TTL_MS) {
-                    LOG.info("FlockFree route-association cache HIT (age=" + age + "ms, entries=" + associationCache.size() + ")");
-                    return new ArrayList<>(cached.roadsWithCameras);
-                } else {
-                    associationCache.remove(cacheKey);
-                    LOG.info("FlockFree route-association cache STALE (age=" + age + "ms, evicting)");
+            synchronized (associationCache) {
+                CameraRoadAssociations cached = associationCache.get(cacheKey);
+                if (cached != null) {
+                    long age = System.currentTimeMillis() - cached.createdAtMs;
+                    if (age < CACHE_TTL_MS) {
+                        LOG.info("FlockFree route-association cache HIT (age=" + age
+                                + "ms, entries=" + associationCache.size() + ")");
+                        return new ArrayList<>(cached.roadsWithCameras);
+                    } else {
+                        associationCache.remove(cacheKey);
+                        LOG.info("FlockFree route-association cache STALE (age=" + age + "ms, evicting)");
+                    }
                 }
             }
         }
@@ -520,16 +701,14 @@ public class CameraAvoidanceHelper {
         Map<Long, Integer> roadIdToCameraCount = new HashMap<>();
         int directionFilteredCount = 0;
         int omnidirectionalCount = 0;
+        RouteRoadIndex roadIndex = cameras.isEmpty() ? null : new RouteRoadIndex(roads, radiusMeters);
         for (CameraData.CameraPoint camera : cameras) {
             int cameraX31 = MapUtils.get31TileNumberX(camera.lon);
             int cameraY31 = MapUtils.get31TileNumberY(camera.lat);
             float cameraBearing = camera.getBearing();
             boolean hasBearing = cameraBearing > 0f;
             boolean matchedAny = false;
-            for (int i = 0; i < roads.size(); i++) {
-                if (i == 0 || i == roads.size() - 1) {
-                    continue;  // skip first/last segments
-                }
+            for (int i : roadIndex.getCandidateRoadIndexes(camera.lat, camera.lon)) {
                 RouteSegmentResult road = roads.get(i);
                 RouteDataObject obj = road.getObject();
                 if (obj == null) {
@@ -600,8 +779,10 @@ public class CameraAvoidanceHelper {
             RouteCacheKey cacheKey = new RouteCacheKey(routeHash, datasetVersion, radiusMeters);
             CameraRoadAssociations associations = new CameraRoadAssociations(
                     new ArrayList<>(result), cameras.size(), System.currentTimeMillis());
-            associationCache.put(cacheKey, associations);
-            LOG.info("FlockFree route-association cache STORE (entries=" + associationCache.size() + ")");
+            synchronized (associationCache) {
+                associationCache.put(cacheKey, associations);
+                LOG.info("FlockFree route-association cache STORE (entries=" + associationCache.size() + ")");
+            }
         }
         // --- End cache store ---
 
@@ -703,9 +884,12 @@ public class CameraAvoidanceHelper {
             minLon = Math.min(minLon, p.getLongitude());
             maxLon = Math.max(maxLon, p.getLongitude());
         }
-        // Expand by radius in degrees (approximate)
-        double latOffset = radiusMeters / 111000.0;
-        double lonOffset = radiusMeters / (111000.0 * Math.cos(Math.toRadians((minLat + maxLat) / 2)));
+        // Use conservative offsets so the bounding-box prefilter cannot exclude a
+        // camera that the precise corridor check would accept.
+        double latOffset = radiusMeters / 100_000d;
+        double maxAbsLat = Math.min(89.9d, Math.max(Math.abs(minLat), Math.abs(maxLat)) + latOffset);
+        double cosLatitude = Math.max(0.01d, Math.cos(Math.toRadians(maxAbsLat)));
+        double lonOffset = radiusMeters / (100_000d * cosLatitude);
         return new double[]{
                 maxLat + latOffset,  // top
                 minLon - lonOffset,  // left
@@ -714,19 +898,21 @@ public class CameraAvoidanceHelper {
         };
     }
 
-    private boolean isCameraNearRoute(@NonNull CameraData.CameraPoint cam, @NonNull List<LatLon> routePoints,
+    private boolean isCameraNearRoute(@NonNull CameraData.CameraPoint cam,
+                                      @NonNull List<LatLon> routePoints,
+                                      @Nullable RouteEdgeIndex routeEdgeIndex,
                                       int radiusMeters) {
         if (routePoints.size() == 1) {
             LatLon point = routePoints.get(0);
             return MapUtils.getDistance(point.getLatitude(), point.getLongitude(), cam.lat, cam.lon) <= radiusMeters;
         }
-        for (int i = 1; i < routePoints.size(); i++) {
-            LatLon from = routePoints.get(i - 1);
-            LatLon to = routePoints.get(i);
+        List<RouteEdge> candidateEdges = routeEdgeIndex != null
+                ? routeEdgeIndex.getCandidateEdges(cam.lat, cam.lon) : Collections.emptyList();
+        for (RouteEdge edge : candidateEdges) {
             double distance = MapUtils.getOrthogonalDistance(
                     cam.lat, cam.lon,
-                    from.getLatitude(), from.getLongitude(),
-                    to.getLatitude(), to.getLongitude());
+                    edge.from.getLatitude(), edge.from.getLongitude(),
+                    edge.to.getLatitude(), edge.to.getLongitude());
             if (distance <= radiusMeters) {
                 return true;
             }

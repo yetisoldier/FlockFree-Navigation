@@ -750,7 +750,7 @@ Camera alerts use toast + vibration only — no persistent notification:
 - `showCameraAlert()` fires a toast with brand and distance info
 - `vibrateForCameraAlert()` triggers a buzz-pause-buzz pattern via `Vibrator` service
 - Cooldown logic: 60s between different cameras, 30s for the same camera
-- Debug trigger via ADB broadcast: `adb shell am broadcast -a net.osmand.flockfree.TEST_ALERT`
+- Bench testing is available through **Check map center alert** in FlockFree settings.
 
 ### 6.8 Permissions
 

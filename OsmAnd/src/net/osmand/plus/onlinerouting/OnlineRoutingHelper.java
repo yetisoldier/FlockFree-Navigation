@@ -29,6 +29,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -154,40 +155,44 @@ public class OnlineRoutingHelper {
 		long tm = System.currentTimeMillis();
 		LOG.info("Calling online routing: " + url);
 		HttpURLConnection connection = NetworkUtils.getHttpURLConnection(url);
-		connection.setRequestProperty("User-Agent", Version.getFullVersion(app));
-		connection.setRequestMethod(method);
-		connection.setConnectTimeout(connectTimeout > 0 ? connectTimeout : AndroidNetworkUtils.CONNECT_TIMEOUT);
-		connection.setReadTimeout(readTimeout > 0 ? readTimeout : AndroidNetworkUtils.READ_TIMEOUT);
-		// set custom headers
-		if (headers != null) {
-			for (String key :  headers.keySet()) {
-				connection.setRequestProperty(key, headers.get(key));
-			}
-		}
-		// send body for non GET requests
-		if (!method.equals("GET") && body != null) {
-			connection.setRequestProperty("Content-Length", String.valueOf(body.length()));
-			connection.setDoOutput(true);
-			connection.getOutputStream().write(body.getBytes(StandardCharsets.UTF_8));
-		}
-		StringBuilder content = new StringBuilder();
-		BufferedReader reader;
-		// .getResponseCode() automatically connects
-		if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
-			reader = new BufferedReader(new InputStreamReader(getInputStream(connection)));
-		} else {
-			reader = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
-		}
-		String s;
-		while ((s = reader.readLine()) != null) {
-			content.append(s);
-		}
 		try {
-			reader.close();
-		} catch (IOException ignored) {
+			connection.setRequestProperty("User-Agent", Version.getFullVersion(app));
+			connection.setRequestMethod(method);
+			connection.setConnectTimeout(connectTimeout > 0 ? connectTimeout : AndroidNetworkUtils.CONNECT_TIMEOUT);
+			connection.setReadTimeout(readTimeout > 0 ? readTimeout : AndroidNetworkUtils.READ_TIMEOUT);
+			if (headers != null) {
+				for (Map.Entry<String, String> header : headers.entrySet()) {
+					connection.setRequestProperty(header.getKey(), header.getValue());
+				}
+			}
+			if (!method.equals("GET") && body != null) {
+				byte[] requestBytes = body.getBytes(StandardCharsets.UTF_8);
+				connection.setFixedLengthStreamingMode(requestBytes.length);
+				connection.setDoOutput(true);
+				try (OutputStream output = connection.getOutputStream()) {
+					output.write(requestBytes);
+				}
+			}
+
+			int responseCode = connection.getResponseCode();
+			InputStream responseStream = responseCode == HttpURLConnection.HTTP_OK
+					? getInputStream(connection) : connection.getErrorStream();
+			if (responseStream == null) {
+				throw new IOException("Online routing returned HTTP " + responseCode + " without a response body");
+			}
+			StringBuilder content = new StringBuilder();
+			try (BufferedReader reader = new BufferedReader(
+					new InputStreamReader(responseStream, StandardCharsets.UTF_8))) {
+				String line;
+				while ((line = reader.readLine()) != null) {
+					content.append(line);
+				}
+			}
+			LOG.info(String.format("Online routing request finished %d ms", System.currentTimeMillis() - tm));
+			return content.toString();
+		} finally {
+			connection.disconnect();
 		}
-		LOG.info(String.format("Online routing request finished %d ms", System.currentTimeMillis() - tm));
-		return content.toString();
 	}
 
 	@Nullable

@@ -226,8 +226,12 @@ public class WifiScannerManager {
 	// ───────────────────────────────────────────────────────────
 
 	private boolean hasLocationPermission() {
-		return app.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+		boolean fineLocationGranted = app.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
 				== PackageManager.PERMISSION_GRANTED;
+		boolean nearbyWifiGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+				|| app.checkSelfPermission(Manifest.permission.NEARBY_WIFI_DEVICES)
+				== PackageManager.PERMISSION_GRANTED;
+		return fineLocationGranted && nearbyWifiGranted;
 	}
 
 	public boolean isReadyToScan() {

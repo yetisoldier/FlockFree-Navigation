@@ -41,10 +41,11 @@ public class CameraData {
 
     private static final String CAMERA_DATA_URL = FlockFreePreferences.CAMERA_DATA_URL;
     private static final String CACHE_FILENAME = "cameras.geojson";
-    private static final String BUNDLED_SEED_ASSET = "flockfree/cameras.geojson";
+    private static final String BUNDLED_SEED_ASSET = "flockfree/cameras.geojson.gz";
     private static final long WEEK_MS = FlockFreePreferences.REFRESH_INTERVAL_MS;
     private static final long MAX_GEOJSON_BYTES = 128L * 1024 * 1024;
     private static final double SPATIAL_CELL_DEGREES = 0.05d;
+    private static final double DEDUP_CELL_DEGREES = 0.001d;
     private static final int OVERPASS_TIMEOUT_MS = 60_000;
     private static final int OVERPASS_CONNECT_TIMEOUT_MS = 30_000;
     private static final String DEFAULT_OVERPASS_ENDPOINT = "https://overpass-api.de/api/interpreter";
@@ -266,6 +267,13 @@ public class CameraData {
                 point.direction = tags.optString("camera:direction", tags.optString("direction", null));
                 point.bearing = parseBearing(point.direction);
 
+                // Keep the secondary source inside the same Flock-only boundary as the
+                // primary feed. Overpass returns every ALPR node in the query area.
+                if (!isFlockCamera(point)) {
+                    skipped++;
+                    continue;
+                }
+
                 // Deduplicate by rounded coords
                 String dedupKey = Math.round(lat * 1_000_000d) + ":" + Math.round(lon * 1_000_000d);
                 if (!seenKeys.add(dedupKey)) {
@@ -373,17 +381,10 @@ public class CameraData {
         }
         List<CameraPoint> merged = new ArrayList<>(primaryCameras.size() + osmCameras.size());
         merged.addAll(primaryCameras);
+        Map<Long, List<CameraPoint>> primaryGrid = buildDedupGrid(primaryCameras);
         int deduped = 0;
         for (CameraPoint osmCam : osmCameras) {
-            boolean isDuplicate = false;
-            for (CameraPoint primary : primaryCameras) {
-                double dist = net.osmand.util.MapUtils.getDistance(
-                        osmCam.lat, osmCam.lon, primary.lat, primary.lon);
-                if (dist <= DEDUP_DISTANCE_METERS) {
-                    isDuplicate = true;
-                    break;
-                }
-            }
+            boolean isDuplicate = isDuplicateOfPrimary(osmCam, primaryCameras, primaryGrid);
             if (!isDuplicate) {
                 merged.add(osmCam);
             } else {
@@ -394,6 +395,76 @@ public class CameraData {
             LOG.info("Merged OSM cameras: " + (osmCameras.size() - deduped) + " added, " + deduped + " duplicates removed");
         }
         return merged;
+    }
+
+    @NonNull
+    private static Map<Long, List<CameraPoint>> buildDedupGrid(@NonNull List<CameraPoint> cameras) {
+        Map<Long, List<CameraPoint>> grid = new HashMap<>();
+        for (CameraPoint camera : cameras) {
+            long key = getDedupGridKey(getDedupLatBucket(camera.lat), getDedupLonBucket(camera.lon));
+            grid.computeIfAbsent(key, ignored -> new ArrayList<>()).add(camera);
+        }
+        return grid;
+    }
+
+    private static boolean isDuplicateOfPrimary(
+            @NonNull CameraPoint camera,
+            @NonNull List<CameraPoint> allPrimaryCameras,
+            @NonNull Map<Long, List<CameraPoint>> primaryGrid) {
+        int latRadius = (int) Math.ceil((DEDUP_DISTANCE_METERS / 111_000d) / DEDUP_CELL_DEGREES);
+        double cosLatitude = Math.abs(Math.cos(Math.toRadians(camera.lat)));
+        if (cosLatitude < 0.01d) {
+            return containsDuplicate(camera, allPrimaryCameras);
+        }
+        int lonRadius = (int) Math.ceil(
+                (DEDUP_DISTANCE_METERS / (111_000d * cosLatitude)) / DEDUP_CELL_DEGREES);
+        double lonSearchDegrees = lonRadius * DEDUP_CELL_DEGREES;
+        if (camera.lon - lonSearchDegrees <= -180d || camera.lon + lonSearchDegrees >= 180d) {
+            return containsDuplicate(camera, allPrimaryCameras);
+        }
+        // Near the poles longitude buckets become very wide in angular terms. Those
+        // locations are rare, and a linear scan is safer than allocating thousands of buckets.
+        if (lonRadius > 100) {
+            return containsDuplicate(camera, allPrimaryCameras);
+        }
+
+        int centerLatBucket = getDedupLatBucket(camera.lat);
+        int centerLonBucket = getDedupLonBucket(camera.lon);
+        for (int latBucket = centerLatBucket - latRadius;
+             latBucket <= centerLatBucket + latRadius; latBucket++) {
+            for (int lonBucket = centerLonBucket - lonRadius;
+                 lonBucket <= centerLonBucket + lonRadius; lonBucket++) {
+                List<CameraPoint> bucket = primaryGrid.get(getDedupGridKey(latBucket, lonBucket));
+                if (bucket != null && containsDuplicate(camera, bucket)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean containsDuplicate(@NonNull CameraPoint camera,
+                                             @NonNull List<CameraPoint> candidates) {
+        for (CameraPoint candidate : candidates) {
+            double distance = net.osmand.util.MapUtils.getDistance(
+                    camera.lat, camera.lon, candidate.lat, candidate.lon);
+            if (distance <= DEDUP_DISTANCE_METERS) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static int getDedupLatBucket(double lat) {
+        return (int) Math.floor((lat + 90d) / DEDUP_CELL_DEGREES);
+    }
+
+    private static int getDedupLonBucket(double lon) {
+        return (int) Math.floor((lon + 180d) / DEDUP_CELL_DEGREES);
+    }
+
+    private static long getDedupGridKey(int latBucket, int lonBucket) {
+        return ((long) latBucket << 32) ^ (lonBucket & 0xffffffffL);
     }
 
     /**
@@ -409,9 +480,8 @@ public class CameraData {
     @NonNull
     public synchronized List<CameraPoint> getMergedCamerasInBoundingBox(
             double top, double left, double bottom, double right) {
-        List<CameraPoint> primary = getCamerasInBoundingBox(top, left, bottom, right);
-        List<CameraPoint> osm = getOsmCamerasInBoundingBox(top, left, bottom, right);
-        return mergeWithOsmCameras(primary, osm);
+        // getCamerasInBoundingBox already includes and deduplicates the OSM overlay.
+        return getCamerasInBoundingBox(top, left, bottom, right);
     }
 
     /**
@@ -424,21 +494,8 @@ public class CameraData {
      */
     @NonNull
     public synchronized List<CameraPoint> getMergedCamerasNear(double lat, double lon, double radiusMeters) {
-        List<CameraPoint> primary = getCamerasNear(lat, lon, radiusMeters);
-        List<CameraPoint> osm = getOsmCamerasInBoundingBox(
-                lat + (radiusMeters / 111_000d),
-                lon - (radiusMeters / (111_000d * Math.max(0.01d, Math.cos(Math.toRadians(lat))))),
-                lat - (radiusMeters / 111_000d),
-                lon + (radiusMeters / (111_000d * Math.max(0.01d, Math.cos(Math.toRadians(lat))))));
-        // Filter OSM results by precise distance
-        List<CameraPoint> osmFiltered = new ArrayList<>();
-        for (CameraPoint cam : osm) {
-            double dist = net.osmand.util.MapUtils.getDistance(cam.lat, cam.lon, lat, lon);
-            if (dist <= radiusMeters) {
-                osmFiltered.add(cam);
-            }
-        }
-        return mergeWithOsmCameras(primary, osmFiltered);
+        // getCamerasNear already includes, distance-filters, and deduplicates the overlay.
+        return getCamerasNear(lat, lon, radiusMeters);
     }
 
     /**

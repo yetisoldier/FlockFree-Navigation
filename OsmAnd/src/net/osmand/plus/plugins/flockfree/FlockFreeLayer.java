@@ -183,17 +183,24 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         if (tileBox.getZoom() >= MIN_ZOOM_TO_SHOW) {
             CameraData cameraData = plugin.getCameraData();
             if (cameraData.isDataLoaded()) {
-                List<CameraData.CameraPoint> cameras = getCamerasForScreen(cameraData, screenArea, tileBox.getZoom());
+                List<CameraData.CameraPoint> queryCameras =
+                        getCamerasForScreen(cameraData, screenArea, tileBox.getZoom());
                 visibleCameras.clear();
-                visibleCameras.addAll(cameras);
+                // The query cache deliberately covers a padded area so map movement does not
+                // repeatedly hit SQLite. Only project and draw the cameras on the current screen.
+                for (CameraData.CameraPoint camera : queryCameras) {
+                    if (isInBounds(screenArea, camera.lat, camera.lon)) {
+                        visibleCameras.add(camera);
+                    }
+                }
                 if (tileBox.getZoom() >= CLUSTER_MIN_ZOOM) {
                     // Show individual markers
-                    for (CameraData.CameraPoint camera : cameras) {
+                    for (CameraData.CameraPoint camera : visibleCameras) {
                         drawCamera(canvas, tileBox, camera);
                     }
                 } else {
                     // Cluster cameras using grid-based spatial clustering
-                    drawClusters(canvas, tileBox, cameras);
+                    drawClusters(canvas, tileBox, visibleCameras);
                 }
             } else {
                 clearCameraQueryCache();

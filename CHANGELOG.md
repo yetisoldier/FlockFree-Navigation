@@ -4,6 +4,24 @@ All notable changes to FlockFree Navigation are documented here.
 
 ## [Unreleased]
 
+### Fixed
+- Clean installs now load the packaged compressed camera seed without requiring a network connection.
+- OSM Overpass cameras now pass the same Flock-only classifier during parse, storage, and reads.
+- Privacy candidates rejected by time or distance guardrails can no longer become the selected route.
+- Overlapping OSM refresh jobs are suppressed, and the externally triggerable debug alert receiver was removed.
+- Android 13+ nearby Wi-Fi permission handling is wired for Wi-Fi camera scanning.
+- High-speed navigation keeps position animation enabled, eliminating the intentional GPS-to-GPS marker jumps introduced above roughly 34 mph; longer normal fix intervals can animate for up to five seconds.
+- FlockFree online routing now calculates whichever Fastest/Privacy counterpart is missing, preserves intermediate stops, ignores stale comparison jobs, and refreshes the selected route on the preview map.
+- Online POST requests now use UTF-8 byte lengths and close streams/connections reliably; FlockFree GraphHopper requests use longer stability-oriented timeouts.
+
+### Performance
+- Camera avoidance is capped at four optional full route searches across all strategies with a 15-second between-attempt budget.
+- Redundant OSM overlay queries and merge passes were removed from merged camera lookups.
+- Primary/OSM camera deduplication now uses a fine spatial index before the authoritative 10-meter distance check instead of comparing every pair.
+- Route-corridor and camera-to-road matching now use bounded spatial indexes before exact geometry checks, with automatic full-scan fallback for unusual geometries.
+- The camera layer now projects, clusters, draws, and hit-tests only cameras inside the current viewport while retaining its padded SQLite query cache.
+- Online camera penalty models are capped at the 500 cameras nearest the requested corridor, preventing multi-megabyte custom-model requests on long routes.
+
 ### Improved
 - BLE reliability: write failures now retry instead of killing the connection. A 5-second write timeout watchdog detects stalled BLE callbacks and recovers gracefully. Queue overflow protection drops stale data instead of piling up. Auto-reconnect retries increased from 3 to 10 with 2-second back-off.
 - BLE throughput: chunk size now uses the negotiated MTU (up to 244 bytes) instead of the default 20 bytes, reducing the number of BLE writes per GPS fix from 4 to 1.

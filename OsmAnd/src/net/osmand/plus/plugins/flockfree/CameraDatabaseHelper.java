@@ -119,8 +119,12 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 			"CREATE INDEX idx_osm_cameras_lat_lon ON " + OSM_TABLE_NAME +
 			" (" + OSM_COL_LAT + ", " + OSM_COL_LON + ");";
 
+	private static final String OSM_FLOCK_SELECTION =
+			"(LOWER(COALESCE(" + OSM_COL_MANUFACTURER + ", '')) LIKE '%flock%' OR " +
+			"LOWER(COALESCE(" + OSM_COL_BRAND + ", '')) LIKE '%flock%' OR " +
+			"LOWER(COALESCE(" + OSM_COL_OPERATOR + ", '')) LIKE '%flock%')";
 	private static final String OSM_COUNT_SQL =
-			"SELECT COUNT(*) FROM " + OSM_TABLE_NAME;
+			"SELECT COUNT(*) FROM " + OSM_TABLE_NAME + " WHERE " + OSM_FLOCK_SELECTION;
 
 	public CameraDatabaseHelper(@NonNull Context context) {
 		super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -428,6 +432,9 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 			long timestamp = System.currentTimeMillis();
 			int idCounter = 0;
 			for (CameraData.CameraPoint cam : cameras) {
+				if (!CameraData.isFlockCamera(cam)) {
+					continue;
+				}
 				ContentValues values = new ContentValues(8);
 				values.put(OSM_COL_ID, idCounter++);
 				values.put(OSM_COL_LAT, cam.lat);
@@ -491,7 +498,8 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 			double top, double left, double bottom, double right) {
 		List<CameraData.CameraPoint> result = new ArrayList<>();
 		SQLiteDatabase db = getReadableDatabase();
-		String selection = OSM_COL_LAT + " >= ? AND " + OSM_COL_LAT + " <= ? AND "
+		String selection = OSM_FLOCK_SELECTION + " AND "
+				+ OSM_COL_LAT + " >= ? AND " + OSM_COL_LAT + " <= ? AND "
 				+ OSM_COL_LON + " >= ? AND " + OSM_COL_LON + " <= ?";
 		String[] selectionArgs = {
 				String.valueOf(bottom),
@@ -534,7 +542,8 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 	 */
 	public boolean hasOsmData() {
 		SQLiteDatabase db = getReadableDatabase();
-		try (Cursor cursor = db.rawQuery("SELECT EXISTS(SELECT 1 FROM " + OSM_TABLE_NAME + " LIMIT 1)", null)) {
+		try (Cursor cursor = db.rawQuery("SELECT EXISTS(SELECT 1 FROM " + OSM_TABLE_NAME
+				+ " WHERE " + OSM_FLOCK_SELECTION + " LIMIT 1)", null)) {
 			return cursor.moveToFirst() && cursor.getInt(0) == 1;
 		} catch (Exception e) {
 			LOG.error("Failed to check OSM camera database for data", e);
