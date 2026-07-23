@@ -1,5 +1,9 @@
 # FlockFree Overnight Handoff
 
+> **Current handoff:** For the active `codex/phase1-stability` work from July 22,
+> 2026, use [HANDOFF-2026-07-22.md](HANDOFF-2026-07-22.md). This file is retained
+> as historical background and describes an older `master`-branch state.
+
 ## Repository State
 
 - Repository: `https://github.com/yetisoldier/FlockFree-Navigation`

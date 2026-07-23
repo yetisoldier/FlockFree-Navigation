@@ -2,6 +2,9 @@
 
 FlockFree Navigation is an OsmAnd fork with an in-tree FlockFree plugin for Flock camera awareness, optional CYD companion hardware integration, traffic-aware routing with user-provided TomTom keys, and community reporting.
 
+Current development status and next-session testing are documented in
+[the July 22, 2026 handoff](docs/HANDOFF-2026-07-22.md).
+
 ![FlockFree Splash](docs/screenshots/ff-splash-branding.png)
 
 ## Features
