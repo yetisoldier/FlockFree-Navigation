@@ -374,7 +374,9 @@ required_online_tokens = [
     "MAX_CAMERA_PENALTY_AREAS = 500",
     "profileOverride = viewing ? PROFILE_FAST : PROFILE_PRIVACY",
     'CAMERA_ZONES_AREA_ID = "camera_zones"',
+    'CAMERA_ZONE_PENALTY = 0.01',
     'geom.put("type", "MultiPolygon")',
+    '.put("if", "in_" + CAMERA_ZONES_AREA_ID)',
     'priorityRules=" + priority.length()',
     "customModel.put(\"areas\", areas)",
     "return 30_000",
@@ -402,6 +404,9 @@ if "userInitiatedRouteSwitch" in plugin:
     raise SystemExit("online comparison can remain suppressed after switching a cached route card")
 if 'String areaId = "cam_" + i' in flockfree_engine:
     raise SystemExit("online camera model still emits one GraphHopper rule set per camera")
+for stale_penalty in ["RAMP_PENALTY", "ARTERIAL_PENALTY", "SURFACE_PENALTY", "road_class_link == true"]:
+    if stale_penalty in flockfree_engine:
+        raise SystemExit(f"online camera model still has road-class-specific penalty: {stale_penalty}")
 
 required_address_search_tokens = [
     "isLikelyStreetAddress(text)",

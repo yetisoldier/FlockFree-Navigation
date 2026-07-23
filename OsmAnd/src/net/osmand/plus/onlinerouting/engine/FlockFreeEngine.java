@@ -217,9 +217,7 @@ public class FlockFreeEngine extends JsonOnlineRoutingEngine {
 
 	// --- Camera Penalty Overlay ---
 
-	private static final double RAMP_PENALTY = 0.1;
-	private static final double ARTERIAL_PENALTY = 0.5;
-	private static final double SURFACE_PENALTY = 0.7;
+	private static final double CAMERA_ZONE_PENALTY = 0.01;
 	private static final String CAMERA_ZONES_AREA_ID = "camera_zones";
 
 	/**
@@ -307,16 +305,12 @@ public class FlockFreeEngine extends JsonOnlineRoutingEngine {
 			area.put("geometry", geom);
 			areas.put(CAMERA_ZONES_AREA_ID, area);
 
-			String inCameraZones = "in_" + CAMERA_ZONES_AREA_ID;
+			// Penalize every drivable road class. Restricting this to selected road classes
+			// left motorway, trunk, service, and other camera-bearing roads completely free,
+			// which allowed the Privacy profile to reproduce the Fastest route unchanged.
 			priority.put(new JSONObject()
-					.put("if", inCameraZones + " && road_class_link == true")
-					.put("multiply_by", RAMP_PENALTY));
-			priority.put(new JSONObject()
-					.put("if", inCameraZones + " && (road_class == PRIMARY || road_class == SECONDARY)")
-					.put("multiply_by", ARTERIAL_PENALTY));
-			priority.put(new JSONObject()
-					.put("if", inCameraZones + " && (road_class == TERTIARY || road_class == RESIDENTIAL || road_class == UNCLASSIFIED)")
-					.put("multiply_by", SURFACE_PENALTY));
+					.put("if", "in_" + CAMERA_ZONES_AREA_ID)
+					.put("multiply_by", CAMERA_ZONE_PENALTY));
 
 			customModel.put("areas", areas);
 			customModel.put("priority", priority);
