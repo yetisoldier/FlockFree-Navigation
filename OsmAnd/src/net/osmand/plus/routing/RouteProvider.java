@@ -31,6 +31,7 @@ import net.osmand.plus.measurementtool.GpxApproximationHelper;
 import net.osmand.plus.measurementtool.GpxApproximationParams;
 import net.osmand.plus.onlinerouting.OnlineRoutingHelper;
 import net.osmand.plus.onlinerouting.engine.OnlineRoutingEngine;
+import net.osmand.plus.onlinerouting.engine.FlockFreeEngine;
 import net.osmand.plus.onlinerouting.engine.OnlineRoutingEngine.OnlineRoutingResponse;
 import net.osmand.plus.plugins.PluginsHelper;
 import net.osmand.plus.plugins.flockfree.CameraAvoidanceHelper;
@@ -205,6 +206,7 @@ public class RouteProvider {
 					try {
 						res = findOnlineRoute(params);
 					} catch (IOException | JSONException e) {
+						log.warn("Online route calculation failed; checking offline fallback", e);
 						res = new RouteCalculationResult(null);
 						params.initialCalculation = false;
 						useFallbackRouting = true;
@@ -215,6 +217,14 @@ public class RouteProvider {
 						OnlineRoutingEngine engine = helper.getEngineByKey(engineKey);
 						if (engine != null && engine.useRoutingFallback()) {
 							res = findVectorMapsRoute(params, calcGPXRoute);
+							if (engine instanceof FlockFreeEngine
+									&& ((FlockFreeEngine) engine).isPrivacyProfile()) {
+								FlockFreeRouteVariant avoided = maybeRecalculateWithFlockFreeAvoidance(
+										params, res, calcGPXRoute);
+								if (avoided != null) {
+									res = avoided.result;
+								}
+							}
 						}
 					}
 				} else if (params.mode.getRouteService() == RouteService.STRAIGHT ||

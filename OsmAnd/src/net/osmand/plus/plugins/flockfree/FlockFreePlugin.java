@@ -185,6 +185,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     private List<RouteDirectionInfo> cachedPrivacyRouteDirections;
     private List<Location> cachedFastestRouteLocations;
     private List<RouteDirectionInfo> cachedFastestRouteDirections;
+    private String cachedComparisonRouteKey;
     private Boolean cameraAvoidanceRuntimeOverride = null;  // null = use preference, true/false = temporary override
     private long lastCameraAlertTimeMs;
     private String lastCameraAlertKey;
@@ -1538,7 +1539,11 @@ public class FlockFreePlugin extends OsmandPlugin {
         
         // Check if this is an online FlockFree route — fetch fastest route for comparison
         RouteCalculationResult onlineRoute = app.getRoutingHelper().getRoute();
-        boolean onlineFlockFreeRoute = isOnlineFlockFreeEngine();
+        boolean onlineFlockFreeConfigured = isOnlineFlockFreeEngine();
+        boolean onlineFlockFreeRoute = onlineFlockFreeConfigured
+                && onlineRoute != null && onlineRoute.getOriginalRoute() == null;
+        boolean onlineFallbackRoute = onlineFlockFreeConfigured
+                && onlineRoute != null && onlineRoute.getOriginalRoute() != null;
         if (onlineRoute != null && onlineRoute.isCalculated() && onlineFlockFreeRoute) {
             maybeFetchOnlineFastestRouteForComparison(onlineRoute);
         }
@@ -1548,6 +1553,9 @@ public class FlockFreePlugin extends OsmandPlugin {
             setLastRouteComparisonInfo(null);
         }
         if (!avoidActive && !trafficEnabled) {
+            if (onlineFallbackRoute) {
+                setLastRouteCheckSummary(app.getString(R.string.flockfree_online_route_fallback));
+            }
             refreshRouteInfoMenuIfVisible();
             return;
         }
@@ -1580,7 +1588,8 @@ public class FlockFreePlugin extends OsmandPlugin {
             refreshRouteInfoMenuIfVisible();
             return;
         }
-        String routeSummary = "";
+        String routeSummary = onlineFallbackRoute
+                ? app.getString(R.string.flockfree_online_route_fallback) : "";
         String routeTradeoffSummary = null;
         // Determine if this is a lightweight recalculation during active navigation
         // (off-route recalc or start-point-only change) vs a full replan (user changed destination).
@@ -1651,6 +1660,13 @@ public class FlockFreePlugin extends OsmandPlugin {
      * Uses cached routes from the background fetch.
      */
     public void switchOnlineRoute(boolean toPrivacy) {
+        String currentRouteKey = getCurrentComparisonRouteKey();
+        if (cachedComparisonRouteKey == null || !cachedComparisonRouteKey.equals(currentRouteKey)) {
+            LOG.warn("Ignoring stale online route comparison selection");
+            clearOnlineComparisonRoutes();
+            refreshRouteInfoMenuIfVisible();
+            return;
+        }
         List<Location> routeLocs = toPrivacy ? cachedPrivacyRouteLocations : cachedFastestRouteLocations;
         List<RouteDirectionInfo> directions = toPrivacy ? cachedPrivacyRouteDirections : cachedFastestRouteDirections;
         if (routeLocs == null || routeLocs.isEmpty()) return;
@@ -1730,12 +1746,12 @@ public class FlockFreePlugin extends OsmandPlugin {
         int currentDistance = currentRoute.getWholeDistance();
         int currentTime = currentRoute.getLeftTime(null);
         boolean leftSideNavigation = app.getSettings().DRIVING_REGION.get().leftHandDriving;
+        String comparisonRouteKey = buildComparisonRouteKey(
+                app.getRoutingHelper().getIntermediatePoints(),
+                new LatLon(lastLocation.getLatitude(), lastLocation.getLongitude()));
         long generation = onlineComparisonGeneration.incrementAndGet();
         setLastRouteComparisonInfo(null);
-        cachedFastestRouteLocations = null;
-        cachedFastestRouteDirections = null;
-        cachedPrivacyRouteLocations = null;
-        cachedPrivacyRouteDirections = null;
+        clearOnlineComparisonRoutes();
         if (onlineComparisonTask != null) {
             onlineComparisonTask.cancel(true);
         }
@@ -1745,8 +1761,8 @@ public class FlockFreePlugin extends OsmandPlugin {
         onlineComparisonTask = onlineComparisonExecutor.submit(() -> {
             try {
                 LOG.info("FlockFree online comparison: fetching " + counterpartProfile);
-                HashMap<String, String> params = new HashMap<>();
-                params.put(EngineParameter.CUSTOM_URL.name(), "https://router.antonson.co/route");
+                HashMap<String, String> params = new HashMap<>(engine.getParams());
+                params.remove(EngineParameter.KEY.name());
                 params.put(EngineParameter.VEHICLE_KEY.name(), counterpartProfile);
                 params.put(EngineParameter.CUSTOM_NAME.name(), counterpartName);
                 FlockFreeEngine counterpartEngine =
@@ -1771,17 +1787,17 @@ public class FlockFreePlugin extends OsmandPlugin {
                 List<Location> fastLocations = currentPrivacy
                         ? new ArrayList<>(counterpartResponse.getRoute()) : currentLocations;
                 List<RouteDirectionInfo> fastDirections = currentPrivacy
-                        ? new ArrayList<>(counterpartResponse.getDirections()) : currentDirections;
+                        ? copyDirections(counterpartResponse.getDirections()) : currentDirections;
                 List<Location> privacyLocations = currentPrivacy
                         ? currentLocations : new ArrayList<>(counterpartResponse.getRoute());
                 List<RouteDirectionInfo> privacyDirections = currentPrivacy
-                        ? currentDirections : new ArrayList<>(counterpartResponse.getDirections());
+                        ? currentDirections : copyDirections(counterpartResponse.getDirections());
                 int fastDistance = currentPrivacy
-                        ? (int) calculateRouteDistance(fastLocations) : currentDistance;
+                        ? getRouteDistance(counterpartResponse) : currentDistance;
                 int fastTime = currentPrivacy
                         ? (int) calculateRouteTime(counterpartResponse) : currentTime;
                 int privacyDistance = currentPrivacy
-                        ? currentDistance : (int) calculateRouteDistance(privacyLocations);
+                        ? currentDistance : getRouteDistance(counterpartResponse);
                 int privacyTime = currentPrivacy
                         ? currentTime : (int) calculateRouteTime(counterpartResponse);
 
@@ -1799,13 +1815,15 @@ public class FlockFreePlugin extends OsmandPlugin {
                         privacyDistance, privacyTime, privacyCameraCount);
 
                 app.runInUIThread(() -> {
-                    if (generation != onlineComparisonGeneration.get()) {
+                    if (generation != onlineComparisonGeneration.get()
+                            || !comparisonRouteKey.equals(getCurrentComparisonRouteKey())) {
                         return;
                     }
                     cachedFastestRouteLocations = fastLocations;
                     cachedFastestRouteDirections = fastDirections;
                     cachedPrivacyRouteLocations = privacyLocations;
                     cachedPrivacyRouteDirections = privacyDirections;
+                    cachedComparisonRouteKey = comparisonRouteKey;
                     setLastRouteComparisonInfo(comparisonInfo);
                     setPrivacyRouteActive(currentPrivacy);
                     refreshRouteInfoMenuIfVisible();
@@ -1814,6 +1832,52 @@ public class FlockFreePlugin extends OsmandPlugin {
                 LOG.error("Error fetching online route counterpart", e);
             }
         });
+    }
+
+    private void clearOnlineComparisonRoutes() {
+        cachedFastestRouteLocations = null;
+        cachedFastestRouteDirections = null;
+        cachedPrivacyRouteLocations = null;
+        cachedPrivacyRouteDirections = null;
+        cachedComparisonRouteKey = null;
+        setLastRouteComparisonInfo(null);
+    }
+
+    @Nullable
+    private String getCurrentComparisonRouteKey() {
+        RoutingHelper helper = app.getRoutingHelper();
+        LatLon destination = helper.getFinalLocation();
+        return destination != null
+                ? buildComparisonRouteKey(helper.getIntermediatePoints(), destination) : null;
+    }
+
+    @NonNull
+    private String buildComparisonRouteKey(@NonNull List<LatLon> intermediates,
+                                           @NonNull LatLon destination) {
+        StringBuilder key = new StringBuilder();
+        for (LatLon point : intermediates) {
+            appendComparisonPoint(key, point);
+        }
+        key.append('|');
+        appendComparisonPoint(key, destination);
+        return key.toString();
+    }
+
+    private void appendComparisonPoint(@NonNull StringBuilder key, @NonNull LatLon point) {
+        key.append(Math.round(point.getLatitude() * 1_000_000d))
+                .append(',')
+                .append(Math.round(point.getLongitude() * 1_000_000d))
+                .append(';');
+    }
+
+    @NonNull
+    private List<RouteDirectionInfo> copyDirections(@Nullable List<RouteDirectionInfo> directions) {
+        return directions != null ? new ArrayList<>(directions) : new ArrayList<>();
+    }
+
+    private int getRouteDistance(@NonNull OnlineRoutingEngine.OnlineRoutingResponse response) {
+        int serverDistance = response.getRouteDistanceMeters();
+        return serverDistance >= 0 ? serverDistance : (int) calculateRouteDistance(response.getRoute());
     }
     
     private int countCamerasNearRoute(List<Location> routeLocations) {
@@ -1856,6 +1920,9 @@ public class FlockFreePlugin extends OsmandPlugin {
     }
     
     private double calculateRouteTime(OnlineRoutingEngine.OnlineRoutingResponse response) {
+        if (response.getRouteTimeSeconds() >= 0) {
+            return response.getRouteTimeSeconds();
+        }
         int totalSeconds = 0;
         if (response.getDirections() != null) {
             for (RouteDirectionInfo direction : response.getDirections()) {

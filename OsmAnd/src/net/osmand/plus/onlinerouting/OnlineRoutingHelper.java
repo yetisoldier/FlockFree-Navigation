@@ -47,6 +47,8 @@ import static net.osmand.util.Algorithms.isEmpty;
 public class OnlineRoutingHelper {
 
 	private static final Log LOG = PlatformUtil.getLog(OnlineRoutingHelper.class);
+	private static final int MAX_ROUTING_RESPONSE_CHARS = 8 * 1024 * 1024;
+	private static final int MAX_ROUTING_ERROR_CHARS = 512;
 
 	private final OsmandApplication app;
 	private final OsmandSettings settings;
@@ -175,7 +177,9 @@ public class OnlineRoutingHelper {
 			}
 
 			int responseCode = connection.getResponseCode();
-			InputStream responseStream = responseCode == HttpURLConnection.HTTP_OK
+			boolean successful = responseCode >= HttpURLConnection.HTTP_OK
+					&& responseCode < HttpURLConnection.HTTP_MULT_CHOICE;
+			InputStream responseStream = successful
 					? getInputStream(connection) : connection.getErrorStream();
 			if (responseStream == null) {
 				throw new IOException("Online routing returned HTTP " + responseCode + " without a response body");
@@ -185,8 +189,23 @@ public class OnlineRoutingHelper {
 					new InputStreamReader(responseStream, StandardCharsets.UTF_8))) {
 				String line;
 				while ((line = reader.readLine()) != null) {
+					if (Thread.currentThread().isInterrupted()) {
+						throw new IOException("Online routing request cancelled");
+					}
+					if (content.length() + line.length() > MAX_ROUTING_RESPONSE_CHARS) {
+						throw new IOException("Online routing response exceeded size limit");
+					}
 					content.append(line);
 				}
+			}
+			if (!successful) {
+				String detail = content.length() > MAX_ROUTING_ERROR_CHARS
+						? content.substring(0, MAX_ROUTING_ERROR_CHARS) : content.toString();
+				throw new IOException("Online routing returned HTTP " + responseCode
+						+ (detail.isEmpty() ? "" : ": " + detail));
+			}
+			if (content.length() == 0) {
+				throw new IOException("Online routing returned an empty response");
 			}
 			LOG.info(String.format("Online routing request finished %d ms", System.currentTimeMillis() - tm));
 			return content.toString();

@@ -63,6 +63,8 @@ public class MapViewTrackingUtilities implements OsmAndLocationListener, IMapLoc
 	private static final int COMPASS_REQUEST_TIME_INTERVAL_MS = 5000;
 	private static final int AUTO_FOLLOW_MSG_ID = OsmAndConstants.UI_HANDLER_LOCATION_SERVICE + 4;
 	private static final long MOVE_ANIMATION_TIME = 500;
+	private static final long MAX_LOCATION_ANIMATION_DURATION_MS = 5_000L;
+	private static final long STALE_LOCATION_ANIMATION_GAP_MS = 10_000L;
 	private static final float FLOCKFREE_LANDSCAPE_NAVIGATION_MAP_RATIO_X = 0.65f;
 	private static final float FLOCKFREE_PATROL_AUTO_FOLLOW_MIN_SPEED_MPS = 2.0f;
 	public static final int AUTO_ZOOM_DEFAULT_CHANGE_ZOOM = 4500;
@@ -251,7 +253,10 @@ public class MapViewTrackingUtilities implements OsmAndLocationListener, IMapLoc
 		long prevLocationTime = myLocationTime;
 
 		long locationTime = System.currentTimeMillis();
-		long movingTime = locationTime - prevLocationTime;
+		long receiveDeltaMs = Math.max(0, locationTime - prevLocationTime);
+		long providerDeltaMs = location != null && prevLocation != null
+				? Math.max(0, location.getTime() - prevLocation.getTime()) : 0;
+		long movingTime = getLocationAnimationInterval(providerDeltaMs, receiveDeltaMs);
 		myLocation = location;
 		myLocationTime = locationTime;
 
@@ -429,6 +434,15 @@ public class MapViewTrackingUtilities implements OsmAndLocationListener, IMapLoc
 
 	private boolean animateMyLocation(@NonNull Location location) {
 		return settings.ANIMATE_MY_LOCATION.get() && !movingToMyLocation;
+	}
+
+	private long getLocationAnimationInterval(long providerDeltaMs, long receiveDeltaMs) {
+		if (providerDeltaMs > 0) {
+			return providerDeltaMs <= STALE_LOCATION_ANIMATION_GAP_MS
+					? Math.min(providerDeltaMs, MAX_LOCATION_ANIMATION_DURATION_MS) : 0;
+		}
+		return receiveDeltaMs <= STALE_LOCATION_ANIMATION_GAP_MS
+				? Math.min(receiveDeltaMs, MAX_LOCATION_ANIMATION_DURATION_MS) : 0;
 	}
 
 	public boolean isShowViewAngle() {

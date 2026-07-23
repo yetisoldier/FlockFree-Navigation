@@ -333,11 +333,20 @@ public abstract class OnlineRoutingEngine implements Cloneable {
 
 		private GpxFile gpxFile;
 		private boolean calculatedTimeSpeed;
+		private int routeDistanceMeters = -1;
+		private int routeTimeSeconds = -1;
 
 		// constructor for JSON responses
 		public OnlineRoutingResponse(List<Location> route, List<RouteDirectionInfo> directions) {
 			this.route = route;
 			this.directions = directions;
+		}
+
+		public OnlineRoutingResponse(List<Location> route, List<RouteDirectionInfo> directions,
+		                             int routeDistanceMeters, int routeTimeSeconds) {
+			this(route, directions);
+			this.routeDistanceMeters = routeDistanceMeters;
+			this.routeTimeSeconds = routeTimeSeconds;
 		}
 
 		// constructor for GPX responses
@@ -352,6 +361,14 @@ public abstract class OnlineRoutingEngine implements Cloneable {
 
 		public List<RouteDirectionInfo> getDirections() {
 			return directions;
+		}
+
+		public int getRouteDistanceMeters() {
+			return routeDistanceMeters;
+		}
+
+		public int getRouteTimeSeconds() {
+			return routeTimeSeconds;
 		}
 
 		public GpxFile getGpxFile() {

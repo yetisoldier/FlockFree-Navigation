@@ -314,6 +314,9 @@ required_route_tokens = [
     "getFlockFreeAvoidanceRejectionReason(",
     "FLOCKFREE_BALANCED_MAX_AVOIDANCE_EXTRA_TIME_SECONDS = 15 * 60",
     "FLOCKFREE_BALANCED_MAX_AVOIDANCE_TIME_MULTIPLIER = 1.50d",
+    'log.warn("Online route calculation failed; checking offline fallback", e)',
+    "((FlockFreeEngine) engine).isPrivacyProfile()",
+    "maybeRecalculateWithFlockFreeAvoidance(",
     "FLOCKFREE_BALANCED_MAX_AVOIDANCE_DISTANCE_MULTIPLIER = 1.50d",
     "MAX_AVOIDANCE_ROUTE_ATTEMPTS = 4",
     "FLOCKFREE_OPTIONAL_ROUTING_BUDGET_MS = 15_000L",
@@ -371,6 +374,14 @@ required_online_tokens = [
     "counterpartProfile = currentPrivacy ? \"car_fast_ch\" : \"car_dynamic_lm\"",
     "path.addAll(app.getRoutingHelper().getIntermediatePoints())",
     "generation != onlineComparisonGeneration.get()",
+    "new HashMap<>(engine.getParams())",
+    "cachedComparisonRouteKey",
+    "comparisonRouteKey.equals(getCurrentComparisonRouteKey())",
+    "response.getRouteDistanceMeters()",
+    "response.getRouteTimeSeconds()",
+    "onlineRoute.getOriginalRoute() == null",
+    "onlineRoute.getOriginalRoute() != null",
+    "flockfree_online_route_fallback",
     "mapView.refreshMap()",
 ]
 online_text = "\n".join([flockfree_engine, plugin])
@@ -405,6 +416,10 @@ if missing_hud_resume:
 required_http_tokens = [
     "connection.setFixedLengthStreamingMode(requestBytes.length)",
     "try (OutputStream output = connection.getOutputStream())",
+    "MAX_ROUTING_RESPONSE_CHARS",
+    "Thread.currentThread().isInterrupted()",
+    "responseCode < HttpURLConnection.HTTP_MULT_CHOICE",
+    "Online routing returned an empty response",
     "connection.disconnect()",
 ]
 missing_http = [item for item in required_http_tokens if item not in online_helper]
@@ -415,6 +430,20 @@ if "HIGH_SPEED_ANIMATION_THRESHOLD_MPS" in map_tracking + location_layer:
     raise SystemExit("high-speed tracking still disables animation and causes marker jumps")
 if "MAX_LOCATION_ANIMATION_DURATION_MS = 5_000L" not in location_layer:
     raise SystemExit("location marker animation does not cover normal multi-second GPS cadence")
+
+required_tracking_tokens = [
+    "SystemClock.elapsedRealtime()",
+    "lastMarkerUpdateRealtimeMs",
+    "getLocationUpdateInterval(providerDeltaMs, receiveDeltaMs)",
+    "getLocationAnimationInterval(providerDeltaMs, receiveDeltaMs)",
+    "Math.min(providerDeltaMs, MAX_LOCATION_ANIMATION_DURATION_MS)",
+    '" receiveDeltaMs=" + receiveDeltaMs',
+    '" effectiveDeltaMs=" + effectiveDeltaMs',
+]
+tracking_text = "\n".join([map_tracking, location_layer])
+missing_tracking = [item for item in required_tracking_tokens if item not in tracking_text]
+if missing_tracking:
+    raise SystemExit("missing smooth location cadence safeguards:\n" + "\n".join(missing_tracking))
 
 required_status_card_tokens = [
     "hasRouteCheckSummaryForRouteMenu()",

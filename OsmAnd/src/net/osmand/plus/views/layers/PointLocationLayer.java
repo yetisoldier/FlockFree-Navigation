@@ -16,6 +16,7 @@ import android.graphics.PointF;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.LayerDrawable;
+import android.os.SystemClock;
 
 import androidx.annotation.ColorInt;
 import androidx.annotation.DrawableRes;
@@ -89,6 +90,7 @@ public class PointLocationLayer extends OsmandMapLayer
 	private Paint area;
 	private Paint aroundArea;
 	private long lastLocationCadenceLogMs;
+	private long lastMarkerUpdateRealtimeMs;
 
 	private ApplicationMode appMode;
 	private boolean carView;
@@ -777,6 +779,10 @@ public class PointLocationLayer extends OsmandMapLayer
 		if (view == null || (mapRenderer == null && view.getZoom() < MIN_ZOOM) || location == null) {
 			return;
 		}
+		long updateRealtimeMs = SystemClock.elapsedRealtime();
+		long receiveDeltaMs = lastMarkerUpdateRealtimeMs > 0
+				? Math.max(0, updateRealtimeMs - lastMarkerUpdateRealtimeMs) : 0;
+		lastMarkerUpdateRealtimeMs = updateRealtimeMs;
 		if (mapRenderer != null && !isMarkerLinkedToMapTarget()) {
 			boolean userInterruptingMovingToMyLocation = isUserInterruptingMovingToMyLocation();
 			Location markerLocation = userInterruptingMovingToMyLocation ? getPointLocation() : location;
@@ -785,13 +791,16 @@ public class PointLocationLayer extends OsmandMapLayer
 			}
 			boolean dataChanged = !MapUtils.areLatLonEqual(prevLocation, markerLocation, HIGH_LATLON_PRECISION);
 			if (dataChanged) {
-				long movingTime = prevLocation != null ? Math.max(0, markerLocation.getTime() - prevLocation.getTime()) : 0;
+				long providerDeltaMs = prevLocation != null
+						? Math.max(0, markerLocation.getTime() - prevLocation.getTime()) : 0;
+				long movingTime = getLocationUpdateInterval(providerDeltaMs, receiveDeltaMs);
 				boolean animatePosition = settings.ANIMATE_MY_LOCATION.get();
 				long animationDuration = userInterruptingMovingToMyLocation ? 0
 						: isAnimateMyLocation() ? getLocationAnimationDuration(movingTime) : 0;
 				Integer interpolationPercent = settings.LOCATION_INTERPOLATION_PERCENT.get();
 				boolean recentLocationGap = movingTime > 0 && movingTime <= STALE_LOCATION_ANIMATION_GAP_MS;
-				logLocationCadence(markerLocation, movingTime, animationDuration);
+				logLocationCadence(markerLocation, providerDeltaMs, receiveDeltaMs,
+						movingTime, animationDuration);
 				if (!userInterruptingMovingToMyLocation
 						&& prevLocation != null && getApplication().getRoutingHelper().isFollowingMode()
 						&& recentLocationGap && interpolationPercent > 0 && animatePosition) {
@@ -811,6 +820,13 @@ public class PointLocationLayer extends OsmandMapLayer
 		}
 	}
 
+	private long getLocationUpdateInterval(long providerDeltaMs, long receiveDeltaMs) {
+		if (providerDeltaMs > 0) {
+			return providerDeltaMs <= STALE_LOCATION_ANIMATION_GAP_MS ? providerDeltaMs : 0;
+		}
+		return receiveDeltaMs <= STALE_LOCATION_ANIMATION_GAP_MS ? receiveDeltaMs : 0;
+	}
+
 	private long getLocationAnimationDuration(long movingTime) {
 		if (movingTime <= 0 || movingTime > STALE_LOCATION_ANIMATION_GAP_MS) {
 			return 0;
@@ -818,9 +834,10 @@ public class PointLocationLayer extends OsmandMapLayer
 		return Math.min(movingTime, MAX_LOCATION_ANIMATION_DURATION_MS);
 	}
 
-	private void logLocationCadence(@NonNull Location location, long providerDeltaMs, long animationDurationMs) {
+	private void logLocationCadence(@NonNull Location location, long providerDeltaMs, long receiveDeltaMs,
+	                                long effectiveDeltaMs, long animationDurationMs) {
 		long now = System.currentTimeMillis();
-		if (providerDeltaMs <= STALE_LOCATION_ANIMATION_GAP_MS
+		if (effectiveDeltaMs <= STALE_LOCATION_ANIMATION_GAP_MS
 				&& now - lastLocationCadenceLogMs < LOCATION_CADENCE_LOG_INTERVAL_MS) {
 			return;
 		}
@@ -830,6 +847,8 @@ public class PointLocationLayer extends OsmandMapLayer
 		String speed = location.hasSpeed() ? String.valueOf(location.getSpeed()) : "unknown";
 		LOG.info("FlockFree location update provider=" + location.getProvider()
 				+ " providerDeltaMs=" + providerDeltaMs
+				+ " receiveDeltaMs=" + receiveDeltaMs
+				+ " effectiveDeltaMs=" + effectiveDeltaMs
 				+ " ageMs=" + ageMs
 				+ " accuracyMeters=" + accuracy
 				+ " speedMps=" + speed

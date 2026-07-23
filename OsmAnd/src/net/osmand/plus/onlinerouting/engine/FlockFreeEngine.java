@@ -444,20 +444,26 @@ public class FlockFreeEngine extends JsonOnlineRoutingEngine {
 			return null;
 		}
 
-		if (isEmpty(points)) return null;
+		if (isEmpty(points) || points.size() < 2) return null;
 		List<Location> route = convertRouteToLocationsList(points);
 
 		// Parse turn-by-turn instructions
-		JSONArray instructions = root.getJSONArray("instructions");
+		JSONArray instructions = root.optJSONArray("instructions");
 		List<RouteDirectionInfo> directions = new ArrayList<>();
-		for (int i = 0; i < instructions.length(); i++) {
+		for (int i = 0; instructions != null && i < instructions.length(); i++) {
 			JSONObject instruction = instructions.getJSONObject(i);
-			int distance = (int) Math.round(instruction.getDouble("distance"));
-			String description = instruction.getString("text");
+			int distance = (int) Math.round(instruction.optDouble("distance", 0));
+			String description = instruction.optString("text", "");
 			String streetName = instruction.optString("street_name", "");
-			int timeInSeconds = Math.round(instruction.getInt("time") / 1000f);
-			JSONArray interval = instruction.getJSONArray("interval");
-			int startPointOffset = interval.getInt(0);
+			int timeInSeconds = Math.round((float) instruction.optLong("time", 0) / 1000f);
+			JSONArray interval = instruction.optJSONArray("interval");
+			if (interval == null || interval.length() < 1) {
+				continue;
+			}
+			int startPointOffset = interval.optInt(0, -1);
+			if (startPointOffset < 0 || startPointOffset >= route.size()) {
+				continue;
+			}
 
 			float averageSpeed = timeInSeconds > 0 ? (float) distance / timeInSeconds : 0;
 			TurnType turnType = parseTurnType(instruction, leftSideNavigation);
@@ -470,7 +476,11 @@ public class FlockFreeEngine extends JsonOnlineRoutingEngine {
 			directions.add(direction);
 		}
 
-		return new OnlineRoutingResponse(route, directions);
+		int routeDistanceMeters = (int) Math.round(root.optDouble("distance", -1));
+		long routeTimeMilliseconds = root.optLong("time", -1);
+		int routeTimeSeconds = routeTimeMilliseconds >= 0
+				? (int) Math.round(routeTimeMilliseconds / 1000d) : -1;
+		return new OnlineRoutingResponse(route, directions, routeDistanceMeters, routeTimeSeconds);
 	}
 
 	@NonNull
