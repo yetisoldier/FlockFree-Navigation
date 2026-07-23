@@ -297,6 +297,9 @@ online_helper = Path("OsmAnd/src/net/osmand/plus/onlinerouting/OnlineRoutingHelp
 map_tracking = Path("OsmAnd/src/net/osmand/plus/base/MapViewTrackingUtilities.java").read_text()
 location_layer = Path("OsmAnd/src/net/osmand/plus/views/layers/PointLocationLayer.java").read_text()
 street_name_widget = Path("OsmAnd/src/net/osmand/plus/views/mapwidgets/widgets/StreetNameWidget.java").read_text()
+map_activity = Path("OsmAnd/src/net/osmand/plus/activities/MapActivity.java").read_text()
+map_info_layer = Path("OsmAnd/src/net/osmand/plus/views/layers/MapInfoLayer.java").read_text()
+map_hud_layout = Path("OsmAnd/src/net/osmand/plus/views/controls/MapHudLayout.java").read_text()
 plugin = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/FlockFreePlugin.java").read_text()
 route_menu = Path("OsmAnd/src/net/osmand/plus/routepreparationmenu/MapRouteInfoMenu.java").read_text()
 route_status_card = Path("OsmAnd/src/net/osmand/plus/routepreparationmenu/cards/FlockFreeRouteStatusCard.java").read_text()
@@ -386,6 +389,18 @@ required_street_name_tokens = [
 missing_street_name = [item for item in required_street_name_tokens if item not in street_name_widget]
 if missing_street_name:
     raise SystemExit("missing empty street-name widget safeguards:\n" + "\n".join(missing_street_name))
+
+required_hud_resume_tokens = [
+    "mapInfoLayer.refreshFlockFreeHudAfterResume();",
+    "public void refreshFlockFreeHudAfterResume()",
+    "mapHudLayout.updateButtons();",
+    "mapHudLayout.requestLayout();",
+    "position.setMarginX(1);",
+]
+hud_resume_text = "\n".join([map_activity, map_info_layer, map_hud_layout])
+missing_hud_resume = [item for item in required_hud_resume_tokens if item not in hud_resume_text]
+if missing_hud_resume:
+    raise SystemExit("missing HUD resume/layout safeguards:\n" + "\n".join(missing_hud_resume))
 
 required_http_tokens = [
     "connection.setFixedLengthStreamingMode(requestBytes.length)",

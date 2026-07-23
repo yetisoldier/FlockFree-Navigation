@@ -455,7 +455,8 @@ public class MapHudLayout extends FrameLayout {
 			}
 		} else if (id == R.id.speedometer_widget || id == R.id.map_alarm_warning) {
 			int margin = getResources().getDimensionPixelSize(R.dimen.map_alarm_bottom_margin);
-			position.setMarginX(0);
+			// Keep rounded cards and elevation shadows inside the physical display.
+			position.setMarginX(1);
 			position.setMarginY((int) AndroidUtils.pxToDpF(getContext(), margin) / 8);
 		} else if (id == R.id.lanes_widget_special_position) {
 			calcGridPositionFromPixel(view, position);

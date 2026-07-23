@@ -358,6 +358,20 @@ public class MapInfoLayer extends OsmandMapLayer implements ICoveredScreenRectPr
 		}
 	}
 
+	public void refreshFlockFreeHudAfterResume() {
+		// Refresh content immediately, then recompute HUD positions after Android
+		// has restored the view hierarchy. Without the post-layout pass, bottom
+		// widgets can remain missing until the next map or GPS update.
+		updateVerticalPanels();
+		if (mapHudLayout != null) {
+			mapHudLayout.post(() -> {
+				updateVerticalPanels();
+				mapHudLayout.updateButtons();
+				mapHudLayout.requestLayout();
+			});
+		}
+	}
+
 	private void clearCustomContainers(@NonNull MapActivity activity) {
 		ViewGroup container = activity.findViewById(R.id.lanes_widget_special_position);
 		if (container != null) {
