@@ -6,12 +6,10 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PointF;
-import android.os.SystemClock;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import net.osmand.core.android.MapRendererView;
 import net.osmand.data.LatLon;
 import net.osmand.data.PointDescription;
 import net.osmand.data.QuadRect;
@@ -40,7 +38,6 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private static final float CLUSTER_RADIUS_INCREMENT_DP = 1f;
     private static final float CLUSTER_MAX_RADIUS_DP = 20f;
     private static final double CAMERA_QUERY_BOUNDS_PADDING_FACTOR = 0.25;
-    private static final long MIN_OVERLAY_REFRESH_INTERVAL_MS = 33L; // at most about 30 FPS
 
     private final FlockFreePlugin plugin;
     private final Paint markerPaint;
@@ -88,7 +85,6 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private QuadRect cachedCameraQueryBounds;
     private int cachedCameraQueryZoom = -1;
     private long cachedCameraDataRevision = -1L;
-    private long lastOverlayRefreshRealtimeMs;
 
     /**
      * A cluster of cameras that fall within the same grid cell.
@@ -159,26 +155,6 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         coneStrokePaint.setStyle(Paint.Style.STROKE);
         coneStrokePaint.setAntiAlias(true);
         coneStrokePaint.setStrokeWidth(coneStrokeWidthPx);
-    }
-
-    @Override
-    public boolean areMapRendererViewEventsAllowed() {
-        return true;
-    }
-
-    @Override
-    public void onUpdateFrame(@NonNull MapRendererView mapRenderer) {
-        super.onUpdateFrame(mapRenderer);
-        if (!plugin.CAMERA_SHOW_LAYER.get() || view == null
-                || !(view.isAnimatingMapRotation() || view.isAnimatingMapMove()
-                || view.isAnimatingMapZoom())) {
-            return;
-        }
-        long now = SystemClock.elapsedRealtime();
-        if (now - lastOverlayRefreshRealtimeMs >= MIN_OVERLAY_REFRESH_INTERVAL_MS) {
-            lastOverlayRefreshRealtimeMs = now;
-            view.refreshMap();
-        }
     }
 
     @Override

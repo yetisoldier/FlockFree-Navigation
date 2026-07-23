@@ -377,14 +377,8 @@ required_layer_tokens = [
 missing_layer = [item for item in required_layer_tokens if item not in flockfree_layer]
 if missing_layer:
     raise SystemExit("missing map-layer visibility filtering:\n" + "\n".join(missing_layer))
-required_layer_throttle_tokens = [
-    "MIN_OVERLAY_REFRESH_INTERVAL_MS = 33L",
-    "SystemClock.elapsedRealtime()",
-    "now - lastOverlayRefreshRealtimeMs >= MIN_OVERLAY_REFRESH_INTERVAL_MS",
-]
-missing_layer_throttle = [item for item in required_layer_throttle_tokens if item not in flockfree_layer]
-if missing_layer_throttle:
-    raise SystemExit("camera overlay redraw is not frame-rate limited:\n" + "\n".join(missing_layer_throttle))
+if "view.refreshMap()" in flockfree_layer or "onUpdateFrame(" in flockfree_layer:
+    raise SystemExit("camera layer still drives the native renderer from a frame callback")
 if "CAMERA_QUERY_CACHE_TTL_MS" in flockfree_layer:
     raise SystemExit("camera layer still expires unchanged spatial queries on a timer")
 if "public long getDataRevision()" not in camera_data or camera_data.count("dataRevision.incrementAndGet()") < 3:
