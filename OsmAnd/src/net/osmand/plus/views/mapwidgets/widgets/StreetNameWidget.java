@@ -142,7 +142,7 @@ public class StreetNameWidget extends MapWidget {
 			turnDrawable.setRouteDirectionColor(turnArrowColorId);
 		}
 
-		if (shouldHide() || streetName == null) {
+		if (shouldHide()) {
 			updateVisibility(false);
 		} else if (showClosestWaypointFirstInAddress && updateWaypoint()) {
 			updateVisibility(true);
@@ -151,6 +151,10 @@ public class StreetNameWidget extends MapWidget {
 			AndroidUiHelper.updateVisibility(turnIcon, false);
 			AndroidUiHelper.updateVisibility(shieldImagesContainer, false);
 			AndroidUiHelper.updateVisibility(exitRefText, false);
+		} else if (!hasStreetData(streetName)) {
+			// CurrentStreetName may contain only the blue position marker when an
+			// online route has no street metadata. Do not leave an empty card visible.
+			updateVisibility(false);
 		} else {
 			updateVisibility(true);
 			AndroidUiHelper.updateVisibility(waypointInfoBar, false);
@@ -203,6 +207,13 @@ public class StreetNameWidget extends MapWidget {
 				addressText.setText(streetName.text);
 			}
 		}
+	}
+
+	private static boolean hasStreetData(@Nullable CurrentStreetName streetName) {
+		return streetName != null
+				&& (!Algorithms.isEmpty(streetName.text)
+				|| !Algorithms.isEmpty(streetName.exitRef)
+				|| !streetName.shields.isEmpty());
 	}
 
 	protected boolean shouldHide() {
@@ -522,6 +533,11 @@ public class StreetNameWidget extends MapWidget {
 			NextDirectionInfo nextDirInfo = new NextDirectionInfo();
 			nextDirInfo = routingHelper.getNextRouteDirectionInfo(nextDirInfo, true);
 			streetName = routingHelper.getCurrentName(nextDirInfo, showNextTurn);
+			if (!hasStreetData(streetName)) {
+				// Online routes do not always include a current RouteSegmentResult.
+				// Prefer the locally matched road name before hiding the widget.
+				setupLastKnownStreetName();
+			}
 		}
 
 		private void setupLastKnownStreetName() {

@@ -296,6 +296,7 @@ flockfree_engine = Path("OsmAnd/src/net/osmand/plus/onlinerouting/engine/FlockFr
 online_helper = Path("OsmAnd/src/net/osmand/plus/onlinerouting/OnlineRoutingHelper.java").read_text()
 map_tracking = Path("OsmAnd/src/net/osmand/plus/base/MapViewTrackingUtilities.java").read_text()
 location_layer = Path("OsmAnd/src/net/osmand/plus/views/layers/PointLocationLayer.java").read_text()
+street_name_widget = Path("OsmAnd/src/net/osmand/plus/views/mapwidgets/widgets/StreetNameWidget.java").read_text()
 plugin = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/FlockFreePlugin.java").read_text()
 route_menu = Path("OsmAnd/src/net/osmand/plus/routepreparationmenu/MapRouteInfoMenu.java").read_text()
 route_status_card = Path("OsmAnd/src/net/osmand/plus/routepreparationmenu/cards/FlockFreeRouteStatusCard.java").read_text()
@@ -375,6 +376,16 @@ if missing_online:
     raise SystemExit("missing paired online routing safeguards:\n" + "\n".join(missing_online))
 if "userInitiatedRouteSwitch" in plugin:
     raise SystemExit("online comparison can remain suppressed after switching a cached route card")
+
+required_street_name_tokens = [
+    "else if (!hasStreetData(streetName))",
+    "if (!hasStreetData(streetName))",
+    "setupLastKnownStreetName();",
+    "|| !streetName.shields.isEmpty()",
+]
+missing_street_name = [item for item in required_street_name_tokens if item not in street_name_widget]
+if missing_street_name:
+    raise SystemExit("missing empty street-name widget safeguards:\n" + "\n".join(missing_street_name))
 
 required_http_tokens = [
     "connection.setFixedLengthStreamingMode(requestBytes.length)",
