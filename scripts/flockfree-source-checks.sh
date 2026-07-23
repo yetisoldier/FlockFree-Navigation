@@ -37,6 +37,23 @@ for path in [
 print("xml ok")
 PY
 
+log "Configuration redraw check"
+python3 - <<'PY'
+from pathlib import Path
+
+map_activity = Path("OsmAnd/src/net/osmand/plus/activities/MapActivity.java").read_text()
+if map_activity.count("scheduleMapRedrawAfterSurfaceChange();") < 2:
+    raise SystemExit("missing delayed map redraw after resume or configuration changes")
+for required in [
+    "private void scheduleMapRedrawAfterSurfaceChange()",
+    "getMapView().refreshMap(true);",
+    "}, 300);",
+]:
+    if required not in map_activity:
+        raise SystemExit(f"missing configuration redraw wiring: {required}")
+print("configuration redraw wiring ok")
+PY
+
 log "FlockFree string checks"
 python3 - <<'PY'
 from pathlib import Path

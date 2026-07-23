@@ -736,6 +736,7 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 		if (mapViewWithLayers != null) {
 			mapViewWithLayers.onResume();
 		}
+		scheduleMapRedrawAfterSurfaceChange();
 		app.getLauncherShortcutsHelper().updateLauncherShortcuts();
 		app.getDownloadThread().setUiActivity(this);
 
@@ -1977,6 +1978,18 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 		app.getLocaleHelper().setLanguage(this);
 		app.runInUIThread(fragmentsHelper::updateFragments);
 		app.getNotificationHelper().refreshNotifications();
+		scheduleMapRedrawAfterSurfaceChange();
+	}
+
+	private void scheduleMapRedrawAfterSurfaceChange() {
+		// The renderer surface can finish resuming or resizing after its lifecycle
+		// callback. Request one delayed vector redraw so the map cannot remain blank
+		// until the user zooms or pans.
+		app.runInUIThread(() -> {
+			if (!isDestroyed()) {
+				getMapView().refreshMap(true);
+			}
+		}, 300);
 	}
 
 	@Override
