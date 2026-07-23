@@ -65,6 +65,7 @@ public class MapViewTrackingUtilities implements OsmAndLocationListener, IMapLoc
 	private static final long MOVE_ANIMATION_TIME = 500;
 	private static final long MAX_LOCATION_ANIMATION_DURATION_MS = 5_000L;
 	private static final long STALE_LOCATION_ANIMATION_GAP_MS = 10_000L;
+	private static final long OUT_OF_ORDER_LOCATION_TOLERANCE_MS = 1_000L;
 	private static final float FLOCKFREE_LANDSCAPE_NAVIGATION_MAP_RATIO_X = 0.65f;
 	private static final float FLOCKFREE_PATROL_AUTO_FOLLOW_MIN_SPEED_MPS = 2.0f;
 	public static final int AUTO_ZOOM_DEFAULT_CHANGE_ZOOM = 4500;
@@ -250,6 +251,9 @@ public class MapViewTrackingUtilities implements OsmAndLocationListener, IMapLoc
 	@Override
 	public void updateLocation(Location location) {
 		Location prevLocation = myLocation;
+		if (isOutOfOrderLocation(prevLocation, location)) {
+			return;
+		}
 		long prevLocationTime = myLocationTime;
 
 		long locationTime = System.currentTimeMillis();
@@ -443,6 +447,12 @@ public class MapViewTrackingUtilities implements OsmAndLocationListener, IMapLoc
 		}
 		return receiveDeltaMs <= STALE_LOCATION_ANIMATION_GAP_MS
 				? Math.min(receiveDeltaMs, MAX_LOCATION_ANIMATION_DURATION_MS) : 0;
+	}
+
+	private boolean isOutOfOrderLocation(@Nullable Location previous, @Nullable Location current) {
+		return previous != null && current != null
+				&& previous.getTime() > 0 && current.getTime() > 0
+				&& current.getTime() + OUT_OF_ORDER_LOCATION_TOLERANCE_MS < previous.getTime();
 	}
 
 	public boolean isShowViewAngle() {

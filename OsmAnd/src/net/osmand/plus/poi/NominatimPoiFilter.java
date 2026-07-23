@@ -41,12 +41,15 @@ public class NominatimPoiFilter extends PoiUIFilter {
 	private static final String CENSUS_ONELINE_ADDRESS_API =
 			"https://geocoding.geo.census.gov/geocoder/locations/onelineaddress";
 	private static final int MIN_SEARCH_DISTANCE_ON_MAP = 20000;
-	private static final int LIMIT = 300;
+	private static final int LIMIT = 20;
+	private static final int CONNECT_TIMEOUT_MS = 10000;
+	private static final int READ_TIMEOUT_MS = 15000;
 	private static final String[] US_STREET_ADDRESS_HINTS = {
 			" st ", " street ", " ave ", " avenue ", " rd ", " road ", " dr ", " drive ",
 			" blvd ", " boulevard ", " ln ", " lane ", " ct ", " court ", " pl ", " place ",
 			" ter ", " terrace ", " way ", " hwy ", " highway ", " pkwy ", " parkway ",
-			" cir ", " circle ", " trl ", " trail "
+			" cir ", " circle ", " trl ", " trail ", " route ", " rte ", " county road ",
+			" county rd ", " state road ", " state rd ", " farm to market ", " fm ", " cr "
 	};
 
 	private String lastError = "";
@@ -88,9 +91,10 @@ public class NominatimPoiFilter extends PoiUIFilter {
 		if (Algorithms.isEmpty(getFilterByName())) {
 			return currentSearchResult;
 		}
-		if (!bboxSearch && searchCensusAddress(matcher)) {
-			MapUtils.sortListOfMapObject(currentSearchResult, lat, lon);
-			return currentSearchResult;
+		if (!bboxSearch && isLikelyUsStreetAddress(getFilterByName())) {
+			if (searchCensusAddress(matcher)) {
+				return currentSearchResult;
+			}
 		}
 
 		double baseDistY = MapUtils.getDistance(lat, lon, lat - 1, lon);
@@ -101,8 +105,8 @@ public class NominatimPoiFilter extends PoiUIFilter {
 		leftLongitude = Math.min(leftLongitude, Math.max(lon - (distance / baseDistX), -180));
 		rightLongitude = Math.max(rightLongitude, Math.min(lon + (distance / baseDistX), 180));
 
-		String viewbox = "viewboxlbrt=" + ((float) leftLongitude) + "," + ((float) bottomLatitude)
-				+ "," + ((float) rightLongitude) + "," + ((float) topLatitude);
+		String viewbox = "viewbox=" + ((float) leftLongitude) + "," + ((float) topLatitude)
+				+ "," + ((float) rightLongitude) + "," + ((float) bottomLatitude);
 		try {
 			lastError = "";
 			String urlq = NOMINATIM_API + "?format=xml" +
@@ -110,13 +114,16 @@ public class NominatimPoiFilter extends PoiUIFilter {
 					"&q=" + URLEncoder.encode(getFilterByName()) +
 					"&extratags=1" +
 					"&addressdetails=1" + // nclude a breakdown of the address into elements
-					"&limit=" + LIMIT;
+					"&limit=" + LIMIT +
+					"&" + viewbox;
 			if (bboxSearch) {
-				urlq += "&bounded=1&" + viewbox;
+				urlq += "&bounded=1";
 			}
 			log.info("Online search: " + urlq);
 			URLConnection connection = NetworkUtils.getHttpURLConnection(urlq); //$NON-NLS-1$
 			connection.setRequestProperty("User-Agent", Version.getFullVersion(app));
+			connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
+			connection.setReadTimeout(READ_TIMEOUT_MS);
 
 			InputStream stream = connection.getInputStream();
 			XmlPullParser parser = PlatformUtil.newXMLPullParser();
@@ -198,7 +205,11 @@ public class NominatimPoiFilter extends PoiUIFilter {
 			log.error("Error parsing name finder poi", e); //$NON-NLS-1$
 			lastError = getApplication().getString(R.string.shared_string_io_error); //$NON-NLS-1$
 		}
-		MapUtils.sortListOfMapObject(currentSearchResult, lat, lon);
+		// Preserve Nominatim's relevance order for global address searches. Sorting those
+		// results by phone distance can bury an exact destination across town or out of state.
+		if (bboxSearch) {
+			MapUtils.sortListOfMapObject(currentSearchResult, lat, lon);
+		}
 		return currentSearchResult;
 	}
 
@@ -213,6 +224,8 @@ public class NominatimPoiFilter extends PoiUIFilter {
 			log.info("US Census address search: " + urlq);
 			URLConnection connection = NetworkUtils.getHttpURLConnection(urlq);
 			connection.setRequestProperty("User-Agent", Version.getFullVersion(app));
+			connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
+			connection.setReadTimeout(READ_TIMEOUT_MS);
 			String body = Algorithms.readFromInputStream(connection.getInputStream()).toString();
 			JSONObject result = new JSONObject(body).optJSONObject("result");
 			JSONArray matches = result != null ? result.optJSONArray("addressMatches") : null;
@@ -270,7 +283,7 @@ public class NominatimPoiFilter extends PoiUIFilter {
 
 	private boolean isLikelyUsStreetAddress(String query) {
 		String trimmed = query == null ? "" : query.trim();
-		if (trimmed.length() < 8 || !Character.isDigit(trimmed.charAt(0))) {
+		if (trimmed.length() < 6 || !trimmed.matches("^\\d+[A-Za-z]?(?:-\\d+)?\\s+.+")) {
 			return false;
 		}
 		String normalized = " " + trimmed.toLowerCase(Locale.US).replaceAll("[^a-z0-9]+", " ") + " ";
@@ -281,7 +294,7 @@ public class NominatimPoiFilter extends PoiUIFilter {
 		}
 		return trimmed.contains(",") && normalized.matches(".* \\d{5}( \\d{4})? .*");
 	}
-	
+
 	public String getLastError() {
 		return lastError;
 	}

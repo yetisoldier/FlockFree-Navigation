@@ -220,6 +220,7 @@ public class FlockFreeEngine extends JsonOnlineRoutingEngine {
 	private static final double RAMP_PENALTY = 0.1;
 	private static final double ARTERIAL_PENALTY = 0.5;
 	private static final double SURFACE_PENALTY = 0.7;
+	private static final String CAMERA_ZONES_AREA_ID = "camera_zones";
 
 	/**
 	 * Build GraphHopper custom_model with directional cone penalties for cameras
@@ -278,10 +279,10 @@ public class FlockFreeEngine extends JsonOnlineRoutingEngine {
 			JSONObject customModel = new JSONObject();
 			JSONObject areas = new JSONObject();
 			JSONArray priority = new JSONArray();
+			JSONArray multiPolygonCoordinates = new JSONArray();
 
 			for (int i = 0; i < cameras.size(); i++) {
 				CameraData.CameraPoint cam = cameras.get(i);
-				String areaId = "cam_" + i;
 
 				// Build cone polygon
 				JSONArray polygon = makeConePolygon(
@@ -289,35 +290,38 @@ public class FlockFreeEngine extends JsonOnlineRoutingEngine {
 					CONE_HALF_ANGLE, CONE_RANGE_FT);
 				if (polygon == null) continue;
 
-				// Create area feature
-				JSONObject area = new JSONObject();
-				area.put("type", "Feature");
-				JSONObject geom = new JSONObject();
-				geom.put("type", "Polygon");
-				JSONArray coords = new JSONArray();
-				coords.put(polygon);
-				geom.put("coordinates", coords);
-				area.put("geometry", geom);
-				areas.put(areaId, area);
+				// GeoJSON MultiPolygon coordinates: polygon -> linear ring -> points.
+				JSONArray polygonCoordinates = new JSONArray();
+				polygonCoordinates.put(polygon);
+				multiPolygonCoordinates.put(polygonCoordinates);
 
-				// Priority rules within this cone
-				// Ramps — strongest penalty
-				priority.put(new JSONObject()
-						.put("if", "in_" + areaId + " && road_class_link == true")
-						.put("multiply_by", RAMP_PENALTY));
-				// Arterials — moderate penalty
-				priority.put(new JSONObject()
-						.put("if", "in_" + areaId + " && (road_class == PRIMARY || road_class == SECONDARY)")
-						.put("multiply_by", ARTERIAL_PENALTY));
-				// Surface streets — mild penalty
-				priority.put(new JSONObject()
-						.put("if", "in_" + areaId + " && (road_class == TERTIARY || road_class == RESIDENTIAL || road_class == UNCLASSIFIED)")
-						.put("multiply_by", SURFACE_PENALTY));
-				// NO MOTORWAY penalty — cameras on ramps, not mainline
 			}
+
+			if (multiPolygonCoordinates.length() == 0) return null;
+
+			JSONObject area = new JSONObject();
+			area.put("type", "Feature");
+			JSONObject geom = new JSONObject();
+			geom.put("type", "MultiPolygon");
+			geom.put("coordinates", multiPolygonCoordinates);
+			area.put("geometry", geom);
+			areas.put(CAMERA_ZONES_AREA_ID, area);
+
+			String inCameraZones = "in_" + CAMERA_ZONES_AREA_ID;
+			priority.put(new JSONObject()
+					.put("if", inCameraZones + " && road_class_link == true")
+					.put("multiply_by", RAMP_PENALTY));
+			priority.put(new JSONObject()
+					.put("if", inCameraZones + " && (road_class == PRIMARY || road_class == SECONDARY)")
+					.put("multiply_by", ARTERIAL_PENALTY));
+			priority.put(new JSONObject()
+					.put("if", inCameraZones + " && (road_class == TERTIARY || road_class == RESIDENTIAL || road_class == UNCLASSIFIED)")
+					.put("multiply_by", SURFACE_PENALTY));
 
 			customModel.put("areas", areas);
 			customModel.put("priority", priority);
+			LOG.info("FlockFree online camera model polygons=" + multiPolygonCoordinates.length()
+					+ ", priorityRules=" + priority.length() + ", jsonBytes=" + customModel.toString().length());
 			return customModel;
 		} catch (JSONException e) {
 			return null;

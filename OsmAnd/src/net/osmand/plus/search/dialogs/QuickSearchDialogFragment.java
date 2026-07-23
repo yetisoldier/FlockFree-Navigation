@@ -123,7 +123,8 @@ public class QuickSearchDialogFragment extends BaseFullScreenDialogFragment impl
 			" st ", " street ", " ave ", " avenue ", " rd ", " road ", " dr ", " drive ",
 			" blvd ", " boulevard ", " ln ", " lane ", " ct ", " court ", " pl ", " place ",
 			" ter ", " terrace ", " way ", " hwy ", " highway ", " pkwy ", " parkway ",
-			" cir ", " circle ", " trl ", " trail "
+			" cir ", " circle ", " trl ", " trail ", " route ", " rte ", " county road ",
+			" county rd ", " state road ", " state rd ", " farm to market ", " fm ", " cr "
 	};
 
 	private static final String QUICK_SEARCH_RUN_SEARCH_FIRST_TIME_KEY = "quick_search_run_search_first_time_key";
@@ -895,7 +896,7 @@ public class QuickSearchDialogFragment extends BaseFullScreenDialogFragment impl
 				// Fallback: if online search returned no results, retry with offline search
 				if (searchUICore.isOnlineSearch() && isResultEmpty()
 						&& !Algorithms.isEmpty(searchQuery)) {
-					startAddressSearch();
+					restoreLocalSearchMode();
 					runCoreSearch(searchQuery, true, false);
 					return false; // don't finish — let the offline search publish its own results
 				}
@@ -1489,7 +1490,11 @@ public class QuickSearchDialogFragment extends BaseFullScreenDialogFragment impl
 				.setEmptyQueryAllowed(false)
 				.setSortByName(false)
 				.setRadiusLevel(1);
-		onlineSettings.setSortType(SearchSettings.SortType.ONLY_BY_DISTANCE);
+		// A complete address should win on textual relevance even when it is far from the
+		// current map position. Distance remains the useful default for online POI searches.
+		onlineSettings.setSortType(isLikelyStreetAddress(searchQuery)
+				? SearchSettings.SortType.BY_RELEVANCE
+				: SearchSettings.SortType.ONLY_BY_DISTANCE);
 		QuickSearchHelper.applySearchStatSetting(onlineSettings);
 		searchUICore.updateSettings(onlineSettings);
 		setResultCollection(null);
@@ -1575,19 +1580,30 @@ public class QuickSearchDialogFragment extends BaseFullScreenDialogFragment impl
 	}
 
 	private void maybeStartOnlineAddressSearch(@NonNull String text) {
-		// When internet is available, prefer online search for any non-empty query.
-		// Online search provides better results for POIs, businesses, and addresses.
-		// If online returns no results, runSearch fallback will switch to offline.
-		if (!searchUICore.isOnlineSearch() && !Algorithms.isEmpty(text.trim())
+		// Keep ordinary POI/name searches local. Residential addresses benefit most from
+		// the online geocoder; if it has no match, searchFinished retries the local index.
+		boolean onlineAddress = isLikelyStreetAddress(text) && isAddressReadyForOnlineSearch(text);
+		if (searchUICore.isOnlineSearch() && !onlineAddress) {
+			restoreLocalSearchMode();
+			updateTabBarVisibility(false);
+		} else if (!searchUICore.isOnlineSearch() && onlineAddress
 				&& settings.isInternetConnectionAvailable()) {
 			startOnlineSearch();
 			updateTabBarVisibility(false);
 		}
 	}
 
+	private void restoreLocalSearchMode() {
+		if (addressSearch) {
+			startAddressSearch();
+		} else {
+			stopAddressSearch();
+		}
+	}
+
 	private boolean isLikelyStreetAddress(@NonNull String text) {
 		String trimmed = text.trim();
-		if (trimmed.length() < 8 || !Character.isDigit(trimmed.charAt(0))) {
+		if (trimmed.length() < 6 || !trimmed.matches("^\\d+[A-Za-z]?(?:-\\d+)?\\s+.+")) {
 			return false;
 		}
 		String normalized = " " + trimmed.toLowerCase(Locale.US).replaceAll("[^a-z0-9]+", " ") + " ";
@@ -1597,6 +1613,17 @@ public class QuickSearchDialogFragment extends BaseFullScreenDialogFragment impl
 			}
 		}
 		return trimmed.contains(",") && normalized.matches(".* \\d{5}( \\d{4})? .*");
+	}
+
+	private boolean isAddressReadyForOnlineSearch(@NonNull String text) {
+		String trimmed = text.trim();
+		if (!text.isEmpty() && Character.isWhitespace(text.charAt(text.length() - 1))) {
+			return true;
+		}
+		if (trimmed.matches(".*\\b\\d{5}(?:-\\d{4})?$")) {
+			return true;
+		}
+		return trimmed.contains(",") && trimmed.matches(".*[,\\s][A-Za-z]{2}$");
 	}
 
 	private void runCoreSearch(String text, boolean showQuickResult, boolean searchMore) {

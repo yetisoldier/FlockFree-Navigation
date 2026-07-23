@@ -77,6 +77,7 @@ public class PointLocationLayer extends OsmandMapLayer
 	private static final long MAX_LOCATION_ANIMATION_DURATION_MS = 5_000L;
 	private static final long MAX_LOCATION_PREDICTION_INTERVAL_MS = 5_000L;
 	private static final long STALE_LOCATION_ANIMATION_GAP_MS = 10_000L;
+	private static final long OUT_OF_ORDER_LOCATION_TOLERANCE_MS = 1_000L;
 	private static final long LOCATION_CADENCE_LOG_INTERVAL_MS = 5_000L;
 	protected static final int MIN_ZOOM = 3;
 	protected static final int RADIUS = 7;
@@ -789,6 +790,9 @@ public class PointLocationLayer extends OsmandMapLayer
 			if (markerLocation == null) {
 				markerLocation = location;
 			}
+			if (isOutOfOrderLocation(prevLocation, markerLocation)) {
+				return;
+			}
 			boolean dataChanged = !MapUtils.areLatLonEqual(prevLocation, markerLocation, HIGH_LATLON_PRECISION);
 			if (dataChanged) {
 				long providerDeltaMs = prevLocation != null
@@ -825,6 +829,11 @@ public class PointLocationLayer extends OsmandMapLayer
 			return providerDeltaMs <= STALE_LOCATION_ANIMATION_GAP_MS ? providerDeltaMs : 0;
 		}
 		return receiveDeltaMs <= STALE_LOCATION_ANIMATION_GAP_MS ? receiveDeltaMs : 0;
+	}
+
+	private boolean isOutOfOrderLocation(@Nullable Location previous, @NonNull Location current) {
+		return previous != null && previous.getTime() > 0 && current.getTime() > 0
+				&& current.getTime() + OUT_OF_ORDER_LOCATION_TOLERANCE_MS < previous.getTime();
 	}
 
 	private long getLocationAnimationDuration(long movingTime) {

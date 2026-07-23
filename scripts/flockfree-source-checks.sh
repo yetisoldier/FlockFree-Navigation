@@ -293,6 +293,8 @@ route_provider = Path("OsmAnd/src/net/osmand/plus/routing/RouteProvider.java").r
 avoidance_helper = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/CameraAvoidanceHelper.java").read_text()
 flockfree_layer = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/FlockFreeLayer.java").read_text()
 flockfree_engine = Path("OsmAnd/src/net/osmand/plus/onlinerouting/engine/FlockFreeEngine.java").read_text()
+quick_search = Path("OsmAnd/src/net/osmand/plus/search/dialogs/QuickSearchDialogFragment.java").read_text()
+nominatim_filter = Path("OsmAnd/src/net/osmand/plus/poi/NominatimPoiFilter.java").read_text()
 online_helper = Path("OsmAnd/src/net/osmand/plus/onlinerouting/OnlineRoutingHelper.java").read_text()
 map_tracking = Path("OsmAnd/src/net/osmand/plus/base/MapViewTrackingUtilities.java").read_text()
 location_layer = Path("OsmAnd/src/net/osmand/plus/views/layers/PointLocationLayer.java").read_text()
@@ -371,6 +373,9 @@ if missing_layer:
 required_online_tokens = [
     "MAX_CAMERA_PENALTY_AREAS = 500",
     "profileOverride = viewing ? PROFILE_FAST : PROFILE_PRIVACY",
+    'CAMERA_ZONES_AREA_ID = "camera_zones"',
+    'geom.put("type", "MultiPolygon")',
+    'priorityRules=" + priority.length()',
     "customModel.put(\"areas\", areas)",
     "return 30_000",
     "counterpartProfile = currentPrivacy ? \"car_fast_ch\" : \"car_dynamic_lm\"",
@@ -395,6 +400,36 @@ if missing_online:
     raise SystemExit("missing paired online routing safeguards:\n" + "\n".join(missing_online))
 if "userInitiatedRouteSwitch" in plugin:
     raise SystemExit("online comparison can remain suppressed after switching a cached route card")
+if 'String areaId = "cam_" + i' in flockfree_engine:
+    raise SystemExit("online camera model still emits one GraphHopper rule set per camera")
+
+required_address_search_tokens = [
+    "isLikelyStreetAddress(text)",
+    "isAddressReadyForOnlineSearch(text)",
+    "restoreLocalSearchMode()",
+    "SearchSettings.SortType.BY_RELEVANCE",
+    '" county road "',
+    'private static final int LIMIT = 20',
+    'String viewbox = "viewbox="',
+    "connection.setConnectTimeout(CONNECT_TIMEOUT_MS)",
+    "if (bboxSearch) {\n\t\t\tMapUtils.sortListOfMapObject",
+]
+address_search_text = "\n".join([quick_search, nominatim_filter])
+missing_address_search = [item for item in required_address_search_tokens if item not in address_search_text]
+if missing_address_search:
+    raise SystemExit("missing residential address search safeguards:\n" + "\n".join(missing_address_search))
+if "!Algorithms.isEmpty(text.trim())" in quick_search:
+    raise SystemExit("ordinary searches still force online geocoding")
+
+required_tracking_tokens = [
+    "OUT_OF_ORDER_LOCATION_TOLERANCE_MS = 1_000L",
+    "isOutOfOrderLocation(prevLocation, location)",
+    "isOutOfOrderLocation(prevLocation, markerLocation)",
+]
+tracking_text = "\n".join([map_tracking, location_layer])
+missing_tracking = [item for item in required_tracking_tokens if item not in tracking_text]
+if missing_tracking:
+    raise SystemExit("missing location ordering safeguards:\n" + "\n".join(missing_tracking))
 
 required_street_name_tokens = [
     "else if (!hasStreetData(streetName))",
