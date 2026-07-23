@@ -27,7 +27,12 @@ fi
 log "XML parse check"
 python3 - <<'PY'
 import xml.etree.ElementTree as ET
-for path in ["OsmAnd/res/values/strings.xml", "OsmAnd/res/xml/flockfree_preferences.xml"]:
+for path in [
+    "OsmAnd/res/values/strings.xml",
+    "OsmAnd/res/xml/flockfree_preferences.xml",
+    "OsmAnd/res/layout-land/flockfree_route_comparison_card.xml",
+    "OsmAnd/res/layout-land/route_info_layout.xml",
+]:
     ET.parse(path)
 print("xml ok")
 PY
@@ -310,6 +315,8 @@ plugin = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/FlockFreePlugin.java
 route_menu = Path("OsmAnd/src/net/osmand/plus/routepreparationmenu/MapRouteInfoMenu.java").read_text()
 route_status_card = Path("OsmAnd/src/net/osmand/plus/routepreparationmenu/cards/FlockFreeRouteStatusCard.java").read_text()
 route_status_layout = Path("OsmAnd/res/layout/flockfree_route_status_card.xml").read_text()
+landscape_comparison_layout = Path("OsmAnd/res/layout-land/flockfree_route_comparison_card.xml").read_text()
+landscape_route_info_layout = Path("OsmAnd/res/layout-land/route_info_layout.xml").read_text()
 readme = Path("README.md").read_text()
 avoidance_doc = Path("docs/FLOCK-CAMERA-AVOIDANCE-ROUTING.md").read_text()
 
@@ -543,6 +550,24 @@ status_card_text = "\n".join([plugin, route_menu, route_status_card, route_statu
 missing_status_card = [item for item in required_status_card_tokens if item not in status_card_text]
 if missing_status_card:
     raise SystemExit("missing route status card wiring:\n" + "\n".join(missing_status_card))
+
+required_landscape_route_tokens = [
+    'android:minHeight="82dp"',
+    'android:textSize="13sp"',
+    'android:id="@+id/flockfree_route_fastest_cameras"',
+    'android:id="@+id/flockfree_route_privacy_cameras"',
+]
+missing_landscape_route = [
+    item for item in required_landscape_route_tokens if item not in landscape_comparison_layout
+]
+if missing_landscape_route:
+    raise SystemExit("missing compact landscape route comparison layout:\n"
+                     + "\n".join(missing_landscape_route))
+if 'android:paddingBottom="56dp"' not in landscape_route_info_layout:
+    raise SystemExit("landscape route card scroller does not reserve the fixed action bar")
+if "cachedPrivacyRouteActive == privacyRouteActive" not in Path(
+        "OsmAnd/src/net/osmand/plus/plugins/flockfree/widgets/CameraProximityWidget.java").read_text():
+    raise SystemExit("camera widget cache is not invalidated when route privacy selection changes")
 
 required_doc_tokens = [
     "actual route exposure",

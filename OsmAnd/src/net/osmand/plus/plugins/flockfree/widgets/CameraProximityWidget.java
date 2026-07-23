@@ -34,6 +34,7 @@ public class CameraProximityWidget extends SimpleWidget {
 	private int cachedRadius = -1;
 	private int cachedStartIndex = -1;
 	private int cachedCameraCount = -1;
+	private boolean cachedPrivacyRouteActive;
 	private double cachedLat = Double.NaN;
 	private double cachedLon = Double.NaN;
 
@@ -120,7 +121,9 @@ public class CameraProximityWidget extends SimpleWidget {
 	                                    @NonNull Location location, double lat, double lon) {
 		int startIndex = findNearestRouteIndex(location, routeLocations);
 		int radiusMeters = plugin.CAMERA_AVOIDANCE_RADIUS.get();
-		if (canUseCachedValue(route, routeLocations.size(), radiusMeters, startIndex, lat, lon)) {
+		boolean privacyRouteActive = plugin.isPrivacyRouteActive();
+		if (canUseCachedValue(route, routeLocations.size(), radiusMeters, startIndex,
+				privacyRouteActive, lat, lon)) {
 			showRouteCameraCount(app, cachedCameraCount);
 			return;
 		}
@@ -131,6 +134,7 @@ public class CameraProximityWidget extends SimpleWidget {
 		cachedRouteSize = routeLocations.size();
 		cachedRadius = radiusMeters;
 		cachedStartIndex = startIndex;
+		cachedPrivacyRouteActive = privacyRouteActive;
 
 		List<Location> remainingRoute = routeLocations.subList(startIndex, routeLocations.size());
 		List<CameraData.CameraPoint> cameras =
@@ -140,12 +144,13 @@ public class CameraProximityWidget extends SimpleWidget {
 	}
 
 	private boolean canUseCachedValue(@NonNull RouteCalculationResult route, int routeSize, int radiusMeters,
-	                                  int startIndex, double lat, double lon) {
+	                                  int startIndex, boolean privacyRouteActive, double lat, double lon) {
 		return cachedCameraCount >= 0
 				&& cachedRoute == route
 				&& cachedRouteSize == routeSize
 				&& cachedRadius == radiusMeters
 				&& cachedStartIndex == startIndex
+				&& cachedPrivacyRouteActive == privacyRouteActive
 				&& isSameLocation(lat, lon);
 	}
 

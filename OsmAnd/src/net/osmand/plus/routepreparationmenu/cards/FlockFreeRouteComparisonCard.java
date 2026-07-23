@@ -10,6 +10,7 @@ import androidx.core.content.ContextCompat;
 
 import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
+import net.osmand.plus.helpers.AndroidUiHelper;
 import net.osmand.plus.plugins.flockfree.FlockFreePlugin.RouteComparisonInfo;
 import net.osmand.plus.utils.AndroidUtils;
 import net.osmand.plus.utils.ColorUtilities;
@@ -48,6 +49,9 @@ public class FlockFreeRouteComparisonCard extends MapBaseCard {
 
 	@Override
 	protected void updateContent() {
+		boolean portrait = AndroidUiHelper.isOrientationPortrait(mapActivity);
+		view.findViewById(R.id.flockfree_route_comparison_title)
+				.setVisibility(portrait ? View.VISIBLE : View.GONE);
 		View fastestCard = view.findViewById(R.id.flockfree_route_fastest_card);
 		View privacyCard = view.findViewById(R.id.flockfree_route_privacy_card);
 
@@ -80,7 +84,7 @@ public class FlockFreeRouteComparisonCard extends MapBaseCard {
 		privacyCameras.setTextColor(ContextCompat.getColor(app, R.color.text_color_positive));
 
 		TextView privacyActiveLabel = view.findViewById(R.id.flockfree_route_privacy_active);
-		privacyActiveLabel.setVisibility(privacyActive ? View.VISIBLE : View.GONE);
+		privacyActiveLabel.setVisibility(privacyActive && portrait ? View.VISIBLE : View.GONE);
 		privacyActiveLabel.setTextColor(ContextCompat.getColor(app, ColorUtilities.getActiveColorId(nightMode)));
 
 		TextView summaryText = view.findViewById(R.id.flockfree_route_comparison_summary_text);
