@@ -1736,19 +1736,24 @@ public class FlockFreePlugin extends OsmandPlugin {
         List<LatLon> path = new ArrayList<>();
         Location firstLocation = routeLocs.get(0);
         Location lastLocation = routeLocs.get(routeLocs.size() - 1);
+        RoutingHelper routingHelper = app.getRoutingHelper();
+        List<LatLon> intermediatePoints = new ArrayList<>(routingHelper.getIntermediatePoints());
+        LatLon requestedDestination = routingHelper.getFinalLocation();
+        if (requestedDestination == null) {
+            requestedDestination = new LatLon(lastLocation.getLatitude(), lastLocation.getLongitude());
+        }
         path.add(new LatLon(firstLocation.getLatitude(), firstLocation.getLongitude()));
-        path.addAll(app.getRoutingHelper().getIntermediatePoints());
-        path.add(new LatLon(lastLocation.getLatitude(), lastLocation.getLongitude()));
+        path.addAll(intermediatePoints);
+        path.add(requestedDestination);
 
         List<Location> currentLocations = new ArrayList<>(routeLocs);
         List<RouteDirectionInfo> currentDirections =
-                new ArrayList<>(app.getRoutingHelper().getRouteDirections());
+                new ArrayList<>(routingHelper.getRouteDirections());
         int currentDistance = currentRoute.getWholeDistance();
         int currentTime = currentRoute.getLeftTime(null);
         boolean leftSideNavigation = app.getSettings().DRIVING_REGION.get().leftHandDriving;
         String comparisonRouteKey = buildComparisonRouteKey(
-                app.getRoutingHelper().getIntermediatePoints(),
-                new LatLon(lastLocation.getLatitude(), lastLocation.getLongitude()));
+                intermediatePoints, requestedDestination);
         long generation = onlineComparisonGeneration.incrementAndGet();
         setLastRouteComparisonInfo(null);
         clearOnlineComparisonRoutes();
@@ -1815,8 +1820,11 @@ public class FlockFreePlugin extends OsmandPlugin {
                         privacyDistance, privacyTime, privacyCameraCount);
 
                 app.runInUIThread(() -> {
+                    String currentRouteKey = getCurrentComparisonRouteKey();
                     if (generation != onlineComparisonGeneration.get()
-                            || !comparisonRouteKey.equals(getCurrentComparisonRouteKey())) {
+                            || !comparisonRouteKey.equals(currentRouteKey)) {
+                        LOG.info("Discarding stale online comparison generation=" + generation
+                                + " requested=" + comparisonRouteKey + " current=" + currentRouteKey);
                         return;
                     }
                     cachedFastestRouteLocations = fastLocations;
