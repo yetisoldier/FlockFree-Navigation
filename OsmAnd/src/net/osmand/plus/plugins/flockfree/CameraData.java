@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.GZIPInputStream;
 
 public class CameraData {
@@ -68,6 +69,7 @@ public class CameraData {
     private volatile boolean loading = false;
     private volatile boolean databaseReady = false;
     private volatile boolean osmDatabaseReady = false;
+    private final AtomicLong dataRevision = new AtomicLong();
     @NonNull
     private volatile DataSource lastLoadedSource = DataSource.NONE;
 
@@ -82,6 +84,11 @@ public class CameraData {
 
     public boolean isLoading() {
         return loading;
+    }
+
+    /** Monotonically changes whenever the camera data visible to map queries changes. */
+    public long getDataRevision() {
+        return dataRevision.get();
     }
 
     public synchronized void ensureDataLoaded() {
@@ -306,6 +313,7 @@ public class CameraData {
             boolean persisted = databaseHelper.replaceAllOsmCameras(osmCameras);
             osmDatabaseReady = persisted;
             if (persisted) {
+                dataRevision.incrementAndGet();
                 LOG.info("OSM camera refresh complete: " + osmCameras.size() + " cameras stored");
                 // Save refresh timestamp
                 app.getSettings().setPreference(FlockFreePreferences.OSM_LAST_REFRESH_TIME, System.currentTimeMillis());
@@ -540,6 +548,7 @@ public class CameraData {
                 cameraGrid = buildSpatialGrid(deduped);
                 lastLoadedSource = DataSource.DATABASE;
                 databaseReady = true;
+                dataRevision.incrementAndGet();
             }
             dataLoaded = true;
             LOG.info("Loaded " + deduped.size() + " Flock cameras from SQLite database (removed " + removed + " duplicates)");
@@ -749,6 +758,7 @@ public class CameraData {
                 cameraGrid = buildSpatialGrid(parsed);
                 lastLoadedSource = source;
                 databaseReady = false;
+                dataRevision.incrementAndGet();
             }
             persistParsedCameras(parsed, source);
             LOG.info("Parsed " + parsed.size() + " Flock camera points from " + source.logName

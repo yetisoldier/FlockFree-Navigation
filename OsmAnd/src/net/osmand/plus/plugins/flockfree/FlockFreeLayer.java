@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PointF;
+import android.os.SystemClock;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -39,7 +40,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private static final float CLUSTER_RADIUS_INCREMENT_DP = 1f;
     private static final float CLUSTER_MAX_RADIUS_DP = 20f;
     private static final double CAMERA_QUERY_BOUNDS_PADDING_FACTOR = 0.25;
-    private static final long CAMERA_QUERY_CACHE_TTL_MS = 10_000L;
+    private static final long MIN_OVERLAY_REFRESH_INTERVAL_MS = 33L; // at most about 30 FPS
 
     private final FlockFreePlugin plugin;
     private final Paint markerPaint;
@@ -86,7 +87,8 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     @Nullable
     private QuadRect cachedCameraQueryBounds;
     private int cachedCameraQueryZoom = -1;
-    private long cachedCameraQueryTimeMs;
+    private long cachedCameraDataRevision = -1L;
+    private long lastOverlayRefreshRealtimeMs;
 
     /**
      * A cluster of cameras that fall within the same grid cell.
@@ -167,8 +169,14 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     @Override
     public void onUpdateFrame(@NonNull MapRendererView mapRenderer) {
         super.onUpdateFrame(mapRenderer);
-        if (plugin.CAMERA_SHOW_LAYER.get() && view != null
-                && (view.isAnimatingMapRotation() || view.isAnimatingMapMove() || view.isAnimatingMapZoom())) {
+        if (!plugin.CAMERA_SHOW_LAYER.get() || view == null
+                || !(view.isAnimatingMapRotation() || view.isAnimatingMapMove()
+                || view.isAnimatingMapZoom())) {
+            return;
+        }
+        long now = SystemClock.elapsedRealtime();
+        if (now - lastOverlayRefreshRealtimeMs >= MIN_OVERLAY_REFRESH_INTERVAL_MS) {
+            lastOverlayRefreshRealtimeMs = now;
             view.refreshMap();
         }
     }
@@ -221,11 +229,11 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private List<CameraData.CameraPoint> getCamerasForScreen(@NonNull CameraData cameraData,
                                                              @NonNull QuadRect screenArea,
                                                              int zoom) {
-        long now = System.currentTimeMillis();
+        long dataRevision = cameraData.getDataRevision();
         QuadRect cachedBounds = cachedCameraQueryBounds;
         if (cachedBounds != null
+                && cachedCameraDataRevision == dataRevision
                 && cachedCameraQueryZoom == zoom
-                && now - cachedCameraQueryTimeMs < CAMERA_QUERY_CACHE_TTL_MS
                 && containsBounds(cachedBounds, screenArea)) {
             return cachedCameraQuery;
         }
@@ -236,7 +244,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
                 queryBounds.top, queryBounds.left, queryBounds.bottom, queryBounds.right));
         cachedCameraQueryBounds = queryBounds;
         cachedCameraQueryZoom = zoom;
-        cachedCameraQueryTimeMs = now;
+        cachedCameraDataRevision = dataRevision;
         return cachedCameraQuery;
     }
 
@@ -244,7 +252,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         cachedCameraQuery.clear();
         cachedCameraQueryBounds = null;
         cachedCameraQueryZoom = -1;
-        cachedCameraQueryTimeMs = 0;
+        cachedCameraDataRevision = -1L;
     }
 
     @NonNull

@@ -292,6 +292,7 @@ from pathlib import Path
 route_provider = Path("OsmAnd/src/net/osmand/plus/routing/RouteProvider.java").read_text()
 avoidance_helper = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/CameraAvoidanceHelper.java").read_text()
 flockfree_layer = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/FlockFreeLayer.java").read_text()
+camera_data = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/CameraData.java").read_text()
 camera_alert_toast = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/CameraAlertToast.java").read_text()
 flockfree_engine = Path("OsmAnd/src/net/osmand/plus/onlinerouting/engine/FlockFreeEngine.java").read_text()
 quick_search = Path("OsmAnd/src/net/osmand/plus/search/dialogs/QuickSearchDialogFragment.java").read_text()
@@ -370,10 +371,24 @@ required_layer_tokens = [
     "if (isInBounds(screenArea, camera.lat, camera.lon))",
     "drawClusters(canvas, tileBox, visibleCameras)",
     "CameraAvoidanceHelper.CAMERA_CONE_HALF_ANGLE_DEGREES",
+    "cachedCameraDataRevision == dataRevision",
+    "cameraData.getDataRevision()",
 ]
 missing_layer = [item for item in required_layer_tokens if item not in flockfree_layer]
 if missing_layer:
     raise SystemExit("missing map-layer visibility filtering:\n" + "\n".join(missing_layer))
+required_layer_throttle_tokens = [
+    "MIN_OVERLAY_REFRESH_INTERVAL_MS = 33L",
+    "SystemClock.elapsedRealtime()",
+    "now - lastOverlayRefreshRealtimeMs >= MIN_OVERLAY_REFRESH_INTERVAL_MS",
+]
+missing_layer_throttle = [item for item in required_layer_throttle_tokens if item not in flockfree_layer]
+if missing_layer_throttle:
+    raise SystemExit("camera overlay redraw is not frame-rate limited:\n" + "\n".join(missing_layer_throttle))
+if "CAMERA_QUERY_CACHE_TTL_MS" in flockfree_layer:
+    raise SystemExit("camera layer still expires unchanged spatial queries on a timer")
+if "public long getDataRevision()" not in camera_data or camera_data.count("dataRevision.incrementAndGet()") < 3:
+    raise SystemExit("camera query cache is not invalidated when camera datasets change")
 
 required_alert_tokens = [
     "findCamerasWhoseConeIntersectsRouteLocations(routeLocations)",
