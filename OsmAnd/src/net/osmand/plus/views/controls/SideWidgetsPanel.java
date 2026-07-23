@@ -362,6 +362,10 @@ public class SideWidgetsPanel extends FrameLayoutEx implements WidgetsContainer 
 		}
 	}
 
+	public void refreshContentSize() {
+		wrapContentAroundPage(null);
+	}
+
 	@Nullable
 	private View getCurrentPageView() {
 		RecyclerView recyclerView = (RecyclerView) viewPager.getChildAt(0);

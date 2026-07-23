@@ -56,7 +56,6 @@ public class MapHudLayout extends FrameLayout {
 	private static final float TOP_BAR_MAX_WIDTH_PERCENTAGE_LANDSCAPE = 0.6f;
 	private static final float FLOCKFREE_TOP_BAR_MAX_WIDTH_PERCENTAGE_LANDSCAPE = 0.36f;
 	private static final int FLOCKFREE_TOP_BAR_START_MARGIN_DP = 88;
-	private static final int FLOCKFREE_RIGHT_PANEL_TOP_MARGIN_PORTRAIT_DP = 96;
 
 	private static final Log LOG = PlatformUtil.getLog(MapHudLayout.class);
 
@@ -93,6 +92,19 @@ public class MapHudLayout extends FrameLayout {
 	private final Paint slotPaintStroke = new Paint();
 	private final Paint slotPaintFill = new Paint();
 	private final Paint framePaintStroke = new Paint();
+	private final Runnable widgetContentReflow = () -> {
+		if (leftWidgetsPanel != null) {
+			leftWidgetsPanel.refreshContentSize();
+		}
+		if (rightWidgetsPanel != null) {
+			rightWidgetsPanel.refreshContentSize();
+		}
+		requestLayout();
+		postOnAnimation(() -> {
+			updateButtons();
+			requestLayout();
+		});
+	};
 
 	public MapHudLayout(@NonNull Context context) {
 		this(context, null);
@@ -636,23 +648,11 @@ public class MapHudLayout extends FrameLayout {
 	private void updateVerticalPanels() {
 		updateHorizontalMargins(topWidgetsPanel);
 		updateHorizontalMargins(bottomWidgetsPanel);
-		updateRightPanelTopMargin();
 	}
 
-	private void updateRightPanelTopMargin() {
-		if (rightWidgetsPanel == null || rightWidgetsPanel.getVisibility() != VISIBLE) {
-			return;
-		}
-		boolean flockFreeActive = PluginsHelper.getEnabledPlugin(FlockFreePlugin.class) != null;
-		int targetTopMargin = flockFreeActive && portrait
-				? (int) (dpToPx * FLOCKFREE_RIGHT_PANEL_TOP_MARGIN_PORTRAIT_DP)
-				: (int) (dpToPx * 6); // content_padding_small_half
-		if (rightWidgetsPanel.getLayoutParams() instanceof MarginLayoutParams params) {
-			if (params.topMargin != targetTopMargin) {
-				params.topMargin = targetTopMargin;
-				rightWidgetsPanel.setLayoutParams(params);
-			}
-		}
+	public void requestWidgetContentReflow() {
+		removeCallbacks(widgetContentReflow);
+		post(widgetContentReflow);
 	}
 
 	private void updateHorizontalMargins(@Nullable VerticalWidgetPanel panel) {

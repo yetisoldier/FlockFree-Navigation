@@ -300,6 +300,8 @@ street_name_widget = Path("OsmAnd/src/net/osmand/plus/views/mapwidgets/widgets/S
 map_activity = Path("OsmAnd/src/net/osmand/plus/activities/MapActivity.java").read_text()
 map_info_layer = Path("OsmAnd/src/net/osmand/plus/views/layers/MapInfoLayer.java").read_text()
 map_hud_layout = Path("OsmAnd/src/net/osmand/plus/views/controls/MapHudLayout.java").read_text()
+side_widgets_panel = Path("OsmAnd/src/net/osmand/plus/views/controls/SideWidgetsPanel.java").read_text()
+text_info_widget = Path("OsmAnd/src/net/osmand/plus/views/mapwidgets/widgets/TextInfoWidget.java").read_text()
 plugin = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/FlockFreePlugin.java").read_text()
 route_menu = Path("OsmAnd/src/net/osmand/plus/routepreparationmenu/MapRouteInfoMenu.java").read_text()
 route_status_card = Path("OsmAnd/src/net/osmand/plus/routepreparationmenu/cards/FlockFreeRouteStatusCard.java").read_text()
@@ -407,11 +409,20 @@ required_hud_resume_tokens = [
     "mapHudLayout.updateButtons();",
     "mapHudLayout.requestLayout();",
     "position.setMarginX(1);",
+    "public void requestWidgetContentReflow()",
+    "rightWidgetsPanel.refreshContentSize();",
+    "public void refreshContentSize()",
+    "requestHudContentReflow();",
+    "mapHudLayout.requestWidgetContentReflow();",
 ]
-hud_resume_text = "\n".join([map_activity, map_info_layer, map_hud_layout])
+hud_resume_text = "\n".join([
+    map_activity, map_info_layer, map_hud_layout, side_widgets_panel, text_info_widget
+])
 missing_hud_resume = [item for item in required_hud_resume_tokens if item not in hud_resume_text]
 if missing_hud_resume:
     raise SystemExit("missing HUD resume/layout safeguards:\n" + "\n".join(missing_hud_resume))
+if "FLOCKFREE_RIGHT_PANEL_TOP_MARGIN_PORTRAIT_DP" in map_hud_layout:
+    raise SystemExit("right-side speed widgets still race with a second hard-coded top margin")
 
 required_http_tokens = [
     "connection.setFixedLengthStreamingMode(requestBytes.length)",

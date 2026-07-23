@@ -5,6 +5,7 @@ import android.graphics.drawable.Drawable;
 import android.text.TextUtils;
 import android.util.Pair;
 import android.view.View;
+import android.view.ViewParent;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -16,6 +17,7 @@ import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.helpers.AndroidUiHelper;
 import net.osmand.plus.utils.OsmAndFormatter;
+import net.osmand.plus.views.controls.MapHudLayout;
 import net.osmand.plus.views.layers.MapInfoLayer.TextState;
 import net.osmand.plus.views.mapwidgets.OutlinedTextContainer;
 import net.osmand.plus.views.mapwidgets.WidgetType;
@@ -132,8 +134,26 @@ public abstract class TextInfoWidget extends MapWidget implements ISupportSidePa
 	}
 
 	public void setText(String text, String subtext) {
+		boolean contentChanged = !TextUtils.equals(textView.getText(), text == null ? "" : text)
+				|| !TextUtils.equals(smallTextView.getText(), subtext == null ? "" : subtext);
 		setTextNoUpdateVisibility(text, subtext);
-		updateVisibility(text != null);
+		boolean visibilityChanged = updateVisibility(text != null);
+		if (contentChanged || visibilityChanged) {
+			requestHudContentReflow();
+		}
+	}
+
+	private void requestHudContentReflow() {
+		getView().post(() -> {
+			ViewParent parent = getView().getParent();
+			while (parent != null) {
+				if (parent instanceof MapHudLayout mapHudLayout) {
+					mapHudLayout.requestWidgetContentReflow();
+					return;
+				}
+				parent = parent.getParent();
+			}
+		});
 	}
 
 	protected void setTextNoUpdateVisibility(String text, String subtext) {
