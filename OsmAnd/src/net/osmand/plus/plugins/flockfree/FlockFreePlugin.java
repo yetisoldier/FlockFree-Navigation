@@ -189,6 +189,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     private Boolean cameraAvoidanceRuntimeOverride = null;  // null = use preference, true/false = temporary override
     private long lastCameraAlertTimeMs;
     private String lastCameraAlertKey;
+    private String dismissedCameraAlertKey;
     private final ExecutorService appUpdateExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService osmRefreshExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService onlineComparisonExecutor = Executors.newSingleThreadExecutor();
@@ -1344,8 +1345,8 @@ public class FlockFreePlugin extends OsmandPlugin {
 
         if (routeLocations != null && !routeLocations.isEmpty()) {
             // Route-based search: only cameras near the route corridor
-            List<CameraData.CameraPoint> routeCameras =
-                    getAvoidanceHelper().findCamerasNearRouteLocations(routeLocations, alertDistance);
+            List<CameraData.CameraPoint> routeCameras = getAvoidanceHelper()
+                    .findCamerasWhoseConeIntersectsRouteLocations(routeLocations);
             for (CameraData.CameraPoint camera : routeCameras) {
                 double distance = MapUtils.getDistance(
                         latitude, longitude, camera.lat, camera.lon);
@@ -1376,6 +1377,7 @@ public class FlockFreePlugin extends OsmandPlugin {
             if (cameraAlertToast != null && cameraAlertToast.isShowing()) {
                 cameraAlertToast.dismiss();
             }
+            dismissedCameraAlertKey = null;
             setLastCameraAlertCheckSummary(app.getString(R.string.flockfree_alert_last_check_no_cameras,
                     alertDistance));
         }
@@ -1472,6 +1474,14 @@ public class FlockFreePlugin extends OsmandPlugin {
         String cameraKey = getCameraAlertKey(camera);
         String brand = camera.brand != null ? camera.brand : app.getString(R.string.res_unknown);
         int roundedDistance = Math.max(1, Math.round((float) distanceMeters));
+        if (!forceAlert && cameraKey.equals(dismissedCameraAlertKey)) {
+            setLastCameraAlertCheckSummary(app.getString(R.string.flockfree_alert_last_check_dismissed,
+                    brand, roundedDistance));
+            return;
+        }
+        if (dismissedCameraAlertKey != null && !cameraKey.equals(dismissedCameraAlertKey)) {
+            dismissedCameraAlertKey = null;
+        }
         long cooldown = cameraKey.equals(lastCameraAlertKey)
                 ? SAME_CAMERA_ALERT_COOLDOWN_MS
                 : CAMERA_ALERT_COOLDOWN_MS;
@@ -1503,6 +1513,7 @@ public class FlockFreePlugin extends OsmandPlugin {
     private void showExtendedCameraAlertToast(@NonNull String title) {
         if (cameraAlertToast == null) {
             cameraAlertToast = new CameraAlertToast(app);
+            cameraAlertToast.setOnUserDismissListener(() -> dismissedCameraAlertKey = lastCameraAlertKey);
         }
         cameraAlertToast.show(title);
     }
@@ -1602,7 +1613,7 @@ public class FlockFreePlugin extends OsmandPlugin {
         if (cameraAvoidanceEnabled) {
             CameraAvoidanceHelper helper = getAvoidanceHelper();
             routeSummary = helper.getRouteCameraSummaryFromLocations(routeLocations);
-            int privacyCameraCount = helper.findCamerasNearRouteLocations(routeLocations, helper.getAvoidanceRadius()).size();
+            int privacyCameraCount = helper.findCamerasWhoseConeIntersectsRouteLocations(routeLocations).size();
             if (!onlineFlockFreeRoute) {
                 updateLastRouteComparisonInfo(helper, route, privacyCameraCount);
                 if (getLastRouteComparisonInfo() != null) {
@@ -1912,8 +1923,8 @@ public class FlockFreePlugin extends OsmandPlugin {
         if (routeLocations == null || routeLocations.isEmpty()) return 0;
         CameraAvoidanceHelper helper = getAvoidanceHelper();
         if (helper == null) return 0;
-        int radiusMeters = 91; // ~300ft matching cone range
-        List<CameraData.CameraPoint> cameras = helper.findCamerasNearRouteLocations(routeLocations, radiusMeters);
+        List<CameraData.CameraPoint> cameras =
+                helper.findCamerasWhoseConeIntersectsRouteLocations(routeLocations);
         return cameras != null ? cameras.size() : 0;
     }
     

@@ -303,8 +303,8 @@ public class RouteProvider {
 			List<Location> horizonLocations = getHorizonRouteLocations(
 					initial.getImmutableAllLocations(), ACTIVE_NAVIGATION_HORIZON_KM);
 			// Count total cameras on the full route for display, but only scan/avoid within horizon
-			totalRouteCameraCount = avoidanceHelper.findCamerasNearRouteLocations(
-					initial.getImmutableAllLocations(), avoidanceRadius).size();
+			totalRouteCameraCount = avoidanceHelper.findCamerasWhoseConeIntersectsRouteLocations(
+					initial.getImmutableAllLocations()).size();
 			scanLocations = horizonLocations;
 			log.info("FlockFree active navigation horizon planning: scanning first "
 					+ ACTIVE_NAVIGATION_HORIZON_KM + " km ("
@@ -328,8 +328,8 @@ public class RouteProvider {
 			avoidanceHelper.recordAvoidanceSkipped(CameraAvoidanceHelper.AvoidanceStatus.SKIPPED_NO_ROAD_IDS);
 			return null;
 		}
-		int originalRouteCameraCount = avoidanceHelper.findCamerasNearRouteLocations(
-				scanLocations, avoidanceRadius).size();
+		int originalRouteCameraCount = avoidanceHelper.findCamerasWhoseConeIntersectsRouteLocations(
+				scanLocations).size();
 		if (originalRouteCameraCount <= 0) {
 			log.warn("FlockFree avoidance skipped: road mapping found camera roads but route exposure scan found none");
 			avoidanceHelper.recordAvoidanceSkipped(CameraAvoidanceHelper.AvoidanceStatus.SKIPPED_NO_ROAD_IDS);
@@ -400,8 +400,8 @@ public class RouteProvider {
 				RouteCalculationResult avoided = findVectorMapsRoute(avoidedParams, calcGPXRoute);
 				completeFlockFreeOptionalRoutingStep(params, tierIteration);
 				if (avoided.isCalculated()) {
-					int avoidedCameraCount = avoidanceHelper.findCamerasNearRouteLocations(
-							avoided.getImmutableAllLocations(), avoidanceRadius).size();
+					int avoidedCameraCount = avoidanceHelper.findCamerasWhoseConeIntersectsRouteLocations(
+							avoided.getImmutableAllLocations()).size();
 					log.info("FlockFree tier " + (tierIdx + 1) + " route has " + avoidedCameraCount
 							+ " cameras (original had " + originalRouteCameraCount + ")");
 
@@ -473,8 +473,8 @@ public class RouteProvider {
 					RouteCalculationResult avoided = findVectorMapsRoute(avoidedParams, calcGPXRoute);
 					completeFlockFreeOptionalRoutingStep(params, tierIteration);
 					if (avoided.isCalculated()) {
-						int avoidedCameraCount = avoidanceHelper.findCamerasNearRouteLocations(
-								avoided.getImmutableAllLocations(), avoidanceRadius).size();
+						int avoidedCameraCount = avoidanceHelper.findCamerasWhoseConeIntersectsRouteLocations(
+								avoided.getImmutableAllLocations()).size();
 						log.info("FlockFree single-road fallback iteration " + (i + 1)
 								+ " route has " + avoidedCameraCount
 								+ " cameras (original had " + originalRouteCameraCount + ")");
@@ -539,8 +539,8 @@ public class RouteProvider {
 						RouteCalculationResult altRoute = findVectorMapsRoute(altParams, calcGPXRoute);
 						completeFlockFreeOptionalRoutingStep(params, tierIteration);
 						if (altRoute.isCalculated()) {
-							int altCameraCount = avoidanceHelper.findCamerasNearRouteLocations(
-									altRoute.getImmutableAllLocations(), avoidanceRadius).size();
+							int altCameraCount = avoidanceHelper.findCamerasWhoseConeIntersectsRouteLocations(
+									altRoute.getImmutableAllLocations()).size();
 							log.info("FlockFree dual-route: alternative has " + altCameraCount
 									+ " cameras vs original " + originalRouteCameraCount
 									+ ", best so far " + bestRouteCameraCount);
@@ -883,8 +883,8 @@ public class RouteProvider {
 		// Track the best route found so far
 		RouteCalculationResult bestRoute = currentRoute;
 		Set<Long> bestBlockedIds = new LinkedHashSet<>(blockedIds);
-		int bestCameraCount = helper.findCamerasNearRouteLocations(
-				currentRoute.getImmutableAllLocations(), radius).size();
+		int bestCameraCount = helper.findCamerasWhoseConeIntersectsRouteLocations(
+				currentRoute.getImmutableAllLocations()).size();
 
 		for (int pass = 0; pass < MAX_AVOIDANCE_PASSES; pass++) {
 			// Find cameras on the current best route
@@ -920,8 +920,8 @@ public class RouteProvider {
 			}
 
 			// Count cameras on the new route
-			int newCameraCount = helper.findCamerasNearRouteLocations(
-					expanded.getImmutableAllLocations(), radius).size();
+			int newCameraCount = helper.findCamerasWhoseConeIntersectsRouteLocations(
+					expanded.getImmutableAllLocations()).size();
 			log.info("FlockFree multi-pass pass " + (pass + 1)
 					+ " result: " + newCameraCount + " cameras (was " + bestCameraCount + ")");
 
@@ -943,13 +943,13 @@ public class RouteProvider {
 			}
 		}
 
-		if (bestCameraCount < helper.findCamerasNearRouteLocations(
-				currentRoute.getImmutableAllLocations(), radius).size()) {
+		if (bestCameraCount < helper.findCamerasWhoseConeIntersectsRouteLocations(
+				currentRoute.getImmutableAllLocations()).size()) {
 			// We found a better route — update blockedIds and return it
 			blockedIds.clear();
 			blockedIds.addAll(bestBlockedIds);
-			int originalCameras = helper.findCamerasNearRouteLocations(
-					currentRoute.getImmutableAllLocations(), radius).size();
+			int originalCameras = helper.findCamerasWhoseConeIntersectsRouteLocations(
+					currentRoute.getImmutableAllLocations()).size();
 			log.info("FlockFree multi-pass improved from "
 					+ originalCameras + " to " + bestCameraCount + " cameras");
 			// Record the avoidance with the improved camera count

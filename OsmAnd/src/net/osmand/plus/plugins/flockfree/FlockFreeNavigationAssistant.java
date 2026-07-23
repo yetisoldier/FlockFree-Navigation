@@ -281,9 +281,8 @@ public final class FlockFreeNavigationAssistant {
 		if (!plugin.getCameraData().isDataLoaded() || locations == null || locations.isEmpty()) {
 			return app.getString(R.string.flockfree_route_preview_no_camera_data);
 		}
-		int radius = plugin.CAMERA_AVOIDANCE_RADIUS.get();
 		int cameraCount = plugin.getAvoidanceHelper()
-				.findCamerasNearRouteLocations(locations, radius).size();
+				.findCamerasWhoseConeIntersectsRouteLocations(locations).size();
 		return app.getString(R.string.flockfree_route_preview_camera_summary, cameraCount);
 	}
 

@@ -134,7 +134,7 @@ public class CameraProximityWidget extends SimpleWidget {
 
 		List<Location> remainingRoute = routeLocations.subList(startIndex, routeLocations.size());
 		List<CameraData.CameraPoint> cameras =
-				plugin.getAvoidanceHelper().findCamerasNearRouteLocations(remainingRoute, radiusMeters);
+				plugin.getAvoidanceHelper().findCamerasWhoseConeIntersectsRouteLocations(remainingRoute);
 		cachedCameraCount = cameras.size();
 		showRouteCameraCount(app, cachedCameraCount);
 	}

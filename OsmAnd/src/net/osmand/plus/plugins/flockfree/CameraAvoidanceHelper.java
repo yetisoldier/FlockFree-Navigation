@@ -47,7 +47,9 @@ public class CameraAvoidanceHelper {
      * of the camera's facing bearing. Set to 60 for a 120° total acceptance window.
      * When camera bearing is unavailable (0), falls back to omnidirectional blocking.
      */
-    private static final float DIRECTION_MATCH_WINDOW_DEGREES = 60f;
+    public static final float CAMERA_CONE_HALF_ANGLE_DEGREES = 60f;
+    public static final double CAMERA_CONE_RANGE_METERS = 91.44d; // 300 feet
+    private static final float DIRECTION_MATCH_WINDOW_DEGREES = CAMERA_CONE_HALF_ANGLE_DEGREES;
 
     public enum AvoidanceStatus {
         NONE,
@@ -538,6 +540,44 @@ public class CameraAvoidanceHelper {
         return findCamerasNearRoute(routePoints, radiusMeters);
     }
 
+    /**
+     * Returns only cameras whose 300-foot directional field-of-view cone intersects
+     * the route geometry. A camera without bearing data is treated as omnidirectional,
+     * matching the privacy router's camera polygon behavior.
+     */
+    @NonNull
+    public List<CameraData.CameraPoint> findCamerasWhoseConeIntersectsRoute(
+            @NonNull List<LatLon> routePoints) {
+        List<CameraData.CameraPoint> result = new ArrayList<>();
+        CameraData cameraData = plugin.getCameraData();
+        if (!cameraData.isDataLoaded() || routePoints.isEmpty()) {
+            return result;
+        }
+
+        int coneRangeMeters = (int) Math.ceil(CAMERA_CONE_RANGE_METERS);
+        double[] bounds = getRouteCorridorBounds(routePoints, coneRangeMeters);
+        List<CameraData.CameraPoint> candidates = cameraData.getCamerasInBoundingBox(
+                bounds[0], bounds[1], bounds[2], bounds[3]);
+        RouteEdgeIndex routeEdgeIndex = routePoints.size() > 1
+                ? new RouteEdgeIndex(routePoints, coneRangeMeters) : null;
+        for (CameraData.CameraPoint camera : candidates) {
+            if (doesCameraConeIntersectRoute(camera, routePoints, routeEdgeIndex)) {
+                result.add(camera);
+            }
+        }
+        return result;
+    }
+
+    @NonNull
+    public List<CameraData.CameraPoint> findCamerasWhoseConeIntersectsRouteLocations(
+            @NonNull List<Location> routeLocations) {
+        List<LatLon> routePoints = new ArrayList<>(routeLocations.size());
+        for (Location location : routeLocations) {
+            routePoints.add(new LatLon(location.getLatitude(), location.getLongitude()));
+        }
+        return findCamerasWhoseConeIntersectsRoute(routePoints);
+    }
+
     @NonNull
     public Set<Long> collectAvoidRoadIdsForRoute(@NonNull RouteCalculationResult route, int radiusMeters) {
         Set<Long> result = new LinkedHashSet<>();
@@ -920,6 +960,141 @@ public class CameraAvoidanceHelper {
         return false;
     }
 
+    private boolean doesCameraConeIntersectRoute(@NonNull CameraData.CameraPoint camera,
+                                                  @NonNull List<LatLon> routePoints,
+                                                  @Nullable RouteEdgeIndex routeEdgeIndex) {
+        if (routePoints.size() == 1) {
+            return isPointInsideCameraCone(camera, routePoints.get(0));
+        }
+        List<RouteEdge> candidateEdges = routeEdgeIndex != null
+                ? routeEdgeIndex.getCandidateEdges(camera.lat, camera.lon) : Collections.emptyList();
+        for (RouteEdge edge : candidateEdges) {
+            if (doesCameraConeIntersectEdge(camera, edge)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isPointInsideCameraCone(@NonNull CameraData.CameraPoint camera,
+                                             @NonNull LatLon point) {
+        double[] local = toCameraLocalMeters(camera, point);
+        return isLocalPointInsideCameraCone(local[0], local[1], camera.getBearing());
+    }
+
+    private boolean doesCameraConeIntersectEdge(@NonNull CameraData.CameraPoint camera,
+                                                 @NonNull RouteEdge edge) {
+        double[] start = toCameraLocalMeters(camera, edge.from);
+        double[] end = toCameraLocalMeters(camera, edge.to);
+        float bearing = camera.getBearing();
+        if (bearing <= 0f) {
+            return distanceFromOriginToSegment(start[0], start[1], end[0], end[1])
+                    <= CAMERA_CONE_RANGE_METERS;
+        }
+        if (isLocalPointInsideCameraCone(start[0], start[1], bearing)
+                || isLocalPointInsideCameraCone(end[0], end[1], bearing)) {
+            return true;
+        }
+
+        double leftAngle = Math.toRadians(bearing - CAMERA_CONE_HALF_ANGLE_DEGREES);
+        double rightAngle = Math.toRadians(bearing + CAMERA_CONE_HALF_ANGLE_DEGREES);
+        double leftX = CAMERA_CONE_RANGE_METERS * Math.sin(leftAngle);
+        double leftY = CAMERA_CONE_RANGE_METERS * Math.cos(leftAngle);
+        double rightX = CAMERA_CONE_RANGE_METERS * Math.sin(rightAngle);
+        double rightY = CAMERA_CONE_RANGE_METERS * Math.cos(rightAngle);
+        if (segmentsIntersect(start[0], start[1], end[0], end[1], 0d, 0d, leftX, leftY)
+                || segmentsIntersect(start[0], start[1], end[0], end[1], 0d, 0d, rightX, rightY)) {
+            return true;
+        }
+
+        // Check the curved outer edge of the cone. A route segment can cross the
+        // arc even when neither endpoint and neither radial edge intersects it.
+        double dx = end[0] - start[0];
+        double dy = end[1] - start[1];
+        double a = dx * dx + dy * dy;
+        if (a <= 1e-9d) {
+            return false;
+        }
+        double b = 2d * (start[0] * dx + start[1] * dy);
+        double c = start[0] * start[0] + start[1] * start[1]
+                - CAMERA_CONE_RANGE_METERS * CAMERA_CONE_RANGE_METERS;
+        double discriminant = b * b - 4d * a * c;
+        if (discriminant < 0d) {
+            return false;
+        }
+        double sqrt = Math.sqrt(Math.max(0d, discriminant));
+        double t1 = (-b - sqrt) / (2d * a);
+        double t2 = (-b + sqrt) / (2d * a);
+        return isArcIntersectionInsideCone(start[0], start[1], dx, dy, t1, bearing)
+                || isArcIntersectionInsideCone(start[0], start[1], dx, dy, t2, bearing);
+    }
+
+    private boolean isArcIntersectionInsideCone(double startX, double startY, double dx, double dy,
+                                                 double t, float bearing) {
+        return t >= 0d && t <= 1d
+                && isWithinConeAngle(startX + t * dx, startY + t * dy, bearing);
+    }
+
+    private boolean isLocalPointInsideCameraCone(double x, double y, float bearing) {
+        double distanceSquared = x * x + y * y;
+        if (distanceSquared > CAMERA_CONE_RANGE_METERS * CAMERA_CONE_RANGE_METERS) {
+            return false;
+        }
+        return bearing <= 0f || isWithinConeAngle(x, y, bearing);
+    }
+
+    private boolean isWithinConeAngle(double x, double y, float bearing) {
+        if (Math.abs(x) < 1e-9d && Math.abs(y) < 1e-9d) {
+            return true;
+        }
+        double pointBearing = Math.toDegrees(Math.atan2(x, y));
+        if (pointBearing < 0d) {
+            pointBearing += 360d;
+        }
+        double difference = Math.abs(pointBearing - bearing) % 360d;
+        return Math.min(difference, 360d - difference) <= CAMERA_CONE_HALF_ANGLE_DEGREES;
+    }
+
+    @NonNull
+    private double[] toCameraLocalMeters(@NonNull CameraData.CameraPoint camera,
+                                          @NonNull LatLon point) {
+        double latitudeScale = 111_320d;
+        double longitudeScale = latitudeScale * Math.max(0.01d, Math.cos(Math.toRadians(camera.lat)));
+        return new double[]{
+                (point.getLongitude() - camera.lon) * longitudeScale,
+                (point.getLatitude() - camera.lat) * latitudeScale
+        };
+    }
+
+    private double distanceFromOriginToSegment(double x1, double y1, double x2, double y2) {
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double lengthSquared = dx * dx + dy * dy;
+        if (lengthSquared <= 1e-9d) {
+            return Math.hypot(x1, y1);
+        }
+        double t = Math.max(0d, Math.min(1d, -(x1 * dx + y1 * dy) / lengthSquared));
+        return Math.hypot(x1 + t * dx, y1 + t * dy);
+    }
+
+    private boolean segmentsIntersect(double ax, double ay, double bx, double by,
+                                      double cx, double cy, double dx, double dy) {
+        double abx = bx - ax;
+        double aby = by - ay;
+        double cdx = dx - cx;
+        double cdy = dy - cy;
+        double denominator = abx * cdy - aby * cdx;
+        if (Math.abs(denominator) < 1e-9d) {
+            return distanceFromOriginToSegment(ax - cx, ay - cy, bx - cx, by - cy) < 1e-6d
+                    || distanceFromOriginToSegment(cx - ax, cy - ay, dx - ax, dy - ay) < 1e-6d;
+        }
+        double acx = cx - ax;
+        double acy = cy - ay;
+        double t = (acx * cdy - acy * cdx) / denominator;
+        double u = (acx * aby - acy * abx) / denominator;
+        return t >= 0d && t <= 1d && u >= 0d && u <= 1d;
+    }
+
     /**
      * Returns a human-readable summary of Flock cameras near the route.
      */
@@ -928,9 +1103,8 @@ public class CameraAvoidanceHelper {
         if (!isAvoidanceEnabled()) {
             return app.getString(R.string.flockfree_route_avoidance_disabled);
         }
-        int radius = getAvoidanceRadius();
-        List<CameraData.CameraPoint> cameras = findCamerasNearRoute(routePoints, radius);
-        return formatRouteCameraSummary(cameras, radius);
+        List<CameraData.CameraPoint> cameras = findCamerasWhoseConeIntersectsRoute(routePoints);
+        return formatRouteCameraSummary(cameras);
     }
 
     @NonNull
@@ -938,15 +1112,14 @@ public class CameraAvoidanceHelper {
         if (!isAvoidanceEnabled()) {
             return app.getString(R.string.flockfree_route_avoidance_disabled);
         }
-        int radius = getAvoidanceRadius();
-        List<CameraData.CameraPoint> cameras = findCamerasNearRouteLocations(routeLocations, radius);
-        return formatRouteCameraSummary(cameras, radius);
+        List<CameraData.CameraPoint> cameras = findCamerasWhoseConeIntersectsRouteLocations(routeLocations);
+        return formatRouteCameraSummary(cameras);
     }
 
     @NonNull
-    private String formatRouteCameraSummary(@NonNull List<CameraData.CameraPoint> cameras, int radius) {
+    private String formatRouteCameraSummary(@NonNull List<CameraData.CameraPoint> cameras) {
         if (cameras.isEmpty()) {
-            return app.getString(R.string.flockfree_route_no_cameras_summary, radius);
+            return app.getString(R.string.flockfree_route_no_cameras_summary);
         }
         int flock = 0, motorola = 0, genetec = 0, other = 0;
         for (CameraData.CameraPoint cam : cameras) {
@@ -958,7 +1131,7 @@ public class CameraAvoidanceHelper {
             else other++;
         }
         StringBuilder sb = new StringBuilder();
-        sb.append(app.getString(R.string.flockfree_route_cameras_summary, cameras.size(), radius)).append("\n");
+        sb.append(app.getString(R.string.flockfree_route_cameras_summary, cameras.size())).append("\n");
         if (flock > 0) appendCount(sb, R.string.flockfree_route_vendor_flock, flock);
         if (motorola > 0) appendCount(sb, R.string.flockfree_route_vendor_motorola, motorola);
         if (genetec > 0) appendCount(sb, R.string.flockfree_route_vendor_genetec, genetec);

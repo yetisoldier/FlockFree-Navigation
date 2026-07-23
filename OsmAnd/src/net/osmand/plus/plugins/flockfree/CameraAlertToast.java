@@ -7,6 +7,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
@@ -46,6 +47,7 @@ public class CameraAlertToast {
 	private static final int CORNER_RADIUS_DP = 14;
 	private static final int ICON_TEXT_GAP_DP = 10;
 	private static final int MAX_WIDTH_DP = 400;
+	private static final int SWIPE_DISMISS_THRESHOLD_DP = 48;
 
 	private final OsmandApplication app;
 	private final Handler uiHandler = new Handler(Looper.getMainLooper());
@@ -54,9 +56,14 @@ public class CameraAlertToast {
 	private WindowManager windowManager;
 	private boolean isShowing;
 	private Runnable hideRunnable;
+	private Runnable onUserDismissListener;
 
 	public CameraAlertToast(@NonNull OsmandApplication app) {
 		this.app = app;
+	}
+
+	public void setOnUserDismissListener(@Nullable Runnable listener) {
+		onUserDismissListener = listener;
 	}
 
 	/**
@@ -150,12 +157,41 @@ public class CameraAlertToast {
 				1f);
 		container.addView(textView, textParams);
 
+		final float[] touchStart = new float[2];
+		textView.setOnTouchListener((view, event) -> {
+			if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+				touchStart[0] = event.getRawX();
+				touchStart[1] = event.getRawY();
+				return true;
+			}
+			if (event.getActionMasked() == MotionEvent.ACTION_UP) {
+				float deltaX = event.getRawX() - touchStart[0];
+				float deltaY = event.getRawY() - touchStart[1];
+				if (Math.hypot(deltaX, deltaY) >= dpToPx(ctx, SWIPE_DISMISS_THRESHOLD_DP)) {
+					dismissByUserInternal();
+				}
+				return true;
+			}
+			return event.getActionMasked() != MotionEvent.ACTION_CANCEL;
+		});
+
+		TextView closeView = new TextView(ctx);
+		closeView.setText("\u00D7");
+		closeView.setTextSize(TypedValue.COMPLEX_UNIT_SP, ICON_SIZE_SP);
+		closeView.setTextColor(TEXT_COLOR);
+		closeView.setGravity(Gravity.CENTER);
+		closeView.setContentDescription(ctx.getString(net.osmand.plus.R.string.shared_string_dismiss));
+		int closePadding = dpToPx(ctx, 8);
+		closeView.setPadding(closePadding, closePadding, closePadding, closePadding);
+		closeView.setOnClickListener(view -> dismissByUserInternal());
+		container.addView(closeView, new LinearLayout.LayoutParams(
+				dpToPx(ctx, 44), dpToPx(ctx, 44)));
+
 		WindowManager.LayoutParams params = new WindowManager.LayoutParams(
 				overlayWidth,
 				WindowManager.LayoutParams.WRAP_CONTENT,
 				WindowManager.LayoutParams.TYPE_APPLICATION_PANEL,
 				WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-						| WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
 						| WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
 				PixelFormat.TRANSLUCENT
 		);
@@ -191,6 +227,13 @@ public class CameraAlertToast {
 	 */
 	public void dismiss() {
 		uiHandler.post(this::dismissInternal);
+	}
+
+	private void dismissByUserInternal() {
+		if (onUserDismissListener != null) {
+			onUserDismissListener.run();
+		}
+		dismissInternal();
 	}
 
 	private void dismissInternal() {

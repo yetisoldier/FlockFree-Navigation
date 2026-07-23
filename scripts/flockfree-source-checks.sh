@@ -292,6 +292,7 @@ from pathlib import Path
 route_provider = Path("OsmAnd/src/net/osmand/plus/routing/RouteProvider.java").read_text()
 avoidance_helper = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/CameraAvoidanceHelper.java").read_text()
 flockfree_layer = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/FlockFreeLayer.java").read_text()
+camera_alert_toast = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/CameraAlertToast.java").read_text()
 flockfree_engine = Path("OsmAnd/src/net/osmand/plus/onlinerouting/engine/FlockFreeEngine.java").read_text()
 quick_search = Path("OsmAnd/src/net/osmand/plus/search/dialogs/QuickSearchDialogFragment.java").read_text()
 nominatim_filter = Path("OsmAnd/src/net/osmand/plus/poi/NominatimPoiFilter.java").read_text()
@@ -312,7 +313,7 @@ readme = Path("README.md").read_text()
 avoidance_doc = Path("docs/FLOCK-CAMERA-AVOIDANCE-ROUTING.md").read_text()
 
 required_route_tokens = [
-    "int originalRouteCameraCount = avoidanceHelper.findCamerasNearRouteLocations(",
+    "int originalRouteCameraCount = avoidanceHelper.findCamerasWhoseConeIntersectsRouteLocations(",
     "int originalRoadAssociationCount = 0;",
     "originalRoadAssociationCount += rwc.cameraCount;",
     "getFlockFreeAvoidanceRejectionReason(",
@@ -356,6 +357,9 @@ required_helper_tokens = [
     "new RouteEdgeIndex(routePoints, radiusMeters)",
     "new RouteRoadIndex(roads, radiusMeters)",
     "getCandidateRoadIndexes(camera.lat, camera.lon)",
+    "findCamerasWhoseConeIntersectsRouteLocations(",
+    "doesCameraConeIntersectEdge(",
+    "CAMERA_CONE_RANGE_METERS = 91.44d",
 ]
 missing_helper = [item for item in required_helper_tokens if item not in avoidance_helper]
 if missing_helper:
@@ -365,10 +369,25 @@ required_layer_tokens = [
     "getCamerasForScreen(cameraData, screenArea, tileBox.getZoom())",
     "if (isInBounds(screenArea, camera.lat, camera.lon))",
     "drawClusters(canvas, tileBox, visibleCameras)",
+    "CameraAvoidanceHelper.CAMERA_CONE_HALF_ANGLE_DEGREES",
 ]
 missing_layer = [item for item in required_layer_tokens if item not in flockfree_layer]
 if missing_layer:
     raise SystemExit("missing map-layer visibility filtering:\n" + "\n".join(missing_layer))
+
+required_alert_tokens = [
+    "findCamerasWhoseConeIntersectsRouteLocations(routeLocations)",
+    "setOnUserDismissListener(",
+    "dismissedCameraAlertKey",
+    "MotionEvent.ACTION_UP",
+    "dismissByUserInternal()",
+]
+alert_text = "\n".join([plugin, camera_alert_toast])
+missing_alert = [item for item in required_alert_tokens if item not in alert_text]
+if missing_alert:
+    raise SystemExit("missing cone-aware dismissible camera alerts:\n" + "\n".join(missing_alert))
+if "FLAG_NOT_TOUCHABLE" in camera_alert_toast:
+    raise SystemExit("camera alert overlay still rejects touch input")
 
 required_online_tokens = [
     "MAX_CAMERA_PENALTY_AREAS = 500",

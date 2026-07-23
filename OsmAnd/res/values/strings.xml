@@ -183,8 +183,8 @@
 	<string name="flockfree_camera_nearest_details">Nearest Flock camera</string>
 	<string name="flockfree_route_camera_data_loading">FlockFree: Flock camera data is still loading.</string>
 	<string name="flockfree_route_avoidance_disabled">FlockFree: Flock camera avoidance disabled.</string>
-	<string name="flockfree_route_no_cameras_summary">FlockFree: no Flock cameras detected within %1$d meters of route.</string>
-	<string name="flockfree_route_cameras_summary">FlockFree: %1$d Flock cameras near route (%2$d-meter corridor):</string>
+	<string name="flockfree_route_no_cameras_summary">FlockFree: no camera field-of-view cones intersect this route.</string>
+	<string name="flockfree_route_cameras_summary">FlockFree: %1$d camera field-of-view cones intersect this route:</string>
 	<string name="flockfree_route_status_applied">Avoidance applied: %1$d Flock-camera-adjacent road objects blocked.</string>
 	<string name="flockfree_route_status_fallback">Avoidance fallback: original route kept after blocking %1$d Flock-camera-adjacent road objects failed.</string>
 	<string name="flockfree_online_route_fallback">Online router unavailable. Using the on-device offline route.</string>
@@ -233,6 +233,7 @@
 	<string name="flockfree_alert_last_check_no_cameras">Nearby alert: no Flock cameras within %1$d meters.</string>
 	<string name="flockfree_alert_last_check_triggered">Nearby alert: %1$s Flock camera about %2$d meters away.</string>
 	<string name="flockfree_alert_last_check_cooldown">Nearby alert suppressed by cooldown: %1$s Flock camera about %2$d meters away.</string>
+	<string name="flockfree_alert_last_check_dismissed">Nearby alert dismissed: %1$s Flock camera about %2$d meters away.</string>
 	<string name="flockfree_cyd_hardware">CYD Hardware</string>
 	<string name="flockfree_cyd_ble">CYD BLE</string>
 	<string name="flockfree_cyd_ble_description">Scan for CYD-Flock-You hardware over Bluetooth Low Energy.</string>
