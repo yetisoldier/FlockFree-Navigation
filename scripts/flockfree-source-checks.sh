@@ -373,6 +373,8 @@ online_text = "\n".join([flockfree_engine, plugin])
 missing_online = [item for item in required_online_tokens if item not in online_text]
 if missing_online:
     raise SystemExit("missing paired online routing safeguards:\n" + "\n".join(missing_online))
+if "userInitiatedRouteSwitch" in plugin:
+    raise SystemExit("online comparison can remain suppressed after switching a cached route card")
 
 required_http_tokens = [
     "connection.setFixedLengthStreamingMode(requestBytes.length)",

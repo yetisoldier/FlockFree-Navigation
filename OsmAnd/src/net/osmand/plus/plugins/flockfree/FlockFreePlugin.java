@@ -185,7 +185,6 @@ public class FlockFreePlugin extends OsmandPlugin {
     private List<RouteDirectionInfo> cachedPrivacyRouteDirections;
     private List<Location> cachedFastestRouteLocations;
     private List<RouteDirectionInfo> cachedFastestRouteDirections;
-    private volatile boolean userInitiatedRouteSwitch = false;
     private Boolean cameraAvoidanceRuntimeOverride = null;  // null = use preference, true/false = temporary override
     private long lastCameraAlertTimeMs;
     private String lastCameraAlertKey;
@@ -598,7 +597,6 @@ public class FlockFreePlugin extends OsmandPlugin {
 
     public void setCameraAvoidanceEnabled(boolean enabled) {
         cameraAvoidanceRuntimeOverride = enabled;
-        userInitiatedRouteSwitch = true;
     }
 
     public String getAvoidanceMode() {
@@ -1541,20 +1539,13 @@ public class FlockFreePlugin extends OsmandPlugin {
         // Check if this is an online FlockFree route — fetch fastest route for comparison
         RouteCalculationResult onlineRoute = app.getRoutingHelper().getRoute();
         boolean onlineFlockFreeRoute = isOnlineFlockFreeEngine();
-        if (!userInitiatedRouteSwitch && onlineRoute != null && onlineRoute.isCalculated() && onlineFlockFreeRoute) {
+        if (onlineRoute != null && onlineRoute.isCalculated() && onlineFlockFreeRoute) {
             maybeFetchOnlineFastestRouteForComparison(onlineRoute);
         }
         
-        boolean preserveComparison = false;
         boolean avoidActive = isCameraAvoidanceActive();
         if (!avoidActive) {
-            if (userInitiatedRouteSwitch) {
-                // User switched to fastest route - keep the comparison card visible
-                userInitiatedRouteSwitch = false;
-                preserveComparison = true;
-            } else {
-                setLastRouteComparisonInfo(null);
-            }
+            setLastRouteComparisonInfo(null);
         }
         if (!avoidActive && !trafficEnabled) {
             refreshRouteInfoMenuIfVisible();
@@ -1622,7 +1613,7 @@ public class FlockFreePlugin extends OsmandPlugin {
             if (lightweightRecalc) {
                 routeSummary = routeSummary + "\n" + "⚡ Horizon planning: only next 10 km scanned during active navigation";
             }
-        } else if (!preserveComparison) {
+        } else {
             setLastRouteComparisonInfo(null);
         }
         setLastRouteTradeoffSummary(routeTradeoffSummary);
@@ -1678,7 +1669,6 @@ public class FlockFreePlugin extends OsmandPlugin {
                 routeLocs, directions, params, null, false);
         
         privacyRouteActive = toPrivacy;
-        userInitiatedRouteSwitch = true;
         ApplicationMode mode = app.getSettings().APPLICATION_MODE.get();
         OnlineRoutingEngine engine = app.getOnlineRoutingHelper().getEngineByKey(mode.getRoutingProfile());
         if (engine instanceof FlockFreeEngine) {
