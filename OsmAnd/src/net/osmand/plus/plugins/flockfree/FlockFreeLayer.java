@@ -1,6 +1,7 @@
 package net.osmand.plus.plugins.flockfree;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -11,6 +12,14 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import net.osmand.core.jni.MapMarker;
+import net.osmand.core.jni.MapMarkerBuilder;
+import net.osmand.core.jni.MapMarkersCollection;
+import net.osmand.core.jni.PointI;
+import net.osmand.core.jni.SWIGTYPE_p_void;
+import net.osmand.core.jni.SingleSkImage;
+import net.osmand.core.jni.SwigUtilities;
+import net.osmand.core.jni.TextRasterizer;
 import net.osmand.data.LatLon;
 import net.osmand.data.PointDescription;
 import net.osmand.data.QuadRect;
@@ -24,6 +33,7 @@ import net.osmand.plus.views.OsmAndMapLayersView;
 import net.osmand.plus.views.layers.ContextMenuLayer;
 import net.osmand.plus.views.layers.MapSelectionResult;
 import net.osmand.plus.views.layers.MapSelectionRules;
+import net.osmand.plus.views.layers.MapTextLayer;
 import net.osmand.plus.views.layers.base.OsmandMapLayer;
 import net.osmand.util.MapUtils;
 
@@ -79,6 +89,9 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private final Map<Long, List<CameraData.CameraPoint>> clusterGrid = new HashMap<>();
     private final Map<Long, float[]> clusterScreenCenter = new HashMap<>();
     private final Map<String, Integer> brandCountsMap = new HashMap<>();
+    private final Map<Integer, SingleSkImage> nativePinImages = new HashMap<>();
+    private final Map<Integer, SingleSkImage> nativeConeImages = new HashMap<>();
+    private final SWIGTYPE_p_void nativeConeIconKey = SwigUtilities.getOnSurfaceIconKey(1);
 
     private List<CameraData.CameraPoint> visibleCameras = new ArrayList<>();
     private List<CydDetectionCandidate> visibleDetections = new ArrayList<>();
@@ -88,6 +101,10 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private QuadRect cachedCameraQueryBounds;
     private int cachedCameraQueryZoom = -1;
     private long cachedCameraDataRevision = -1L;
+    private long cameraQueryGeneration;
+    private long nativeMarkerQueryGeneration = -1L;
+    private int nativeMarkerZoomGroup = -1;
+    private boolean nativeMarkerNightMode;
 
     /**
      * A cluster of cameras that fall within the same grid cell.
@@ -179,11 +196,13 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     @Override
     public void onDraw(Canvas canvas, RotatedTileBox tileBox, DrawSettings drawSettings) {
         if (!plugin.CAMERA_SHOW_LAYER.get()) {
+            clearNativeCameraMarkers();
             return;
         }
 
         QuadRect screenArea = tileBox.getLatLonBounds();
         visibleClusters.clear();
+        MapRendererView mapRenderer = getMapRenderer();
         if (tileBox.getZoom() >= MIN_ZOOM_TO_SHOW) {
             CameraData cameraData = plugin.getCameraData();
             if (cameraData.isDataLoaded()) {
@@ -198,19 +217,28 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
                     }
                 }
                 if (tileBox.getZoom() >= CLUSTER_MIN_ZOOM) {
-                    // Show individual markers
-                    for (CameraData.CameraPoint camera : visibleCameras) {
-                        drawCamera(canvas, tileBox, camera);
+                    if (mapRenderer != null) {
+                        updateNativeCameraMarkers(mapRenderer, queryCameras, tileBox.getZoom(),
+                                drawSettings.isNightMode());
+                    } else {
+                        clearNativeCameraMarkers();
+                        // Legacy renderer: draw individual markers on the shared canvas.
+                        for (CameraData.CameraPoint camera : visibleCameras) {
+                            drawCamera(canvas, tileBox, camera);
+                        }
                     }
                 } else {
+                    clearNativeCameraMarkers();
                     // Cluster cameras using grid-based spatial clustering
                     drawClusters(canvas, tileBox, visibleCameras);
                 }
             } else {
                 clearCameraQueryCache();
+                clearNativeCameraMarkers();
                 visibleCameras.clear();
             }
         } else {
+            clearNativeCameraMarkers();
             visibleCameras.clear();
         }
 
@@ -240,6 +268,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         cachedCameraQueryBounds = queryBounds;
         cachedCameraQueryZoom = zoom;
         cachedCameraDataRevision = dataRevision;
+        cameraQueryGeneration++;
         return cachedCameraQuery;
     }
 
@@ -248,6 +277,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         cachedCameraQueryBounds = null;
         cachedCameraQueryZoom = -1;
         cachedCameraDataRevision = -1L;
+        cameraQueryGeneration++;
     }
 
     @NonNull
@@ -582,6 +612,149 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
             return lon >= screenArea.left && lon <= screenArea.right;
         }
         return lon >= screenArea.left || lon <= screenArea.right;
+    }
+
+    private void updateNativeCameraMarkers(@NonNull MapRendererView mapRenderer,
+                                           @NonNull List<CameraData.CameraPoint> cameras,
+                                           int zoom, boolean nightMode) {
+        int zoomGroup = zoom >= 15 ? 15 : CLUSTER_MIN_ZOOM;
+        if (nativeMarkerQueryGeneration == cameraQueryGeneration
+                && nativeMarkerZoomGroup == zoomGroup
+                && nativeMarkerNightMode == nightMode
+                && (cameras.isEmpty() || mapMarkersCollection != null)) {
+            return;
+        }
+
+        clearNativeCameraMarkers();
+        nativeMarkerQueryGeneration = cameraQueryGeneration;
+        nativeMarkerZoomGroup = zoomGroup;
+        nativeMarkerNightMode = nightMode;
+        if (cameras.isEmpty()) {
+            return;
+        }
+
+        MapMarkersCollection markersCollection = new MapMarkersCollection();
+        TextRasterizer.Style captionStyle = zoomGroup >= 15
+                ? MapTextLayer.getTextStyle(getContext(), nightMode, getTextScale(), view.getDensity())
+                : null;
+        int markerId = 1;
+        for (CameraData.CameraPoint camera : cameras) {
+            int color = getBrandColor(camera.brand);
+            MapMarkerBuilder markerBuilder = new MapMarkerBuilder()
+                    .setMarkerId(markerId++)
+                    .setBaseOrder(getPointsOrder())
+                    .setIsHidden(false)
+                    .setIsAccuracyCircleSupported(false)
+                    .setPosition(new PointI(
+                            MapUtils.get31TileNumberX(camera.lon),
+                            MapUtils.get31TileNumberY(camera.lat)))
+                    .setPinIcon(getNativePinImage(color))
+                    .setPinIconVerticalAlignment(MapMarker.PinIconVerticalAlignment.CenterVertical)
+                    .setPinIconHorisontalAlignment(MapMarker.PinIconHorisontalAlignment.CenterHorizontal);
+
+            float bearing = camera.getBearing();
+            if (captionStyle != null) {
+                markerBuilder.setCaptionStyle(captionStyle)
+                        .setCaptionTopSpace(-cameraOuterRadiusPx - cameraLabelOffsetPx)
+                        .setCaption(getShortBrandName(camera.brand));
+            }
+            if (zoomGroup >= 15 && bearing > 0f) {
+                markerBuilder.addOnMapSurfaceIcon(nativeConeIconKey, getNativeConeImage(color));
+            }
+            MapMarker marker = markerBuilder.buildAndAddToCollection(markersCollection);
+            if (marker != null && zoomGroup >= 15 && bearing > 0f) {
+                marker.setOnMapSurfaceIconDirection(nativeConeIconKey, bearing);
+            }
+        }
+        mapMarkersCollection = markersCollection;
+        mapRenderer.addSymbolsProvider(mapMarkersCollection);
+    }
+
+    @NonNull
+    private SingleSkImage getNativePinImage(int color) {
+        SingleSkImage image = nativePinImages.get(color);
+        if (image != null) {
+            return image;
+        }
+
+        int padding = (int) Math.ceil(markerStrokeWidthPx);
+        int size = (int) Math.ceil(cameraOuterRadiusPx * 2f) + padding * 2;
+        float center = size / 2f;
+        Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(markerStrokeWidthPx);
+        paint.setColor(color);
+        canvas.drawCircle(center, center, cameraOuterRadiusPx, paint);
+
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(Color.WHITE);
+        canvas.drawCircle(center, center, cameraInnerRadiusPx, paint);
+
+        paint.setColor(color);
+        float camLeft = center - cameraGlyphWidthPx / 2f;
+        float camTop = center - cameraGlyphHeightPx / 2f;
+        canvas.drawRect(camLeft, camTop,
+                camLeft + cameraGlyphWidthPx, camTop + cameraGlyphHeightPx, paint);
+        canvas.drawCircle(center, center, cameraLensRadiusPx, paint);
+
+        image = NativeUtilities.createSkImageFromBitmap(bitmap);
+        nativePinImages.put(color, image);
+        return image;
+    }
+
+    @NonNull
+    private SingleSkImage getNativeConeImage(int color) {
+        SingleSkImage image = nativeConeImages.get(color);
+        if (image != null) {
+            return image;
+        }
+
+        int padding = (int) Math.ceil(coneStrokeWidthPx);
+        int size = (int) Math.ceil(coneLengthPx * 2f) + padding * 2;
+        float center = size / 2f;
+        float halfAngle = (float) Math.toRadians(CONE_HALF_ANGLE_DEG);
+        float leftX = center + (float) (coneLengthPx * Math.sin(-halfAngle));
+        float leftY = center - (float) (coneLengthPx * Math.cos(-halfAngle));
+        float rightX = center + (float) (coneLengthPx * Math.sin(halfAngle));
+        float rightY = center - (float) (coneLengthPx * Math.cos(halfAngle));
+
+        Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        Path path = new Path();
+        path.moveTo(center, center);
+        path.lineTo(leftX, leftY);
+        path.lineTo(rightX, rightY);
+        path.close();
+
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(color);
+        paint.setAlpha(60);
+        canvas.drawPath(path, paint);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(coneStrokeWidthPx);
+        paint.setAlpha(140);
+        canvas.drawPath(path, paint);
+
+        image = NativeUtilities.createSkImageFromBitmap(bitmap);
+        nativeConeImages.put(color, image);
+        return image;
+    }
+
+    private void clearNativeCameraMarkers() {
+        if (mapMarkersCollection != null) {
+            clearMapMarkersCollections();
+        }
+    }
+
+    @Override
+    protected void clearMapMarkersCollections() {
+        super.clearMapMarkersCollections();
+        nativeMarkerQueryGeneration = -1L;
+        nativeMarkerZoomGroup = -1;
     }
 
     private void drawCamera(@NonNull Canvas canvas, @NonNull RotatedTileBox tileBox,

@@ -401,12 +401,24 @@ required_layer_tokens = [
     "cameraData.getDataRevision()",
     "requestOverlayRedraw()",
     "MapUtils.unifyRotationTo360(-mapRenderer.getAzimuth())",
+    "updateNativeCameraMarkers(mapRenderer, queryCameras",
+    "new MapMarkersCollection()",
+    ".setPosition(new PointI(",
+    ".setPinIcon(getNativePinImage(color))",
+    ".addOnMapSurfaceIcon(nativeConeIconKey, getNativeConeImage(color))",
+    "marker.setOnMapSurfaceIconDirection(nativeConeIconKey, bearing)",
+    "mapRenderer.addSymbolsProvider(mapMarkersCollection)",
 ]
 missing_layer = [item for item in required_layer_tokens if item not in flockfree_layer]
 if missing_layer:
     raise SystemExit("missing map-layer visibility filtering:\n" + "\n".join(missing_layer))
 if "view.refreshMap()" in flockfree_layer:
     raise SystemExit("camera layer still drives the native renderer from a frame callback")
+native_branch = flockfree_layer.split(
+    "if (tileBox.getZoom() >= CLUSTER_MIN_ZOOM)", 1
+)[1].split("} else {", 1)[0]
+if "if (mapRenderer != null)" not in native_branch or "updateNativeCameraMarkers(" not in native_branch:
+    raise SystemExit("high-zoom OpenGL cameras are not routed through native map markers")
 required_overlay_tokens = [
     "private final AtomicBoolean overlayOnlyDraw",
     "boolean overlayOnly = overlayOnlyDraw.getAndSet(false)",
