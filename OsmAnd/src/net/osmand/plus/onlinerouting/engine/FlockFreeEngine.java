@@ -90,7 +90,7 @@ public class FlockFreeEngine extends JsonOnlineRoutingEngine {
 	}
 
 	// Camera cone parameters
-	private static final double CONE_HALF_ANGLE = 60.0;  // degrees
+	private static final double CONE_HALF_ANGLE = 30.0;  // 60-degree total field of view
 	private static final double CONE_RANGE_FT = 300.0;   // feet
 
 	public FlockFreeEngine(@Nullable Map<String, String> params) {

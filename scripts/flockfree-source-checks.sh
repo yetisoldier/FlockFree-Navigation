@@ -314,6 +314,7 @@ from pathlib import Path
 route_provider = Path("OsmAnd/src/net/osmand/plus/routing/RouteProvider.java").read_text()
 avoidance_helper = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/CameraAvoidanceHelper.java").read_text()
 flockfree_layer = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/FlockFreeLayer.java").read_text()
+map_layers_view = Path("OsmAnd/src/net/osmand/plus/views/OsmAndMapLayersView.java").read_text()
 camera_data = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/CameraData.java").read_text()
 camera_alert_toast = Path("OsmAnd/src/net/osmand/plus/plugins/flockfree/CameraAlertToast.java").read_text()
 flockfree_engine = Path("OsmAnd/src/net/osmand/plus/onlinerouting/engine/FlockFreeEngine.java").read_text()
@@ -385,6 +386,7 @@ required_helper_tokens = [
     "findCamerasWhoseConeIntersectsRouteLocations(",
     "doesCameraConeIntersectEdge(",
     "CAMERA_CONE_RANGE_METERS = 91.44d",
+    "CAMERA_CONE_HALF_ANGLE_DEGREES = 30f",
 ]
 missing_helper = [item for item in required_helper_tokens if item not in avoidance_helper]
 if missing_helper:
@@ -397,12 +399,25 @@ required_layer_tokens = [
     "CameraAvoidanceHelper.CAMERA_CONE_HALF_ANGLE_DEGREES",
     "cachedCameraDataRevision == dataRevision",
     "cameraData.getDataRevision()",
+    "requestOverlayRedraw()",
+    "MapUtils.unifyRotationTo360(-mapRenderer.getAzimuth())",
 ]
 missing_layer = [item for item in required_layer_tokens if item not in flockfree_layer]
 if missing_layer:
     raise SystemExit("missing map-layer visibility filtering:\n" + "\n".join(missing_layer))
-if "view.refreshMap()" in flockfree_layer or "onUpdateFrame(" in flockfree_layer:
+if "view.refreshMap()" in flockfree_layer:
     raise SystemExit("camera layer still drives the native renderer from a frame callback")
+required_overlay_tokens = [
+    "private final AtomicBoolean overlayOnlyDraw",
+    "boolean overlayOnly = overlayOnlyDraw.getAndSet(false)",
+    "mapRenderer != null && !overlayOnly",
+    "public void requestOverlayRedraw()",
+    "postInvalidateOnAnimation()",
+]
+missing_overlay = [item for item in required_overlay_tokens if item not in map_layers_view]
+if missing_overlay:
+    raise SystemExit("missing feedback-free camera overlay redraw wiring:\n"
+                     + "\n".join(missing_overlay))
 if "CAMERA_QUERY_CACHE_TTL_MS" in flockfree_layer:
     raise SystemExit("camera layer still expires unchanged spatial queries on a timer")
 if "public long getDataRevision()" not in camera_data or camera_data.count("dataRevision.incrementAndGet()") < 3:
@@ -424,6 +439,7 @@ if "FLAG_NOT_TOUCHABLE" in camera_alert_toast:
 
 required_online_tokens = [
     "MAX_CAMERA_PENALTY_AREAS = 500",
+    "CONE_HALF_ANGLE = 30.0",
     "profileOverride = viewing ? PROFILE_FAST : PROFILE_PRIVACY",
     'CAMERA_ZONES_AREA_ID = "camera_zones"',
     'CAMERA_ZONE_PENALTY = 0.01',

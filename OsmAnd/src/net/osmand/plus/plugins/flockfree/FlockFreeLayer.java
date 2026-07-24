@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PointF;
+import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -19,6 +20,7 @@ import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.plugins.flockfree.cyd.CydDetectionCandidate;
 import net.osmand.plus.utils.NativeUtilities;
+import net.osmand.plus.views.OsmAndMapLayersView;
 import net.osmand.plus.views.layers.ContextMenuLayer;
 import net.osmand.plus.views.layers.MapSelectionResult;
 import net.osmand.plus.views.layers.MapSelectionRules;
@@ -156,6 +158,22 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         coneStrokePaint.setStyle(Paint.Style.STROKE);
         coneStrokePaint.setAntiAlias(true);
         coneStrokePaint.setStrokeWidth(coneStrokeWidthPx);
+    }
+
+    @Override
+    public boolean areMapRendererViewEventsAllowed() {
+        return true;
+    }
+
+    @Override
+    public void onUpdateFrame(@NonNull MapRendererView mapRenderer) {
+        super.onUpdateFrame(mapRenderer);
+        if (plugin.CAMERA_SHOW_LAYER.get() && view != null) {
+            View overlayView = view.getView();
+            if (overlayView instanceof OsmAndMapLayersView) {
+                ((OsmAndMapLayersView) overlayView).requestOverlayRedraw();
+            }
+        }
     }
 
     @Override
@@ -624,8 +642,13 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private void drawCameraCone(@NonNull Canvas canvas, @NonNull RotatedTileBox tileBox,
                                 float x, float y, float compassBearing, int color) {
         // Convert compass bearing (0=N, 90=E) to canvas angle (0=E, 90=S),
-        // then apply the map rotation already used by RotatedTileBox projection.
-        float screenAngle = (float) Math.toRadians(compassBearing - 90f + tileBox.getRotate());
+        // then apply the live native-renderer rotation. The RotatedTileBox can lag
+        // behind the renderer during an animated turn or pan.
+        MapRendererView mapRenderer = getMapRenderer();
+        float mapRotation = mapRenderer != null
+                ? MapUtils.unifyRotationTo360(-mapRenderer.getAzimuth())
+                : tileBox.getRotate();
+        float screenAngle = (float) Math.toRadians(compassBearing - 90f + mapRotation);
 
         float halfAngle = (float) Math.toRadians(CONE_HALF_ANGLE_DEG);
 

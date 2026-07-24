@@ -44,10 +44,10 @@ public class CameraAvoidanceHelper {
     /**
      * Half-window in degrees for direction-aware camera filtering.
      * A camera blocks a road segment only if the route bearing is within ±this many degrees
-     * of the camera's facing bearing. Set to 60 for a 120° total acceptance window.
+     * of the camera's facing bearing. Set to 30 for a 60° total acceptance window.
      * When camera bearing is unavailable (0), falls back to omnidirectional blocking.
      */
-    public static final float CAMERA_CONE_HALF_ANGLE_DEGREES = 60f;
+    public static final float CAMERA_CONE_HALF_ANGLE_DEGREES = 30f;
     public static final double CAMERA_CONE_RANGE_METERS = 91.44d; // 300 feet
     private static final float DIRECTION_MATCH_WINDOW_DEGREES = CAMERA_CONE_HALF_ANGLE_DEGREES;
 

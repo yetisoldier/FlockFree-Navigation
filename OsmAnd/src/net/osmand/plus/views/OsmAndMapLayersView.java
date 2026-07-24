@@ -13,9 +13,12 @@ import net.osmand.core.android.MapRendererView;
 import net.osmand.plus.settings.enums.ThemeUsageContext;
 import net.osmand.plus.views.layers.base.OsmandMapLayer.DrawSettings;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 public class OsmAndMapLayersView extends View {
 
 	private OsmandMapTileView mapView;
+	private final AtomicBoolean overlayOnlyDraw = new AtomicBoolean();
 
 	public OsmAndMapLayersView(Context context, AttributeSet attrs) {
 		super(context, attrs);
@@ -77,6 +80,7 @@ public class OsmAndMapLayersView extends View {
 	
 	@Override
 	protected void onDraw(Canvas canvas) {
+		boolean overlayOnly = overlayOnlyDraw.getAndSet(false);
 		if (mapView == null) {
 			return;
 		}
@@ -85,8 +89,18 @@ public class OsmAndMapLayersView extends View {
 		mapView.drawOverMap(canvas, mapView.getRotatedTileBox(), drawSettings);
 
 		MapRendererView mapRenderer = mapView.getMapRenderer();
-		if (mapRenderer != null) {
+		if (mapRenderer != null && !overlayOnly) {
 			mapRenderer.requestRender();
 		}
+	}
+
+	/**
+	 * Repaint Android canvas layers to match a native renderer frame without asking
+	 * the native renderer for another frame. This avoids a render feedback loop while
+	 * keeping canvas markers anchored during native map animations.
+	 */
+	public void requestOverlayRedraw() {
+		overlayOnlyDraw.set(true);
+		postInvalidateOnAnimation();
 	}
 }
