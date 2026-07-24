@@ -105,6 +105,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private long nativeMarkerQueryGeneration = -1L;
     private int nativeMarkerZoomGroup = -1;
     private boolean nativeMarkerNightMode;
+    private boolean nativeRenderPending;
 
     /**
      * A cluster of cameras that fall within the same grid cell.
@@ -670,7 +671,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         }
         mapMarkersCollection = markersCollection;
         mapRenderer.addSymbolsProvider(mapMarkersCollection);
-        mapRenderer.requestRender();
+        requestNativeCameraRender(mapRenderer);
     }
 
     private int getCameraZoomGroup(int zoom) {
@@ -766,9 +767,31 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
             MapRendererView mapRenderer = getMapRenderer();
             clearMapMarkersCollections();
             if (requestRender && mapRenderer != null) {
-                mapRenderer.requestRender();
+                requestNativeCameraRender(mapRenderer);
             }
         }
+    }
+
+    private void requestNativeCameraRender(@NonNull MapRendererView mapRenderer) {
+        if (nativeRenderPending) {
+            return;
+        }
+        if (view == null) {
+            mapRenderer.requestRender();
+            return;
+        }
+        View layersView = view.getView();
+        if (layersView == null) {
+            mapRenderer.requestRender();
+            return;
+        }
+        nativeRenderPending = true;
+        layersView.postOnAnimation(() -> {
+            nativeRenderPending = false;
+            if (getMapRenderer() == mapRenderer) {
+                mapRenderer.requestRender();
+            }
+        });
     }
 
     @Override
