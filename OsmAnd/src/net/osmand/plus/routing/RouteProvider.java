@@ -794,7 +794,7 @@ public class RouteProvider {
 					if (camDist > avoidanceRadius) continue;
 
 					float camBearing = cam.getBearing();
-					if (camBearing > 0f) {
+					if (cam.hasBearing()) {
 						float delta = (float) Math.abs(camBearing - segBearing);
 						if (delta > 180f) delta = 360f - delta;
 						if (delta < bestBearingDelta) {

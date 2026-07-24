@@ -408,6 +408,10 @@ required_layer_tokens = [
     ".addOnMapSurfaceIcon(nativeConeIconKey, getNativeConeImage(color))",
     "marker.setOnMapSurfaceIconDirection(nativeConeIconKey, bearing)",
     "mapRenderer.addSymbolsProvider(mapMarkersCollection)",
+    "mapRenderer.requestRender()",
+    "boolean hasBearing = camera.hasBearing()",
+    "cachedCameraQueryZoomGroup == zoomGroup",
+    "getCameraZoomGroup(zoom)",
 ]
 missing_layer = [item for item in required_layer_tokens if item not in flockfree_layer]
 if missing_layer:
@@ -432,8 +436,27 @@ if missing_overlay:
                      + "\n".join(missing_overlay))
 if "CAMERA_QUERY_CACHE_TTL_MS" in flockfree_layer:
     raise SystemExit("camera layer still expires unchanged spatial queries on a timer")
+if "cachedCameraQueryZoom =" in flockfree_layer:
+    raise SystemExit("camera query cache is still invalidated by every integer zoom change")
 if "public long getDataRevision()" not in camera_data or camera_data.count("dataRevision.incrementAndGet()") < 3:
     raise SystemExit("camera query cache is not invalidated when camera datasets change")
+required_bearing_tokens = [
+    "public boolean hasBearing()",
+    "val >= 0f && val <= 360f",
+    "boolean hasBearing = camera.hasBearing()",
+    "if (!camera.hasBearing())",
+    "cam.hasBearing() ? cam.getBearing() : -1f",
+]
+bearing_text = "\n".join([
+    camera_data,
+    avoidance_helper,
+    flockfree_layer,
+    route_provider,
+    flockfree_engine,
+])
+missing_bearing = [item for item in required_bearing_tokens if item not in bearing_text]
+if missing_bearing:
+    raise SystemExit("missing zero-degree camera-bearing wiring:\n" + "\n".join(missing_bearing))
 
 required_alert_tokens = [
     "findCamerasWhoseConeIntersectsRouteLocations(routeLocations)",

@@ -99,7 +99,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private final List<CameraData.CameraPoint> cachedCameraQuery = new ArrayList<>();
     @Nullable
     private QuadRect cachedCameraQueryBounds;
-    private int cachedCameraQueryZoom = -1;
+    private int cachedCameraQueryZoomGroup = -1;
     private long cachedCameraDataRevision = -1L;
     private long cameraQueryGeneration;
     private long nativeMarkerQueryGeneration = -1L;
@@ -253,10 +253,11 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
                                                              @NonNull QuadRect screenArea,
                                                              int zoom) {
         long dataRevision = cameraData.getDataRevision();
+        int zoomGroup = getCameraZoomGroup(zoom);
         QuadRect cachedBounds = cachedCameraQueryBounds;
         if (cachedBounds != null
                 && cachedCameraDataRevision == dataRevision
-                && cachedCameraQueryZoom == zoom
+                && cachedCameraQueryZoomGroup == zoomGroup
                 && containsBounds(cachedBounds, screenArea)) {
             return cachedCameraQuery;
         }
@@ -266,7 +267,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         cachedCameraQuery.addAll(cameraData.getCamerasInBoundingBox(
                 queryBounds.top, queryBounds.left, queryBounds.bottom, queryBounds.right));
         cachedCameraQueryBounds = queryBounds;
-        cachedCameraQueryZoom = zoom;
+        cachedCameraQueryZoomGroup = zoomGroup;
         cachedCameraDataRevision = dataRevision;
         cameraQueryGeneration++;
         return cachedCameraQuery;
@@ -275,7 +276,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private void clearCameraQueryCache() {
         cachedCameraQuery.clear();
         cachedCameraQueryBounds = null;
-        cachedCameraQueryZoom = -1;
+        cachedCameraQueryZoomGroup = -1;
         cachedCameraDataRevision = -1L;
         cameraQueryGeneration++;
     }
@@ -617,7 +618,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private void updateNativeCameraMarkers(@NonNull MapRendererView mapRenderer,
                                            @NonNull List<CameraData.CameraPoint> cameras,
                                            int zoom, boolean nightMode) {
-        int zoomGroup = zoom >= 15 ? 15 : CLUSTER_MIN_ZOOM;
+        int zoomGroup = getCameraZoomGroup(zoom);
         if (nativeMarkerQueryGeneration == cameraQueryGeneration
                 && nativeMarkerZoomGroup == zoomGroup
                 && nativeMarkerNightMode == nightMode
@@ -625,7 +626,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
             return;
         }
 
-        clearNativeCameraMarkers();
+        clearNativeCameraMarkers(false);
         nativeMarkerQueryGeneration = cameraQueryGeneration;
         nativeMarkerZoomGroup = zoomGroup;
         nativeMarkerNightMode = nightMode;
@@ -653,21 +654,33 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
                     .setPinIconHorisontalAlignment(MapMarker.PinIconHorisontalAlignment.CenterHorizontal);
 
             float bearing = camera.getBearing();
+            boolean hasBearing = camera.hasBearing();
             if (captionStyle != null) {
                 markerBuilder.setCaptionStyle(captionStyle)
                         .setCaptionTopSpace(-cameraOuterRadiusPx - cameraLabelOffsetPx)
                         .setCaption(getShortBrandName(camera.brand));
             }
-            if (zoomGroup >= 15 && bearing > 0f) {
+            if (zoomGroup >= 15 && hasBearing) {
                 markerBuilder.addOnMapSurfaceIcon(nativeConeIconKey, getNativeConeImage(color));
             }
             MapMarker marker = markerBuilder.buildAndAddToCollection(markersCollection);
-            if (marker != null && zoomGroup >= 15 && bearing > 0f) {
+            if (marker != null && zoomGroup >= 15 && hasBearing) {
                 marker.setOnMapSurfaceIconDirection(nativeConeIconKey, bearing);
             }
         }
         mapMarkersCollection = markersCollection;
         mapRenderer.addSymbolsProvider(mapMarkersCollection);
+        mapRenderer.requestRender();
+    }
+
+    private int getCameraZoomGroup(int zoom) {
+        if (zoom >= 15) {
+            return 15;
+        }
+        if (zoom >= CLUSTER_MIN_ZOOM) {
+            return CLUSTER_MIN_ZOOM;
+        }
+        return MIN_ZOOM_TO_SHOW;
     }
 
     @NonNull
@@ -745,8 +758,16 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     }
 
     private void clearNativeCameraMarkers() {
+        clearNativeCameraMarkers(true);
+    }
+
+    private void clearNativeCameraMarkers(boolean requestRender) {
         if (mapMarkersCollection != null) {
+            MapRendererView mapRenderer = getMapRenderer();
             clearMapMarkersCollections();
+            if (requestRender && mapRenderer != null) {
+                mapRenderer.requestRender();
+            }
         }
     }
 

@@ -1144,10 +1144,11 @@ public class CameraData {
     }
 
     /**
-     * Parses a bearing (compass degrees 1-360) from a direction string.
+     * Parses a bearing (compass degrees 0-360) from a direction string.
      * Accepts numeric values like "270", "355", "0".
-     * Returns 0 for null/empty/unparseable values, meaning "no bearing data".
-     * 0 is also returned for literal "0" since we treat 0 as no-bearing per spec.
+     * Returns 0 for null/empty/unparseable values; callers must use
+     * {@link CameraPoint#hasBearing()} to distinguish missing data from a valid
+     * north-facing 0-degree bearing.
      */
     private static float parseBearing(@Nullable String direction) {
         if (direction == null || direction.isEmpty()) {
@@ -1155,7 +1156,7 @@ public class CameraData {
         }
         try {
             float val = Float.parseFloat(direction.trim());
-            if (val > 0 && val <= 360) {
+            if (val >= 0 && val <= 360) {
                 return val;
             }
         } catch (NumberFormatException ignored) {
@@ -1177,8 +1178,8 @@ public class CameraData {
         @Nullable public String osmTimestamp;
 
         /**
-         * Parsed bearing (compass degrees 1-360) derived from the {@code direction} string.
-         * 0 means no bearing data available (falls back to omnidirectional blocking).
+         * Parsed bearing (compass degrees 0-360) derived from the {@code direction} string.
+         * Use {@link #hasBearing()} to distinguish a valid 0-degree bearing from missing data.
          */
         public float bearing = 0f;
 
@@ -1188,7 +1189,7 @@ public class CameraData {
          * available even when CameraPoint instances are created by CameraDatabaseHelper
          * (which sets {@code direction} but not {@code bearing}).
          *
-         * @return bearing in degrees (1-360), or 0 if no bearing data is available
+         * @return bearing in degrees (0-360), or 0 if no bearing data is available
          */
         public float getBearing() {
             if (bearing != 0f) {
@@ -1199,13 +1200,32 @@ public class CameraData {
             }
             try {
                 float val = Float.parseFloat(direction.trim());
-                if (val > 0 && val <= 360) {
+                if (val >= 0 && val <= 360) {
                     bearing = val;
                     return val;
                 }
             } catch (NumberFormatException ignored) {
             }
             return 0f;
+        }
+
+        /**
+         * Returns whether this camera has a valid numeric direction. This explicit
+         * check is necessary because 0 degrees is a valid north-facing bearing.
+         */
+        public boolean hasBearing() {
+            if (bearing > 0f && bearing <= 360f) {
+                return true;
+            }
+            if (direction == null || direction.isEmpty()) {
+                return false;
+            }
+            try {
+                float val = Float.parseFloat(direction.trim());
+                return val >= 0f && val <= 360f;
+            } catch (NumberFormatException ignored) {
+                return false;
+            }
         }
     }
 

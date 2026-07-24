@@ -284,7 +284,7 @@ public class FlockFreeEngine extends JsonOnlineRoutingEngine {
 
 				// Build cone polygon
 				JSONArray polygon = makeConePolygon(
-					cam.lon, cam.lat, cam.getBearing(),
+					cam.lon, cam.lat, cam.hasBearing() ? cam.getBearing() : -1f,
 					CONE_HALF_ANGLE, CONE_RANGE_FT);
 				if (polygon == null) continue;
 
@@ -341,7 +341,8 @@ public class FlockFreeEngine extends JsonOnlineRoutingEngine {
 
 	/**
 	 * Create a GeoJSON polygon representing a directional cone from a camera.
-	 * If camera has no bearing (0), creates a full circle (omnidirectional).
+	 * A negative bearing represents missing data and creates a full circle
+	 * (omnidirectional). Zero is a valid north-facing direction.
 	 * Returns array of [lon, lat] coordinates forming the cone polygon.
 	 */
 	@Nullable
@@ -355,7 +356,7 @@ public class FlockFreeEngine extends JsonOnlineRoutingEngine {
 			double rangeDegLat = rangeFt / 364000.0;
 			double rangeDegLon = rangeFt / (364000.0 * Math.max(Math.cos(Math.toRadians(lat)), 0.01));
 
-			if (bearing <= 0) {
+			if (bearing < 0) {
 				// Omnidirectional — full circle
 				for (int i = 0; i < nPoints; i++) {
 					double angle = 2 * Math.PI * i / nPoints;

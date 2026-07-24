@@ -734,9 +734,9 @@ public class CameraAvoidanceHelper {
         // For each Flock camera, block ALL route segments within the radius, not just
         // the single nearest one. This prevents the router from simply using
         // an adjacent road in the same corridor and still passing near the camera.
-        // Direction-aware filtering: if the camera has a bearing (1-360), only block
+        // Direction-aware filtering: if the camera has a bearing (0-360), only block
         // road segments whose travel direction is within ±DIRECTION_MATCH_WINDOW_DEGREES
-        // of the camera's facing bearing. If the camera has no bearing data (0),
+        // of the camera's facing bearing. If the camera has no bearing data,
         // fall back to omnidirectional blocking (block all segments within radius).
         Map<Long, Integer> roadIdToCameraCount = new HashMap<>();
         int directionFilteredCount = 0;
@@ -746,7 +746,7 @@ public class CameraAvoidanceHelper {
             int cameraX31 = MapUtils.get31TileNumberX(camera.lon);
             int cameraY31 = MapUtils.get31TileNumberY(camera.lat);
             float cameraBearing = camera.getBearing();
-            boolean hasBearing = cameraBearing > 0f;
+            boolean hasBearing = camera.hasBearing();
             boolean matchedAny = false;
             for (int i : roadIndex.getCandidateRoadIndexes(camera.lat, camera.lon)) {
                 RouteSegmentResult road = roads.get(i);
@@ -979,6 +979,10 @@ public class CameraAvoidanceHelper {
     private boolean isPointInsideCameraCone(@NonNull CameraData.CameraPoint camera,
                                              @NonNull LatLon point) {
         double[] local = toCameraLocalMeters(camera, point);
+        if (!camera.hasBearing()) {
+            return local[0] * local[0] + local[1] * local[1]
+                    <= CAMERA_CONE_RANGE_METERS * CAMERA_CONE_RANGE_METERS;
+        }
         return isLocalPointInsideCameraCone(local[0], local[1], camera.getBearing());
     }
 
@@ -987,7 +991,7 @@ public class CameraAvoidanceHelper {
         double[] start = toCameraLocalMeters(camera, edge.from);
         double[] end = toCameraLocalMeters(camera, edge.to);
         float bearing = camera.getBearing();
-        if (bearing <= 0f) {
+        if (!camera.hasBearing()) {
             return distanceFromOriginToSegment(start[0], start[1], end[0], end[1])
                     <= CAMERA_CONE_RANGE_METERS;
         }
@@ -1040,7 +1044,7 @@ public class CameraAvoidanceHelper {
         if (distanceSquared > CAMERA_CONE_RANGE_METERS * CAMERA_CONE_RANGE_METERS) {
             return false;
         }
-        return bearing <= 0f || isWithinConeAngle(x, y, bearing);
+        return isWithinConeAngle(x, y, bearing);
     }
 
     private boolean isWithinConeAngle(double x, double y, float bearing) {
