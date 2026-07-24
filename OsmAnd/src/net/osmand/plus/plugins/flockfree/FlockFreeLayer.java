@@ -29,7 +29,6 @@ import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.plugins.flockfree.cyd.CydDetectionCandidate;
 import net.osmand.plus.utils.NativeUtilities;
-import net.osmand.plus.views.OsmAndMapLayersView;
 import net.osmand.plus.views.layers.ContextMenuLayer;
 import net.osmand.plus.views.layers.MapSelectionResult;
 import net.osmand.plus.views.layers.MapSelectionRules;
@@ -176,22 +175,6 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         coneStrokePaint.setStyle(Paint.Style.STROKE);
         coneStrokePaint.setAntiAlias(true);
         coneStrokePaint.setStrokeWidth(coneStrokeWidthPx);
-    }
-
-    @Override
-    public boolean areMapRendererViewEventsAllowed() {
-        return true;
-    }
-
-    @Override
-    public void onUpdateFrame(@NonNull MapRendererView mapRenderer) {
-        super.onUpdateFrame(mapRenderer);
-        if (plugin.CAMERA_SHOW_LAYER.get() && view != null) {
-            View overlayView = view.getView();
-            if (overlayView instanceof OsmAndMapLayersView) {
-                ((OsmAndMapLayersView) overlayView).requestOverlayRedraw();
-            }
-        }
     }
 
     @Override
@@ -666,7 +649,8 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
             }
             MapMarker marker = markerBuilder.buildAndAddToCollection(markersCollection);
             if (marker != null && zoomGroup >= 15 && hasBearing) {
-                marker.setOnMapSurfaceIconDirection(nativeConeIconKey, bearing);
+                float nativeDirection = (bearing + 180f) % 360f;
+                marker.setOnMapSurfaceIconDirection(nativeConeIconKey, nativeDirection);
             }
         }
         mapMarkersCollection = markersCollection;

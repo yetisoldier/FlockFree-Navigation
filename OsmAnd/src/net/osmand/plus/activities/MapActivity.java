@@ -820,7 +820,7 @@ public class MapActivity extends OsmandActionBarActivity implements DownloadEven
 		updateFlockFreeHudControls();
 		MapInfoLayer mapInfoLayer = getMapLayers().getMapInfoLayer();
 		if (PluginsHelper.getEnabledPlugin(FlockFreePlugin.class) != null && mapInfoLayer != null) {
-			mapInfoLayer.refreshFlockFreeHudAfterResume();
+			mapInfoLayer.refreshFlockFreeHudLayout();
 		}
 	}
 

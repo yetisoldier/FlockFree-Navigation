@@ -325,6 +325,7 @@ map_tracking = Path("OsmAnd/src/net/osmand/plus/base/MapViewTrackingUtilities.ja
 location_layer = Path("OsmAnd/src/net/osmand/plus/views/layers/PointLocationLayer.java").read_text()
 street_name_widget = Path("OsmAnd/src/net/osmand/plus/views/mapwidgets/widgets/StreetNameWidget.java").read_text()
 map_activity = Path("OsmAnd/src/net/osmand/plus/activities/MapActivity.java").read_text()
+map_actions = Path("OsmAnd/src/net/osmand/plus/views/MapActions.java").read_text()
 map_info_layer = Path("OsmAnd/src/net/osmand/plus/views/layers/MapInfoLayer.java").read_text()
 map_hud_layout = Path("OsmAnd/src/net/osmand/plus/views/controls/MapHudLayout.java").read_text()
 side_widgets_panel = Path("OsmAnd/src/net/osmand/plus/views/controls/SideWidgetsPanel.java").read_text()
@@ -399,14 +400,14 @@ required_layer_tokens = [
     "CameraAvoidanceHelper.CAMERA_CONE_HALF_ANGLE_DEGREES",
     "cachedCameraDataRevision == dataRevision",
     "cameraData.getDataRevision()",
-    "requestOverlayRedraw()",
     "MapUtils.unifyRotationTo360(-mapRenderer.getAzimuth())",
     "updateNativeCameraMarkers(mapRenderer, queryCameras",
     "new MapMarkersCollection()",
     ".setPosition(new PointI(",
     ".setPinIcon(getNativePinImage(color))",
     ".addOnMapSurfaceIcon(nativeConeIconKey, getNativeConeImage(color))",
-    "marker.setOnMapSurfaceIconDirection(nativeConeIconKey, bearing)",
+    "float nativeDirection = (bearing + 180f) % 360f",
+    "marker.setOnMapSurfaceIconDirection(nativeConeIconKey, nativeDirection)",
     "mapRenderer.addSymbolsProvider(mapMarkersCollection)",
     "mapRenderer.requestRender()",
     "private boolean nativeRenderPending",
@@ -426,17 +427,14 @@ native_branch = flockfree_layer.split(
 )[1].split("} else {", 1)[0]
 if "if (mapRenderer != null)" not in native_branch or "updateNativeCameraMarkers(" not in native_branch:
     raise SystemExit("high-zoom OpenGL cameras are not routed through native map markers")
-required_overlay_tokens = [
-    "private final AtomicBoolean overlayOnlyDraw",
-    "boolean overlayOnly = overlayOnlyDraw.getAndSet(false)",
-    "mapRenderer != null && !overlayOnly",
-    "public void requestOverlayRedraw()",
-    "postInvalidateOnAnimation()",
-]
-missing_overlay = [item for item in required_overlay_tokens if item not in map_layers_view]
-if missing_overlay:
-    raise SystemExit("missing feedback-free camera overlay redraw wiring:\n"
-                     + "\n".join(missing_overlay))
+for stale_overlay_token in [
+    "overlayOnlyDraw",
+    "requestOverlayRedraw()",
+    "areMapRendererViewEventsAllowed()",
+    "void onUpdateFrame(",
+]:
+    if stale_overlay_token in map_layers_view or stale_overlay_token in flockfree_layer:
+        raise SystemExit("stale camera overlay frame bridge remains: " + stale_overlay_token)
 if "CAMERA_QUERY_CACHE_TTL_MS" in flockfree_layer:
     raise SystemExit("camera layer still expires unchanged spatial queries on a timer")
 if "cachedCameraQueryZoom =" in flockfree_layer:
@@ -553,10 +551,11 @@ if missing_street_name:
     raise SystemExit("missing empty street-name widget safeguards:\n" + "\n".join(missing_street_name))
 
 required_hud_resume_tokens = [
-    "mapInfoLayer.refreshFlockFreeHudAfterResume();",
-    "public void refreshFlockFreeHudAfterResume()",
+    "mapInfoLayer.refreshFlockFreeHudLayout();",
+    "public void refreshFlockFreeHudLayout()",
     "mapHudLayout.updateButtons();",
     "mapHudLayout.requestLayout();",
+    "mapHudLayout.postOnAnimation(() ->",
     "position.setMarginX(1);",
     "public void requestWidgetContentReflow()",
     "rightWidgetsPanel.refreshContentSize();",
@@ -565,13 +564,21 @@ required_hud_resume_tokens = [
     "mapHudLayout.requestWidgetContentReflow();",
 ]
 hud_resume_text = "\n".join([
-    map_activity, map_info_layer, map_hud_layout, side_widgets_panel, text_info_widget
+    map_activity, map_actions, map_info_layer, map_hud_layout, side_widgets_panel, text_info_widget
 ])
 missing_hud_resume = [item for item in required_hud_resume_tokens if item not in hud_resume_text]
 if missing_hud_resume:
     raise SystemExit("missing HUD resume/layout safeguards:\n" + "\n".join(missing_hud_resume))
 if "FLOCKFREE_RIGHT_PANEL_TOP_MARGIN_PORTRAIT_DP" in map_hud_layout:
     raise SystemExit("right-side speed widgets still race with a second hard-coded top margin")
+if map_info_layer.count("mapHudLayout.postOnAnimation(() ->") < 2:
+    raise SystemExit("HUD state refresh is missing its post-measurement position pass")
+navigation_start = map_actions.split("public void startNavigation()", 1)[1].split(
+    "public void selectAddress(", 1
+)[0]
+if "routingHelper.setFollowingMode(true)" not in navigation_start \
+        or "refreshFlockFreeHudLayout()" not in navigation_start:
+    raise SystemExit("navigation start does not trigger a HUD visibility/position refresh")
 
 required_http_tokens = [
     "connection.setFixedLengthStreamingMode(requestBytes.length)",

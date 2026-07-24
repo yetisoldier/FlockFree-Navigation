@@ -485,6 +485,7 @@ public class MapActions {
 		routingHelper.setRoutePlanningMode(false);
 		mapTrackingUtilities.switchRoutePlanningMode();
 		app.getOsmandMap().getMapView().refreshMap();
+		refreshFlockFreeHudLayout();
 	}
 
 	public void startNavigation() {
@@ -521,8 +522,16 @@ public class MapActions {
 				}
 				if (activity != null) {
 					AndroidUtils.requestNotificationPermissionIfNeeded(activity);
+					refreshFlockFreeHudLayout();
 				}
 			}
+		}
+	}
+
+	private void refreshFlockFreeHudLayout() {
+		MapActivity mapActivity = getMapActivity();
+		if (mapActivity != null && mapActivity.getMapLayers().getMapInfoLayer() != null) {
+			mapActivity.getMapLayers().getMapInfoLayer().refreshFlockFreeHudLayout();
 		}
 	}
 
