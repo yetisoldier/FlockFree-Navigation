@@ -35,7 +35,8 @@ Current development status and next-session testing are documented in
 - **Camera count validation** — Only accepts an avoidance route if it has strictly fewer Flock cameras than the original route. Prevents the inverted "privacy route has more cameras" bug.
 - **Detour guardrails** — Every non-zero-camera candidate must satisfy the selected mode: Balanced allows up to 15 minutes and 1.5x time/distance; Strict Privacy allows up to 30 minutes and 2x. Zero-camera routes remain privacy-first.
 - **Route comparison/status card** — Shows fastest vs privacy route side-by-side when a privacy route is accepted, or shows the FlockFree route-check status when no separate privacy route is available.
-- **Self-hosted online routing** — The FlockFree GraphHopper engine calculates both Fastest and camera-penalized Privacy routes, shows real distance/time/camera counts for both, and swaps the selected route directly on the preview map. Offline routing remains available as fallback.
+- **Self-hosted online routing** — The FlockFree GraphHopper engine calculates both Fastest and camera-penalized Privacy routes, shows real distance/time/camera counts for both, and swaps the selected route directly on the preview map. The backend covers the entire United States. Offline routing remains available as fallback.
+- **USA-only online routing** — The FlockFree online routing engine (Fastest and Privacy profiles) works within the United States only. For routing outside the US, use offline OsmAnd routing with downloaded vector maps.
 - **Partial avoidance reporting** — When full avoidance isn't possible, reports how many Flock camera roads were blocked and how many Flock cameras remain on the route.
 - **Status persistence** — Route check results persist across app restarts
 - **Metadata scope note** — FlockFree only avoids cameras whose source metadata identifies them as Flock-related through the `brand` or `operator` field.
@@ -273,12 +274,13 @@ For developers and field testers:
 - **Package:** `com.yetiwurks.flockfree`
 - **Min Android:** API 21 (Android 5.0)
 - **Target:** Android 14 (API 34)
-- **Flock camera index:** 89,942 Flock-labeled points from the bundled source snapshot (offline-first)
+- **Flock camera index:** 104,902 Flock-labeled points from the bundled source snapshot (offline-first)
 - **Camera data source:** [DeFlock](https://deflock.org) / [OpenStreetMap](https://openstreetmap.org)
 
 ## Known Limitations
 
 - Route avoidance is offline-only (requires downloaded vector maps)
+- **Online routing (Fastest and Privacy profiles) works within the United States only.** The self-hosted GraphHopper backend covers the full US graph. For routing outside the US, offline OsmAnd routing with downloaded vector maps remains available worldwide.
 - A real Flock camera may not be avoided until the source data labels it with Flock-related `brand` or `operator` metadata
 - Avoidance is capped at four full route searches across all strategies; very dense camera areas may still fall back to the original route
 - The reserved multi-pass reroute helper is disabled in the current build; active avoidance uses bounded severity tiers plus single-road and motorway fallbacks.

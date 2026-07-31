@@ -4,6 +4,28 @@ All notable changes to FlockFree Navigation are documented here.
 
 ## [Unreleased]
 
+## [v1.9.3] — 2026-07-31
+
+### Changed
+- **Full US routing graph** — The self-hosted FlockFree GraphHopper backend now covers the entire United States (70.3M nodes, 86.9M edges) instead of the previous 5-state upper Midwest extract. Routes work nationwide.
+- **Online routing is USA-only** — The FlockFree online routing engine (Fastest and Privacy profiles) routes within the United States only. Offline OsmAnd routing remains available worldwide for regions where you have downloaded vector maps.
+
+### Fixed
+- Camera overlay rendering stabilized across zoom changes, map rotation, and pan animations using the native OpenGL map scene.
+- Camera cone orientation now renders correctly after map rotation.
+- Navigation HUD reflow issues after resume and during landscape route comparison fixed.
+- Online routing POST requests now use UTF-8 byte lengths and longer stability-oriented timeouts.
+- FlockFree online routing calculates whichever Fastest/Privacy counterpart is missing, preserves intermediate stops, and ignores stale comparison jobs.
+- High-speed navigation keeps position animation enabled, eliminating GPS marker jumps above ~34 mph.
+- Map renderer surface change refresh and FlockFreeLayer import fix for OpenGL mode.
+
+### Performance
+- Camera layer now projects, clusters, draws, and hit-tests only cameras inside the current viewport with padded SQLite query cache.
+- Online camera penalty models capped at 500 nearest cameras per route corridor.
+- Camera avoidance capped at four full route searches with 15-second between-attempt budget.
+- Redundant OSM overlay queries removed from merged camera lookups.
+- Primary/OSM camera deduplication uses fine spatial index before exact distance check.
+
 ### Fixed
 - Clean installs now load the packaged compressed camera seed without requiring a network connection.
 - OSM Overpass cameras now pass the same Flock-only classifier during parse, storage, and reads.
