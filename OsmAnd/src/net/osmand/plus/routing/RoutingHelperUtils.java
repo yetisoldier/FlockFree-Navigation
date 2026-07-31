@@ -158,20 +158,72 @@ public class RoutingHelperUtils {
 	}
 
 	static int lookAheadFindMinOrthogonalDistance(Location currentLocation, List<Location> routeNodes, int currentRoute, int iterations) {
+		return lookAheadFindMinOrthogonalDistance(currentLocation, routeNodes, currentRoute, iterations, null);
+	}
+
+	/**
+	 * Overloaded version that accepts the current GPS location with bearing to break ties
+	 * between route segments on divided highways. When two candidate segments are close in
+	 * orthogonal distance (within SIMILAR_DISTANCE_THRESHOLD), the segment whose bearing
+	 * better matches the GPS bearing is preferred. This prevents snapping to the wrong
+	 * carriageway when GPS accuracy is poor.
+	 */
+	static int lookAheadFindMinOrthogonalDistance(Location currentLocation, List<Location> routeNodes,
+	                                              int currentRoute, int iterations, Location gpsLocation) {
 		double newDist;
 		double dist = Double.POSITIVE_INFINITY;
 		int index = currentRoute;
+		// Track second-best candidate for bearing tiebreaker
+		double secondDist = Double.POSITIVE_INFINITY;
+		int secondIndex = -1;
+
 		while (iterations > 0 && currentRoute + 1 < routeNodes.size()) {
 			newDist = getOrthogonalDistance(currentLocation, routeNodes.get(currentRoute), routeNodes.get(currentRoute + 1));
 			if (newDist < dist) {
+				// Shift previous best to second-best
+				secondDist = dist;
+				secondIndex = index;
 				index = currentRoute;
 				dist = newDist;
+			} else if (newDist < secondDist) {
+				secondDist = newDist;
+				secondIndex = currentRoute;
 			}
 			currentRoute++;
 			iterations--;
 		}
+
+		// Bearing gate: if GPS has a bearing and the two closest segments are close in distance,
+		// prefer the segment whose bearing better matches the GPS bearing.
+		if (gpsLocation != null && gpsLocation.hasBearing() && secondIndex >= 0
+				&& index + 1 < routeNodes.size() && secondIndex + 1 < routeNodes.size()) {
+			double distGap = secondDist - dist;
+			if (distGap <= SIMILAR_DISTANCE_THRESHOLD) {
+				float bestBearing = (float) MapUtils.normalizeDegrees360(
+						routeNodes.get(index).bearingTo(routeNodes.get(index + 1)));
+				float altBearing = (float) MapUtils.normalizeDegrees360(
+						routeNodes.get(secondIndex).bearingTo(routeNodes.get(secondIndex + 1)));
+				float gpsBearing = gpsLocation.getBearing();
+				double bestDiff = Math.abs(MapUtils.degreesDiff(gpsBearing, bestBearing));
+				double altDiff = Math.abs(MapUtils.degreesDiff(gpsBearing, altBearing));
+
+				// If best candidate's bearing deviates >90° from GPS and the alternative is closer,
+				// always prefer the bearing-matched alternative.
+				// Otherwise, only override when distances are very close (within threshold).
+				if (bestDiff > 90.0 && altDiff < bestDiff) {
+					index = secondIndex;
+					dist = secondDist;
+				} else if (distGap <= SIMILAR_DISTANCE_THRESHOLD && altDiff < bestDiff) {
+					index = secondIndex;
+					dist = secondDist;
+				}
+			}
+		}
 		return index;
 	}
+
+	/** Maximum distance difference (meters) between two candidate segments to trigger bearing tiebreaker. */
+	private static final double SIMILAR_DISTANCE_THRESHOLD = 15.0;
 
 	/**
 	 * Wrong movement direction is considered when between

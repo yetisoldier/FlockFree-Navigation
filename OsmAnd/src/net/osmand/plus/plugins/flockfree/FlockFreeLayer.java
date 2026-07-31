@@ -51,6 +51,13 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private static final float CLUSTER_MAX_RADIUS_DP = 20f;
     private static final double CAMERA_QUERY_BOUNDS_PADDING_FACTOR = 0.25;
 
+    // Zoom-based scale factors for camera pin/cone icon sizing.
+    // At street level (zoom 15+), markers are full size; they shrink at lower zoom levels
+    // so the map doesn't get cluttered when viewing a wider area.
+    private static final float PIN_SCALE_ZOOM_CLOSE = 1.0f;   // zoomGroup 15+ (street level)
+    private static final float PIN_SCALE_ZOOM_CLUSTER = 0.7f; // zoomGroup 13-14 (neighborhood)
+    private static final float PIN_SCALE_ZOOM_FAR = 0.5f;     // zoomGroup 10-12 (city overview)
+
     private final FlockFreePlugin plugin;
     private final Paint markerPaint;
     private final Paint candidatePaint;
@@ -60,7 +67,13 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
 
     // Keep the visible field of view consistent with routing and route camera counts.
     private static final float CONE_HALF_ANGLE_DEG = CameraAvoidanceHelper.CAMERA_CONE_HALF_ANGLE_DEGREES;
-    private static final float CONE_LENGTH_DP = 44f;     // screen-space cone length in dp
+    // Cone represents a fixed real-world distance so it scales naturally with zoom.
+    // At zoom 15, 100m ≈ 44dp on screen; this keeps cones visually proportional.
+    // Cone scales with zoom but not as fast as the map itself, so it stays proportional
+    // to the road without dominating the screen at high zoom or vanishing at low zoom.
+    // At zoom 15: 44dp (reference). Each zoom level changes cone length by ~1.41x (sqrt of map scale).
+    private static final float CONE_BASE_LENGTH_DP = 44f;  // reference screen length at zoom 15
+    private static final float CONE_ZOOM_POWER = 0.5f;     // sqrt scaling: 2^(zoom-15) * 0.5
 
     // Cached pixel dimensions — computed once in constructor to avoid per-frame dpToPx() calls
     private final float cameraOuterRadiusPx;
@@ -70,7 +83,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private final float cameraGlyphHeightPx;
     private final float cameraLensRadiusPx;
     private final float cameraLabelOffsetPx;
-    private final float coneLengthPx;
+    private final float coneLengthPx;  // reference length at zoom 15, used for native cone bitmaps
     private final float detectionRadiusPx;
     private final float detectionLabelOffsetPx;
     private final float clusterCellSizePx;
@@ -88,8 +101,9 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private final Map<Long, List<CameraData.CameraPoint>> clusterGrid = new HashMap<>();
     private final Map<Long, float[]> clusterScreenCenter = new HashMap<>();
     private final Map<String, Integer> brandCountsMap = new HashMap<>();
-    private final Map<Integer, SingleSkImage> nativePinImages = new HashMap<>();
-    private final Map<Integer, SingleSkImage> nativeConeImages = new HashMap<>();
+    // Cache key: ((long)zoomGroup << 32) | (color & 0xFFFFFFFFL) — so bitmaps vary by both color and zoom level
+    private final Map<Long, SingleSkImage> nativePinImages = new HashMap<>();
+    private final Map<Long, SingleSkImage> nativeConeImages = new HashMap<>();
     private final SWIGTYPE_p_void nativeConeIconKey = SwigUtilities.getOnSurfaceIconKey(1);
 
     private List<CameraData.CameraPoint> visibleCameras = new ArrayList<>();
@@ -103,6 +117,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     private long cameraQueryGeneration;
     private long nativeMarkerQueryGeneration = -1L;
     private int nativeMarkerZoomGroup = -1;
+    private int nativeMarkerZoom = -1;  // track actual zoom for cone regeneration
     private boolean nativeMarkerNightMode;
     private boolean nativeRenderPending;
 
@@ -142,7 +157,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         cameraGlyphHeightPx = dpToPx(2);
         cameraLensRadiusPx = dpToPx(0.8f);
         cameraLabelOffsetPx = dpToPx(3);
-        coneLengthPx = dpToPx(CONE_LENGTH_DP);
+        coneLengthPx = dpToPx(CONE_BASE_LENGTH_DP);
         detectionRadiusPx = dpToPx(8);
         detectionLabelOffsetPx = dpToPx(2);
         clusterCellSizePx = dpToPx(CLUSTER_CELL_SIZE_DP);
@@ -603,22 +618,29 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
                                            @NonNull List<CameraData.CameraPoint> cameras,
                                            int zoom, boolean nightMode) {
         int zoomGroup = getCameraZoomGroup(zoom);
+        int roundedZoom = Math.round(zoom);
         if (nativeMarkerQueryGeneration == cameraQueryGeneration
                 && nativeMarkerZoomGroup == zoomGroup
+                && nativeMarkerZoom == roundedZoom
                 && nativeMarkerNightMode == nightMode
                 && (cameras.isEmpty() || mapMarkersCollection != null)) {
             return;
         }
 
-        clearNativeCameraMarkers(false);
         nativeMarkerQueryGeneration = cameraQueryGeneration;
         nativeMarkerZoomGroup = zoomGroup;
+        nativeMarkerZoom = roundedZoom;
         nativeMarkerNightMode = nightMode;
+
         if (cameras.isEmpty()) {
+            // Nothing to show — just clean up old markers, no flicker risk.
+            clearNativeCameraMarkers(false);
             return;
         }
 
-        MapMarkersCollection markersCollection = new MapMarkersCollection();
+        // Build the new markers collection BEFORE removing the old one from the renderer.
+        // This ensures there is never a frame where no markers exist, preventing flicker.
+        MapMarkersCollection newCollection = new MapMarkersCollection();
         TextRasterizer.Style captionStyle = zoomGroup >= 15
                 ? MapTextLayer.getTextStyle(getContext(), nightMode, getTextScale(), view.getDensity())
                 : null;
@@ -633,7 +655,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
                     .setPosition(new PointI(
                             MapUtils.get31TileNumberX(camera.lon),
                             MapUtils.get31TileNumberY(camera.lat)))
-                    .setPinIcon(getNativePinImage(color))
+                    .setPinIcon(getNativePinImage(color, zoomGroup))
                     .setPinIconVerticalAlignment(MapMarker.PinIconVerticalAlignment.CenterVertical)
                     .setPinIconHorisontalAlignment(MapMarker.PinIconHorisontalAlignment.CenterHorizontal);
 
@@ -641,20 +663,27 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
             boolean hasBearing = camera.hasBearing();
             if (captionStyle != null) {
                 markerBuilder.setCaptionStyle(captionStyle)
-                        .setCaptionTopSpace(-cameraOuterRadiusPx - cameraLabelOffsetPx)
+                        .setCaptionTopSpace(-(cameraOuterRadiusPx * getPinScaleForZoomGroup(zoomGroup)) - (cameraLabelOffsetPx * getPinScaleForZoomGroup(zoomGroup)))
                         .setCaption(getShortBrandName(camera.brand));
             }
             if (zoomGroup >= 15 && hasBearing) {
-                markerBuilder.addOnMapSurfaceIcon(nativeConeIconKey, getNativeConeImage(color));
+                markerBuilder.addOnMapSurfaceIcon(nativeConeIconKey, getNativeConeImage(color, zoom));
             }
-            MapMarker marker = markerBuilder.buildAndAddToCollection(markersCollection);
+            MapMarker marker = markerBuilder.buildAndAddToCollection(newCollection);
             if (marker != null && zoomGroup >= 15 && hasBearing) {
                 float nativeDirection = (bearing + 180f) % 360f;
                 marker.setOnMapSurfaceIconDirection(nativeConeIconKey, nativeDirection);
             }
         }
-        mapMarkersCollection = markersCollection;
-        mapRenderer.addSymbolsProvider(mapMarkersCollection);
+
+        // Atomic swap: save old collection, set new one, add new to renderer FIRST,
+        // then remove old — so the renderer always has markers visible.
+        MapMarkersCollection oldCollection = mapMarkersCollection;
+        mapMarkersCollection = newCollection;
+        mapRenderer.addSymbolsProvider(newCollection);
+        if (oldCollection != null) {
+            mapRenderer.removeSymbolsProvider(oldCollection);
+        }
         requestNativeCameraRender(mapRenderer);
     }
 
@@ -668,56 +697,94 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         return MIN_ZOOM_TO_SHOW;
     }
 
+    /**
+     * Returns a scale factor for the given zoom group, used to size pin/cone bitmaps.
+     * Closer zoom = larger markers; farther zoom = smaller markers to reduce clutter.
+     */
+    private static float getPinScaleForZoomGroup(int zoomGroup) {
+        if (zoomGroup >= 15) return PIN_SCALE_ZOOM_CLOSE;
+        if (zoomGroup >= CLUSTER_MIN_ZOOM) return PIN_SCALE_ZOOM_CLUSTER;
+        return PIN_SCALE_ZOOM_FAR;
+    }
+
+    /** Composite cache key: combines zoomGroup and color into a single long. */
+    private static long pinCacheKey(int color, int zoomGroup) {
+        return ((long) zoomGroup << 32) | (color & 0xFFFFFFFFL);
+    }
+
     @NonNull
-    private SingleSkImage getNativePinImage(int color) {
-        SingleSkImage image = nativePinImages.get(color);
+    private SingleSkImage getNativePinImage(int color, int zoomGroup) {
+        long key = pinCacheKey(color, zoomGroup);
+        SingleSkImage image = nativePinImages.get(key);
         if (image != null) {
             return image;
         }
 
-        int padding = (int) Math.ceil(markerStrokeWidthPx);
-        int size = (int) Math.ceil(cameraOuterRadiusPx * 2f) + padding * 2;
+        float scale = getPinScaleForZoomGroup(zoomGroup);
+        // Scale all pixel dimensions for this zoom level so markers shrink at lower zoom
+        float outerRadius = cameraOuterRadiusPx * scale;
+        float innerRadius = cameraInnerRadiusPx * scale;
+        float strokeWidth = markerStrokeWidthPx * scale;
+        float glyphWidth = cameraGlyphWidthPx * scale;
+        float glyphHeight = cameraGlyphHeightPx * scale;
+        float lensRadius = cameraLensRadiusPx * scale;
+
+        int padding = (int) Math.ceil(strokeWidth);
+        int size = (int) Math.ceil(outerRadius * 2f) + padding * 2;
         float center = size / 2f;
         Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
         paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(markerStrokeWidthPx);
+        paint.setStrokeWidth(strokeWidth);
         paint.setColor(color);
-        canvas.drawCircle(center, center, cameraOuterRadiusPx, paint);
+        canvas.drawCircle(center, center, outerRadius, paint);
 
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(Color.WHITE);
-        canvas.drawCircle(center, center, cameraInnerRadiusPx, paint);
+        canvas.drawCircle(center, center, innerRadius, paint);
 
         paint.setColor(color);
-        float camLeft = center - cameraGlyphWidthPx / 2f;
-        float camTop = center - cameraGlyphHeightPx / 2f;
-        canvas.drawRect(camLeft, camTop,
-                camLeft + cameraGlyphWidthPx, camTop + cameraGlyphHeightPx, paint);
-        canvas.drawCircle(center, center, cameraLensRadiusPx, paint);
+        float camLeft = center - glyphWidth / 2f;
+        float camTop = center - glyphHeight / 2f;
+        canvas.drawRect(camLeft, camTop, camLeft + glyphWidth, camTop + glyphHeight, paint);
+        canvas.drawCircle(center, center, lensRadius, paint);
 
         image = NativeUtilities.createSkImageFromBitmap(bitmap);
-        nativePinImages.put(color, image);
+        nativePinImages.put(key, image);
         return image;
     }
 
     @NonNull
-    private SingleSkImage getNativeConeImage(int color) {
-        SingleSkImage image = nativeConeImages.get(color);
+    private SingleSkImage getNativeConeImage(int color, int zoom) {
+        // Cache key includes rounded zoom so cones regenerate when zoom changes significantly.
+        // Round to nearest integer zoom to limit cache entries while staying visually accurate.
+        int roundedZoom = Math.round(zoom);
+        long key = pinCacheKey(color, roundedZoom);
+        SingleSkImage image = nativeConeImages.get(key);
         if (image != null) {
             return image;
         }
 
-        int padding = (int) Math.ceil(coneStrokeWidthPx);
-        int size = (int) Math.ceil(coneLengthPx * 2f) + padding * 2;
+        // Cone scales with zoom using sqrt of map scale so it grows when zooming in
+        // but doesn't dominate the screen. At zoom 15: reference, zoom 17: ~2x, zoom 13: ~0.5x.
+        float scale = getPinScaleForZoomGroup(getCameraZoomGroup(zoom));
+        float zoomScaleFactor = (float) Math.pow(2, (roundedZoom - 15) * CONE_ZOOM_POWER);
+        float coneLength = coneLengthPx * zoomScaleFactor;
+        // Clamp to reasonable screen range
+        coneLength = Math.max(coneLength, coneLengthPx * 0.3f);
+        coneLength = Math.min(coneLength, coneLengthPx * 3f);
+        float coneStrokeW = coneStrokeWidthPx * scale;
+
+        int padding = (int) Math.ceil(coneStrokeW);
+        int size = (int) Math.ceil(coneLength * 2f) + padding * 2;
         float center = size / 2f;
         float halfAngle = (float) Math.toRadians(CONE_HALF_ANGLE_DEG);
-        float leftX = center + (float) (coneLengthPx * Math.sin(-halfAngle));
-        float leftY = center - (float) (coneLengthPx * Math.cos(-halfAngle));
-        float rightX = center + (float) (coneLengthPx * Math.sin(halfAngle));
-        float rightY = center - (float) (coneLengthPx * Math.cos(halfAngle));
+        float leftX = center + (float) (coneLength * Math.sin(-halfAngle));
+        float leftY = center - (float) (coneLength * Math.cos(-halfAngle));
+        float rightX = center + (float) (coneLength * Math.sin(halfAngle));
+        float rightY = center - (float) (coneLength * Math.cos(halfAngle));
 
         Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
@@ -733,12 +800,12 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         paint.setAlpha(60);
         canvas.drawPath(path, paint);
         paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(coneStrokeWidthPx);
+        paint.setStrokeWidth(coneStrokeW);
         paint.setAlpha(140);
         canvas.drawPath(path, paint);
 
         image = NativeUtilities.createSkImageFromBitmap(bitmap);
-        nativeConeImages.put(color, image);
+        nativeConeImages.put(key, image);
         return image;
     }
 
@@ -783,6 +850,10 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         super.clearMapMarkersCollections();
         nativeMarkerQueryGeneration = -1L;
         nativeMarkerZoomGroup = -1;
+        nativeMarkerZoom = -1;
+        // Clear cached pin/cone bitmaps so stale size or night-mode variants don't persist
+        nativePinImages.clear();
+        nativeConeImages.clear();
     }
 
     private void drawCamera(@NonNull Canvas canvas, @NonNull RotatedTileBox tileBox,
@@ -792,35 +863,46 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         float y = pos.y;
         int color = getBrandColor(camera.brand);
 
+        // Apply zoom-based scaling so canvas fallback matches native renderer behavior
+        int zoomGroup = getCameraZoomGroup(tileBox.getZoom());
+        float scale = getPinScaleForZoomGroup(zoomGroup);
+        float outerRadius = cameraOuterRadiusPx * scale;
+        float innerRadius = cameraInnerRadiusPx * scale;
+        float strokeWidth = markerStrokeWidthPx * scale;
+        float glyphWidth = cameraGlyphWidthPx * scale;
+        float glyphHeight = cameraGlyphHeightPx * scale;
+        float lensRadius = cameraLensRadiusPx * scale;
+        float labelOffset = cameraLabelOffsetPx * scale;
+
         // Draw orientation cone when direction is available and zoom is high enough
         if (tileBox.getZoom() >= 15) {
             Float bearing = parseDirection(camera.direction);
             if (bearing != null) {
-                drawCameraCone(canvas, tileBox, x, y, bearing, color);
+                drawCameraCone(canvas, tileBox, x, y, bearing, color, scale);
             }
         }
 
         // Outer ring: brand-color stroked circle (POI pin style)
         markerPaint.setStyle(Paint.Style.STROKE);
         markerPaint.setColor(color);
-        markerPaint.setStrokeWidth(markerStrokeWidthPx);
-        canvas.drawCircle(x, y, cameraOuterRadiusPx, markerPaint);
+        markerPaint.setStrokeWidth(strokeWidth);
+        canvas.drawCircle(x, y, outerRadius, markerPaint);
 
         // Inner white filled circle (switch to FILL once — stays for rest of method)
         markerPaint.setStyle(Paint.Style.FILL);
         markerPaint.setColor(Color.WHITE);
-        canvas.drawCircle(x, y, cameraInnerRadiusPx, markerPaint);
+        canvas.drawCircle(x, y, innerRadius, markerPaint);
 
         // Tiny camera glyph in brand color: rectangle body + circular lens
         markerPaint.setColor(color);
-        float camLeft = x - cameraGlyphWidthPx / 2f;
-        float camTop = y - cameraGlyphHeightPx / 2f;
-        canvas.drawRect(camLeft, camTop, camLeft + cameraGlyphWidthPx, camTop + cameraGlyphHeightPx, markerPaint);
-        canvas.drawCircle(x, y, cameraLensRadiusPx, markerPaint);
+        float camLeft = x - glyphWidth / 2f;
+        float camTop = y - glyphHeight / 2f;
+        canvas.drawRect(camLeft, camTop, camLeft + glyphWidth, camTop + glyphHeight, markerPaint);
+        canvas.drawCircle(x, y, lensRadius, markerPaint);
 
         if (tileBox.getZoom() >= 15) {
             String label = getShortBrandName(camera.brand);
-            canvas.drawText(label, x, y - cameraOuterRadiusPx - cameraLabelOffsetPx, textPaint);
+            canvas.drawText(label, x, y - outerRadius - labelOffset, textPaint);
         }
     }
 
@@ -841,7 +923,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
     }
 
     private void drawCameraCone(@NonNull Canvas canvas, @NonNull RotatedTileBox tileBox,
-                                float x, float y, float compassBearing, int color) {
+                                float x, float y, float compassBearing, int color, float scale) {
         // Convert compass bearing (0=N, 90=E) to canvas angle (0=E, 90=S),
         // then apply the live native-renderer rotation. The RotatedTileBox can lag
         // behind the renderer during an animated turn or pan.
@@ -852,14 +934,21 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         float screenAngle = (float) Math.toRadians(compassBearing - 90f + mapRotation);
 
         float halfAngle = (float) Math.toRadians(CONE_HALF_ANGLE_DEG);
+        // Cone scales with zoom using sqrt of map scale factor so it grows when zooming in
+        // but doesn't dominate the screen. At zoom 15: 44dp, zoom 17: ~88dp, zoom 13: ~22dp.
+        float zoomScaleFactor = (float) Math.pow(2, (tileBox.getFullZoom() - 15) * CONE_ZOOM_POWER);
+        float scaledConeLength = coneLengthPx * zoomScaleFactor;
+        // Clamp to reasonable screen range
+        scaledConeLength = Math.max(scaledConeLength, coneLengthPx * 0.3f);
+        scaledConeLength = Math.min(scaledConeLength, coneLengthPx * 3f);
 
         // Reuse class-level conePath — reset before each use instead of allocating
         conePath.reset();
         conePath.moveTo(x, y);
-        float endX1 = x + (float) (coneLengthPx * Math.cos(screenAngle - halfAngle));
-        float endY1 = y + (float) (coneLengthPx * Math.sin(screenAngle - halfAngle));
-        float endX2 = x + (float) (coneLengthPx * Math.cos(screenAngle + halfAngle));
-        float endY2 = y + (float) (coneLengthPx * Math.sin(screenAngle + halfAngle));
+        float endX1 = x + (float) (scaledConeLength * Math.cos(screenAngle - halfAngle));
+        float endY1 = y + (float) (scaledConeLength * Math.sin(screenAngle - halfAngle));
+        float endX2 = x + (float) (scaledConeLength * Math.cos(screenAngle + halfAngle));
+        float endY2 = y + (float) (scaledConeLength * Math.sin(screenAngle + halfAngle));
         conePath.lineTo(endX1, endY1);
         conePath.lineTo(endX2, endY2);
         conePath.close();
@@ -872,6 +961,7 @@ public class FlockFreeLayer extends OsmandMapLayer implements ContextMenuLayer.I
         // Stroke with a more opaque brand color
         coneStrokePaint.setColor(color);
         coneStrokePaint.setAlpha(140);
+        coneStrokePaint.setStrokeWidth(coneStrokeWidthPx * scale);
         canvas.drawPath(conePath, coneStrokePaint);
     }
 
