@@ -836,12 +836,12 @@ public class ExternalApiHelper {
 		try {
 
 			if (API_CMD_GET_INFO.equals(command)) {
-				uri = Uri.parse("osmand.api://get_info");
+				uri = Uri.parse("flockfree.api://get_info");
 			}
 
 			if (API_CMD_NAVIGATE.equals(command)) {
 				// test navigate
-				uri = Uri.parse("osmand.api://navigate" +
+				uri = Uri.parse("flockfree.api://navigate" +
 						"?start_lat=" + lat + "&start_lon=" + lon + "&start_name=Start" +
 						"&dest_lat=" + destLat + "&dest_lon=" + destLon + "&dest_name=Finish" +
 						"&profile=bicycle");
@@ -849,53 +849,53 @@ public class ExternalApiHelper {
 
 			if (API_CMD_RECORD_AUDIO.equals(command)) {
 				// test record audio
-				uri = Uri.parse("osmand.api://record_audio?lat=" + lat + "&lon=" + lon);
+				uri = Uri.parse("flockfree.api://record_audio?lat=" + lat + "&lon=" + lon);
 			}
 			if (API_CMD_RECORD_VIDEO.equals(command)) {
 				// test record video
-				uri = Uri.parse("osmand.api://record_video?lat=" + lat + "&lon=" + lon);
+				uri = Uri.parse("flockfree.api://record_video?lat=" + lat + "&lon=" + lon);
 			}
 			if (API_CMD_RECORD_PHOTO.equals(command)) {
 				// test take photo
-				uri = Uri.parse("osmand.api://record_photo?lat=" + lat + "&lon=" + lon);
+				uri = Uri.parse("flockfree.api://record_photo?lat=" + lat + "&lon=" + lon);
 			}
 			if (API_CMD_STOP_AV_REC.equals(command)) {
 				// test record video
-				uri = Uri.parse("osmand.api://stop_av_rec");
+				uri = Uri.parse("flockfree.api://stop_av_rec");
 			}
 
 			if (API_CMD_ADD_MAP_MARKER.equals(command)) {
 				// test marker
-				uri = Uri.parse("osmand.api://add_map_marker?lat=" + lat + "&lon=" + lon + "&name=Marker");
+				uri = Uri.parse("flockfree.api://add_map_marker?lat=" + lat + "&lon=" + lon + "&name=Marker");
 			}
 
 			if (API_CMD_SHOW_LOCATION.equals(command)) {
 				// test location
-				uri = Uri.parse("osmand.api://show_location?lat=" + lat + "&lon=" + lon);
+				uri = Uri.parse("flockfree.api://show_location?lat=" + lat + "&lon=" + lon);
 			}
 
 			if (API_CMD_ADD_FAVORITE.equals(command)) {
 				// test favorite
-				uri = Uri.parse("osmand.api://add_favorite?lat=" + lat + "&lon=" + lon + "&name=Favorite&desc=Description&category=test2&color=red&visible=true");
+				uri = Uri.parse("flockfree.api://add_favorite?lat=" + lat + "&lon=" + lon + "&name=Favorite&desc=Description&category=test2&color=red&visible=true");
 			}
 
 			if (API_CMD_START_GPX_REC.equals(command)) {
 				// test start gpx recording
-				uri = Uri.parse("osmand.api://start_gpx_rec");
+				uri = Uri.parse("flockfree.api://start_gpx_rec");
 			}
 
 			if (API_CMD_STOP_GPX_REC.equals(command)) {
 				// test stop gpx recording
-				uri = Uri.parse("osmand.api://stop_gpx_rec");
+				uri = Uri.parse("flockfree.api://stop_gpx_rec");
 			}
 
 			if (API_CMD_SHOW_GPX.equals(command)) {
 				// test show gpx (path)
 				//File gpx = new File(app.getAppPath(IndexConstants.GPX_INDEX_DIR), gpxName);
-				//uri = Uri.parse("osmand.api://show_gpx?path=" + URLEncoder.encode(gpx.getAbsolutePath(), "UTF-8"));
+				//uri = Uri.parse("flockfree.api://show_gpx?path=" + URLEncoder.encode(gpx.getAbsolutePath(), "UTF-8"));
 
 				// test show gpx (data)
-				uri = Uri.parse("osmand.api://show_gpx");
+				uri = Uri.parse("flockfree.api://show_gpx");
 				intent = new Intent(Intent.ACTION_VIEW, uri);
 				intent.putExtra("data", Algorithms.getFileAsString(
 						new File(app.getAppPath(IndexConstants.GPX_INDEX_DIR), gpxName)));
@@ -904,10 +904,10 @@ public class ExternalApiHelper {
 			if (API_CMD_NAVIGATE_GPX.equals(command)) {
 				// test navigate gpx (path)
 				//File gpx = new File(app.getAppPath(IndexConstants.GPX_INDEX_DIR), gpxName);
-				//uri = Uri.parse("osmand.api://navigate_gpx?force=true&path=" + URLEncoder.encode(gpx.getAbsolutePath(), "UTF-8"));
+				//uri = Uri.parse("flockfree.api://navigate_gpx?force=true&path=" + URLEncoder.encode(gpx.getAbsolutePath(), "UTF-8"));
 
 				// test navigate gpx (data)
-				uri = Uri.parse("osmand.api://navigate_gpx?force=true");
+				uri = Uri.parse("flockfree.api://navigate_gpx?force=true");
 				intent = new Intent(Intent.ACTION_VIEW, uri);
 				intent.putExtra("data", Algorithms.getFileAsString(
 						new File(app.getAppPath(IndexConstants.GPX_INDEX_DIR), gpxName)));

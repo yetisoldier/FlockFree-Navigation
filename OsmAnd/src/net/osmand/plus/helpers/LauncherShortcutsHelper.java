@@ -49,7 +49,7 @@ public class LauncherShortcutsHelper {
 
 	private static final Log LOG = PlatformUtil.getLog(LauncherShortcutsHelper.class);
 
-	public static final String INTENT_SCHEME = "osmand.shortcuts";
+	public static final String INTENT_SCHEME = "flockfree.shortcuts";
 
 	private static final int VISIBLE_DYNAMIC_SHORTCUTS_LIMIT = 4;
 	@ColorRes

@@ -92,7 +92,7 @@ public class PluginsHelper {
 	private static final Log LOG = PlatformUtil.getLog(PluginsHelper.class);
 
 	private static final String CUSTOM_PLUGINS_KEY = "custom_plugins";
-	private static final String PLUGINS_PREFERENCES_NAME = "net.osmand.plugins";
+	private static final String PLUGINS_PREFERENCES_NAME = "com.yetiwurks.flockfree.plugins";
 	public static final String ONLINE_PLUGINS_URL = "https://osmand.net/api/plugins/list";
 	public static final String OSMAND_URL = "https://osmand.net";
 

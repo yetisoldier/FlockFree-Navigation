@@ -42,7 +42,7 @@ public class NavigationService extends Service {
 	public static class NavigationServiceBinder extends Binder {
 	}
 
-	public static final String DEEP_LINK_ACTION_OPEN_ROOT_SCREEN = "net.osmand.plus.navigation.car.OpenRootScreen";
+	public static final String DEEP_LINK_ACTION_OPEN_ROOT_SCREEN = "com.yetiwurks.flockfree.navigation.car.OpenRootScreen";
 
 	// global id don't conflict with others
 	public static int USED_BY_NAVIGATION = 1;

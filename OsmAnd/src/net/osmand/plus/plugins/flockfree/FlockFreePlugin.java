@@ -779,6 +779,9 @@ public class FlockFreePlugin extends OsmandPlugin {
         if (assets == null) {
             return "";
         }
+        String sideloadMatch = "";
+        String flockfreeMatch = "";
+        String releaseMatch = "";
         String fallback = "";
         for (int i = 0; i < assets.length(); i++) {
             JSONObject asset = assets.optJSONObject(i);
@@ -787,13 +790,40 @@ public class FlockFreePlugin extends OsmandPlugin {
             }
             String name = asset.optString("name", "");
             String url = asset.optString("browser_download_url", "");
-            if (Algorithms.isEmpty(url) || !name.toLowerCase(java.util.Locale.US).endsWith(APK_EXTENSION)) {
+            String nameLower = name.toLowerCase(java.util.Locale.US);
+            if (Algorithms.isEmpty(url) || !nameLower.endsWith(APK_EXTENSION)) {
                 continue;
             }
-            if (name.toLowerCase(java.util.Locale.US).contains("sideload")) {
-                return url;
+            // Skip debug builds — never distribute debug builds via auto-update
+            if (nameLower.contains("debug")) {
+                continue;
             }
+            // Priority 1: "sideload" in name (our convention for distribution APKs)
+            if (nameLower.contains("sideload")) {
+                sideloadMatch = url;
+                continue;
+            }
+            // Priority 2: "flockfree" in name (branded APK)
+            if (nameLower.contains("flockfree") || nameLower.contains("flock-free")) {
+                flockfreeMatch = url;
+                continue;
+            }
+            // Priority 3: release build (not debug, not legacy)
+            if (nameLower.contains("release") && !nameLower.contains("legacy")) {
+                releaseMatch = url;
+                continue;
+            }
+            // Priority 4: any non-debug APK
             fallback = url;
+        }
+        if (!Algorithms.isEmpty(sideloadMatch)) {
+            return sideloadMatch;
+        }
+        if (!Algorithms.isEmpty(flockfreeMatch)) {
+            return flockfreeMatch;
+        }
+        if (!Algorithms.isEmpty(releaseMatch)) {
+            return releaseMatch;
         }
         return fallback;
     }

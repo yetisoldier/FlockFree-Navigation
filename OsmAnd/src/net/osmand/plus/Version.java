@@ -31,9 +31,9 @@ public class Version {
 	public static final String HMD_MANUFACTURER_NAME = "HMD Global";
 	public static final String HMD_MODEL_NAME = "HMD Terra M";
 
-	public static final String FULL_VERSION_NAME = "net.osmand.plus";
+	public static final String FULL_VERSION_NAME = "com.yetiwurks.flockfree";
 	private static final String FREE_VERSION_NAME = "net.osmand";
-	private static final String FREE_DEV_VERSION_NAME = "net.osmand.dev";
+	private static final String FREE_DEV_VERSION_NAME = "com.yetiwurks.flockfree.dev";
 	private static final String FLOCKFREE_VERSION_NAME_PREFIX = "com.yetiwurks.flockfree";
 	private static final String UTM_REF = "&referrer=utm_source%3Dosmand";
 

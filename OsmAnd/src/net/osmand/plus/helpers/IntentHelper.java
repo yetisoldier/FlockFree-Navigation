@@ -642,9 +642,9 @@ public class IntentHelper {
 					} else if ("content".equals(scheme)) {
 						mapActivity.getImportHelper().handleContentImport(data, intent.getExtras(), true);
 						clearIntent(intent);
-					} else if ("google.navigation".equals(scheme) || "osmand.navigation".equals(scheme)) {
+					} else if ("google.navigation".equals(scheme) || "flockfree.navigation".equals(scheme)) {
 						parseNavigationIntent(intent);
-					} else if ("osmand.api".equals(scheme)) {
+					} else if ("flockfree.api".equals(scheme)) {
 						ExternalApiHelper apiHelper = new ExternalApiHelper(mapActivity);
 						Intent result = apiHelper.processApiRequest(intent);
 						mapActivity.setResult(apiHelper.getResultCode(), result);
@@ -842,7 +842,7 @@ public class IntentHelper {
 		Intent intent = mapActivity.getIntent();
 		if (intent != null && intent.getData() != null) {
 			Uri uri = intent.getData();
-			if (uri.toString().startsWith("osmand-oauth")) {
+			if (uri.toString().startsWith("flockfree-oauth")) {
 				String code = uri.getQueryParameter("code");
 				if (code != null) {
 					app.getOsmOAuthHelper().addListener(getOnAuthorizeListener());

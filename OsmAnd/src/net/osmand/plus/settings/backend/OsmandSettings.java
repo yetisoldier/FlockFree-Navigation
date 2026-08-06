@@ -134,8 +134,8 @@ public class OsmandSettings {
 	public static final int VERSION = 1;
 
 	// These settings are stored in SharedPreferences
-	public static final String CUSTOM_SHARED_PREFERENCES_PREFIX = "net.osmand.customsettings.";
-	public static final String SHARED_PREFERENCES_NAME = "net.osmand.settings";
+	public static final String CUSTOM_SHARED_PREFERENCES_PREFIX = "com.yetiwurks.flockfree.customsettings.";
+	public static final String SHARED_PREFERENCES_NAME = "com.yetiwurks.flockfree.settings";
 	private static String CUSTOM_SHARED_PREFERENCES_NAME;
 
 	public static final String RENDERER_PREFERENCE_PREFIX = "nrenderer_";
