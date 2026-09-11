@@ -12,6 +12,7 @@ All notable changes to FlockFree Navigation are documented here.
 
 ### Fixed
 - Upgraded installs clear the old Flock-only camera database and reload the full all-brand dataset on first launch after updating.
+- Fixed the bundled seed asset path so clean installs and offline upgrades load the packaged 140,125-camera seed without a network connection. The Android asset packager stores the seed decompressed as cameras.geojson, but the app was still looking for cameras.geojson.gz, a path that no release APK contains.
 
 ## [v1.9.3] — 2026-07-31
 
