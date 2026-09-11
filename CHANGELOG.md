@@ -4,6 +4,15 @@ All notable changes to FlockFree Navigation are documented here.
 
 ## [Unreleased]
 
+## [v1.9.5] - 2026-09-11
+
+### Changed
+- **All-ALPR camera coverage:** FlockFree now shows every US plate reader camera, not just Flock Safety hardware. Motorola/Vigilant, Genetec, Leonardo/ELSAG, Axon, Rekor, PlateSmart, Ubicquia, Ekin, Neology, Verkada, and unbranded ALPR nodes are now included, growing the national dataset from about 88K to about 140K cameras.
+- Dataset and avoidance settings now say "plate reader camera" instead of "Flock camera" to match the all-brand dataset.
+
+### Fixed
+- Upgraded installs clear the old Flock-only camera database and reload the full all-brand dataset on first launch after updating.
+
 ## [v1.9.3] — 2026-07-31
 
 ### Changed
