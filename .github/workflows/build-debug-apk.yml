@@ -67,7 +67,7 @@ jobs:
       run: printf "\norg.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8\n" >> gradle.properties
     - name: Build with Gradle
       working-directory: ./android
-      run: ./gradlew :OsmAnd:assembleGplayFreeOpenglFatDebug --no-daemon --max-workers=1
+      run: ./gradlew :OsmAnd:assembleGplayFreeOpenglFatDebug --no-daemon --max-workers=1 -x test
     - name: Rename APK
       working-directory: ./android
       run: mv OsmAnd/build/outputs/apk/gplayFreeOpenglFat/debug/OsmAnd-gplayFree-opengl-fat-debug.apk OsmAnd/build/outputs/apk/gplayFreeOpenglFat/debug/FlockFree-gplayFree-opengl-fat-debug-$(git log -n 1 --format='%h').apk
