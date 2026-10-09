@@ -159,7 +159,14 @@ android {
 
 	buildTypes {
 		debug {
-			signingConfig signingConfigs.publishing
+			// Local builds with the release keystore present keep release
+			// signing (existing installs update in place). CI has no
+			// keystores/ checked out, so falls back to the tracked debug
+			// keystore instead of failing validateSigning before an
+			// artifact is ever produced.
+			signingConfig file("../keystores/flockfree-release.keystore").exists()
+				? signingConfigs.publishing
+				: signingConfigs.development
 		}
 		release {
 			signingConfig signingConfigs.publishing
