@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * SQLite-backed persistent storage for Flock camera data.
+ * SQLite-backed persistent storage for ALPR camera data.
  * <p>
  * Adds a persistent database behind the in-memory spatial grid
  * that supports range queries by latitude/longitude bounding box.
@@ -45,7 +45,7 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 
 	private static final Log LOG = PlatformUtil.getLog(CameraDatabaseHelper.class);
 
-	private static final int DATABASE_VERSION = 4;
+	private static final int DATABASE_VERSION = 5;
 	private static final String DATABASE_NAME = "flockfree_cameras.db";
 	private static final String TABLE_NAME = "cameras";
 	private static final String OSM_TABLE_NAME = "osm_cameras";
@@ -65,10 +65,6 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 	private static final String COL_MOUNT_TYPE = "mount_type";
 	private static final String COL_SURVEILLANCE_ZONE = "surveillance_zone";
 	private static final String COL_OSM_TIMESTAMP = "osm_timestamp";
-	private static final String FLOCK_SELECTION =
-			"(LOWER(COALESCE(" + COL_MANUFACTURER + ", '')) LIKE '%flock%' OR " +
-			"LOWER(COALESCE(" + COL_BRAND + ", '')) LIKE '%flock%' OR " +
-			"LOWER(COALESCE(" + COL_OPERATOR + ", '')) LIKE '%flock%')";
 
 	private static final String CREATE_TABLE_SQL =
 			"CREATE TABLE " + TABLE_NAME + " (" +
@@ -89,7 +85,7 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 			" (" + COL_LAT + ", " + COL_LON + ");";
 
 	private static final String COUNT_SQL =
-			"SELECT COUNT(*) FROM " + TABLE_NAME + " WHERE " + FLOCK_SELECTION;
+			"SELECT COUNT(*) FROM " + TABLE_NAME;
 
 	// OSM overlay table columns
 	private static final String OSM_COL_ID = "id";
@@ -119,12 +115,8 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 			"CREATE INDEX idx_osm_cameras_lat_lon ON " + OSM_TABLE_NAME +
 			" (" + OSM_COL_LAT + ", " + OSM_COL_LON + ");";
 
-	private static final String OSM_FLOCK_SELECTION =
-			"(LOWER(COALESCE(" + OSM_COL_MANUFACTURER + ", '')) LIKE '%flock%' OR " +
-			"LOWER(COALESCE(" + OSM_COL_BRAND + ", '')) LIKE '%flock%' OR " +
-			"LOWER(COALESCE(" + OSM_COL_OPERATOR + ", '')) LIKE '%flock%')";
 	private static final String OSM_COUNT_SQL =
-			"SELECT COUNT(*) FROM " + OSM_TABLE_NAME + " WHERE " + OSM_FLOCK_SELECTION;
+			"SELECT COUNT(*) FROM " + OSM_TABLE_NAME;
 
 	public CameraDatabaseHelper(@NonNull Context context) {
 		super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -136,7 +128,7 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 		db.execSQL(CREATE_INDEX_SQL);
 		db.execSQL(CREATE_OSM_TABLE_SQL);
 		db.execSQL(CREATE_OSM_INDEX_SQL);
-		LOG.info("Camera database created (v4 with OSM overlay)");
+		LOG.info("Camera database created (v5 with OSM overlay)");
 	}
 
 	@Override
@@ -152,11 +144,19 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 			db.execSQL(CREATE_OSM_INDEX_SQL);
 			LOG.info("Camera database upgraded: added osm_cameras overlay table");
 		}
+		if (oldVersion < 5) {
+			// v5: the camera dataset expanded from Flock-only to all ALPR brands.
+			// Clear both tables so the next load repopulates from the all-brand
+			// feed/seed instead of keeping the old Flock-only snapshot.
+			db.execSQL("DELETE FROM " + TABLE_NAME);
+			db.execSQL("DELETE FROM " + OSM_TABLE_NAME);
+			LOG.info("Camera database upgraded: cleared camera tables for all-brand ALPR reload");
+		}
 		LOG.info("Camera database upgraded from " + oldVersion + " to " + newVersion);
 	}
 
 	/**
-	 * Replaces all camera data in the database with Flock-only rows.
+	 * Replaces all camera data in the database with ALPR rows.
 	 * Uses a transaction for atomicity.
 	 *
 	 * @param cameras the full list of camera points to store
@@ -169,7 +169,7 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 		try {
 			db.delete(TABLE_NAME, null, null);
 			for (CameraData.CameraPoint cam : cameras) {
-				if (!CameraData.isFlockCamera(cam)) {
+				if (!CameraData.isAlprCamera(cam)) {
 					continue;
 				}
 				ContentValues values = new ContentValues(11);
@@ -188,7 +188,7 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 				inserted++;
 			}
 			db.setTransactionSuccessful();
-			LOG.info("Replaced camera database with " + inserted + " Flock camera rows");
+			LOG.info("Replaced camera database with " + inserted + " camera rows");
 			return true;
 		} catch (Exception e) {
 			LOG.error("Failed to replace camera database", e);
@@ -199,7 +199,7 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 	}
 
 	/**
-	 * Returns Flock cameras within the given bounding box.
+	 * Returns cameras within the given bounding box.
 	 * Uses the lat/lon index for efficient range queries.
 	 *
 	 * @param top    northern latitude boundary
@@ -238,7 +238,7 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 			double top, double left, double bottom, double right) {
 		List<CameraData.CameraPoint> result = new ArrayList<>();
 		SQLiteDatabase db = getReadableDatabase();
-		String selection = FLOCK_SELECTION + " AND " + COL_LAT + " >= ? AND " + COL_LAT + " <= ? AND "
+		String selection = COL_LAT + " >= ? AND " + COL_LAT + " <= ? AND "
 				+ COL_LON + " >= ? AND " + COL_LON + " <= ?";
 		String[] selectionArgs = {
 				String.valueOf(bottom),
@@ -248,7 +248,7 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 		};
 		try (Cursor cursor = db.query(TABLE_NAME, null, selection, selectionArgs,
 				null, null, null)) {
-			addCursorCamerasIfFlock(cursor, result);
+			addCursorCameras(cursor, result);
 		} catch (Exception e) {
 			LOG.error("Failed to query cameras in bounding box", e);
 		}
@@ -256,7 +256,7 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 	}
 
 	/**
-	 * Returns Flock cameras within the given radius of the given point.
+	 * Returns cameras within the given radius of the given point.
 	 * Uses a bounding-box pre-filter then precise distance filtering.
 	 *
 	 * @param lat          center latitude
@@ -302,7 +302,7 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 	}
 
 	/**
-	 * Returns all Flock cameras from the database for rebuilding in-memory route helpers.
+	 * Returns all cameras from the database for rebuilding in-memory route helpers.
 	 *
 	 * @return full list of camera points, or an empty list if loading fails
 	 */
@@ -310,17 +310,17 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 	public List<CameraData.CameraPoint> getAllCameras() {
 		List<CameraData.CameraPoint> result = new ArrayList<>();
 		SQLiteDatabase db = getReadableDatabase();
-		try (Cursor cursor = db.query(TABLE_NAME, null, FLOCK_SELECTION, null,
+		try (Cursor cursor = db.query(TABLE_NAME, null, null, null,
 				null, null, null)) {
-			addCursorCamerasIfFlock(cursor, result);
+			addCursorCameras(cursor, result);
 		} catch (Exception e) {
-			LOG.error("Failed to load Flock cameras from database", e);
+			LOG.error("Failed to load cameras from database", e);
 		}
 		return result;
 	}
 
 	/**
-	 * Returns the total number of Flock cameras in the database.
+	 * Returns the total number of cameras in the database.
 	 *
 	 * @return camera count, or 0 if the query fails
 	 */
@@ -337,14 +337,14 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 	}
 
 	/**
-	 * Returns true if the database has any Flock camera data.
+	 * Returns true if the database has any camera data.
 	 *
 	 * @return true if the database contains at least one camera
 	 */
 	public boolean hasData() {
 		SQLiteDatabase db = getReadableDatabase();
 		try (Cursor cursor = db.rawQuery("SELECT EXISTS(SELECT 1 FROM " + TABLE_NAME
-				+ " WHERE " + FLOCK_SELECTION + " LIMIT 1)", null)) {
+				+ " LIMIT 1)", null)) {
 			return cursor.moveToFirst() && cursor.getInt(0) == 1;
 		} catch (Exception e) {
 			LOG.error("Failed to check camera database for data", e);
@@ -366,11 +366,11 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 		}
 	}
 
-	private static void addCursorCamerasIfFlock(@NonNull Cursor cursor,
-	                                            @NonNull List<CameraData.CameraPoint> result) {
+	private static void addCursorCameras(@NonNull Cursor cursor,
+	                                    @NonNull List<CameraData.CameraPoint> result) {
 		while (cursor.moveToNext()) {
 			CameraData.CameraPoint point = cursorToCameraPoint(cursor);
-			if (CameraData.isFlockCamera(point)) {
+			if (CameraData.isAlprCamera(point)) {
 				result.add(point);
 			}
 		}
@@ -432,7 +432,7 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 			long timestamp = System.currentTimeMillis();
 			int idCounter = 0;
 			for (CameraData.CameraPoint cam : cameras) {
-				if (!CameraData.isFlockCamera(cam)) {
+				if (!CameraData.isAlprCamera(cam)) {
 					continue;
 				}
 				ContentValues values = new ContentValues(8);
@@ -498,8 +498,7 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 			double top, double left, double bottom, double right) {
 		List<CameraData.CameraPoint> result = new ArrayList<>();
 		SQLiteDatabase db = getReadableDatabase();
-		String selection = OSM_FLOCK_SELECTION + " AND "
-				+ OSM_COL_LAT + " >= ? AND " + OSM_COL_LAT + " <= ? AND "
+		String selection = OSM_COL_LAT + " >= ? AND " + OSM_COL_LAT + " <= ? AND "
 				+ OSM_COL_LON + " >= ? AND " + OSM_COL_LON + " <= ?";
 		String[] selectionArgs = {
 				String.valueOf(bottom),
@@ -543,7 +542,7 @@ public class CameraDatabaseHelper extends SQLiteOpenHelper {
 	public boolean hasOsmData() {
 		SQLiteDatabase db = getReadableDatabase();
 		try (Cursor cursor = db.rawQuery("SELECT EXISTS(SELECT 1 FROM " + OSM_TABLE_NAME
-				+ " WHERE " + OSM_FLOCK_SELECTION + " LIMIT 1)", null)) {
+				+ " LIMIT 1)", null)) {
 			return cursor.moveToFirst() && cursor.getInt(0) == 1;
 		} catch (Exception e) {
 			LOG.error("Failed to check OSM camera database for data", e);

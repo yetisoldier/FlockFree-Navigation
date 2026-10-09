@@ -229,7 +229,7 @@ if "simulateDetection(getMapActivity())" not in fragment:
     raise SystemExit("settings simulate button does not pass map activity for map-center fallback")
 if "refreshData()" not in camera_data:
     raise SystemExit("missing CameraData.refreshData()")
-if '"flockfree/cameras.geojson.gz"' not in camera_data:
+if '"flockfree/cameras.geojson"' not in camera_data:
     raise SystemExit("missing packaged bundled camera seed asset path")
 print("preference wiring ok")
 PY
@@ -278,7 +278,7 @@ required_data = [
     "databaseHelper.getCamerasNear(lat, lon, radiusMeters)",
     "file.getName() + \".tmp\"",
     "Unable to replace camera cache file",
-    "if (!isFlockCamera(point))",
+    "if (!isAlprCamera(point))",
     "return getCamerasInBoundingBox(top, left, bottom, right)",
     "buildDedupGrid(primaryCameras)",
     "isDuplicateOfPrimary(osmCam, primaryCameras, primaryGrid)",
@@ -404,11 +404,11 @@ required_layer_tokens = [
     "updateNativeCameraMarkers(mapRenderer, queryCameras",
     "new MapMarkersCollection()",
     ".setPosition(new PointI(",
-    ".setPinIcon(getNativePinImage(color))",
-    ".addOnMapSurfaceIcon(nativeConeIconKey, getNativeConeImage(color))",
+    ".setPinIcon(getNativePinImage(color, zoomGroup))",
+    ".addOnMapSurfaceIcon(nativeConeIconKey, getNativeConeImage(color, zoom))",
     "float nativeDirection = (bearing + 180f) % 360f",
     "marker.setOnMapSurfaceIconDirection(nativeConeIconKey, nativeDirection)",
-    "mapRenderer.addSymbolsProvider(mapMarkersCollection)",
+    "mapRenderer.addSymbolsProvider(newCollection)",
     "mapRenderer.requestRender()",
     "private boolean nativeRenderPending",
     "layersView.postOnAnimation(() ->",

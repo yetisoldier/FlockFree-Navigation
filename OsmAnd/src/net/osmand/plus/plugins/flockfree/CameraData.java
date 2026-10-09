@@ -28,7 +28,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -42,7 +41,7 @@ public class CameraData {
 
     private static final String CAMERA_DATA_URL = FlockFreePreferences.CAMERA_DATA_URL;
     private static final String CACHE_FILENAME = "cameras.geojson";
-    private static final String BUNDLED_SEED_ASSET = "flockfree/cameras.geojson.gz";
+    private static final String BUNDLED_SEED_ASSET = "flockfree/cameras.geojson";
     private static final long WEEK_MS = FlockFreePreferences.REFRESH_INTERVAL_MS;
     private static final long MAX_GEOJSON_BYTES = 128L * 1024 * 1024;
     private static final double SPATIAL_CELL_DEGREES = 0.05d;
@@ -53,11 +52,6 @@ public class CameraData {
     private static final String OVERPASS_QUERY_TEMPLATE =
             "[out:json][timeout:60];(node[\"man_made\"=\"surveillance\"][\"surveillance:type\"=\"ALPR\"](15, -170, 75, -50););out body;";
     private static final double DEDUP_DISTANCE_METERS = 10.0;
-
-    /** Known Flock manufacturer name variants for matching (case-insensitive). */
-    private static final String[] FLOCK_MANUFACTURER_ALIASES = {
-        "flock", "flock safety", "flock group inc", "flock group"
-    };
 
     private final OsmandApplication app;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -274,9 +268,9 @@ public class CameraData {
                 point.direction = tags.optString("camera:direction", tags.optString("direction", null));
                 point.bearing = parseBearing(point.direction);
 
-                // Keep the secondary source inside the same Flock-only boundary as the
-                // primary feed. Overpass returns every ALPR node in the query area.
-                if (!isFlockCamera(point)) {
+                // Accept all brands: the Overpass query template is ALPR-gated, so
+                // every node it returns is a plate reader camera.
+                if (!isAlprCamera(point)) {
                     skipped++;
                     continue;
                 }
@@ -521,7 +515,7 @@ public class CameraData {
     }
 
     /**
-     * Loads Flock camera data from the SQLite database.
+     * Loads camera data from the SQLite database.
      * This is the fastest path — no GeoJSON parsing needed.
      *
      * @return true if data was loaded from the database
@@ -536,7 +530,7 @@ public class CameraData {
             if (count <= 0) {
                 return false;
             }
-            List<CameraPoint> loaded = filterFlockCameras(databaseHelper.getAllCameras());
+            List<CameraPoint> loaded = databaseHelper.getAllCameras();
             if (loaded.isEmpty()) {
                 return false;
             }
@@ -551,7 +545,7 @@ public class CameraData {
                 dataRevision.incrementAndGet();
             }
             dataLoaded = true;
-            LOG.info("Loaded " + deduped.size() + " Flock cameras from SQLite database (removed " + removed + " duplicates)");
+            LOG.info("Loaded " + deduped.size() + " cameras from SQLite database (removed " + removed + " duplicates)");
             return true;
         } catch (Exception e) {
             LOG.error("Failed to load cameras from database", e);
@@ -592,7 +586,7 @@ public class CameraData {
                     return false;
                 }
                 dataLoaded = true;
-                LOG.info("Loaded " + cameras.size() + " Flock cameras from cache (" + cacheFile.length() + " bytes)");
+                LOG.info("Loaded " + cameras.size() + " cameras from cache (" + cacheFile.length() + " bytes)");
                 return true;
             } catch (Exception e) {
                 LOG.error("Failed to load camera cache", e);
@@ -682,7 +676,7 @@ public class CameraData {
             List<CameraPoint> parsed = new ArrayList<>(features.length());
             Set<String> seenKeys = new HashSet<>();
             int skipped = 0;
-            int nonFlockSkipped = 0;
+            int nonAlprSkipped = 0;
             int duplicates = 0;
             for (int i = 0; i < features.length(); i++) {
                 JSONObject feature = features.optJSONObject(i);
@@ -729,8 +723,9 @@ public class CameraData {
                 point.mountType = optProperty(props, "mountType", "mount_type");
                 point.surveillanceZone = optProperty(props, "surveillanceZone", "surveillance_zone");
                 point.osmTimestamp = optProperty(props, "osmTimestamp", "osm_timestamp");
-                if (!isFlockCamera(point)) {
-                    nonFlockSkipped++;
+                // Accept all brands: the feed and bundled seed are ALPR-curated.
+                if (!isAlprCamera(point)) {
+                    nonAlprSkipped++;
                     continue;
                 }
 
@@ -748,8 +743,8 @@ public class CameraData {
                 parsed.add(point);
             }
             if (parsed.isEmpty()) {
-                LOG.error("Parsed zero Flock camera points from " + source + "; skipped=" + skipped
-                        + ", nonFlockSkipped=" + nonFlockSkipped
+                LOG.error("Parsed zero camera points from " + source + "; skipped=" + skipped
+                        + ", nonAlprSkipped=" + nonAlprSkipped
                         + ", duplicates=" + duplicates + ", features=" + features.length());
                 return false;
             }
@@ -761,8 +756,8 @@ public class CameraData {
                 dataRevision.incrementAndGet();
             }
             persistParsedCameras(parsed, source);
-            LOG.info("Parsed " + parsed.size() + " Flock camera points from " + source.logName
-                    + "; skipped=" + skipped + ", nonFlockSkipped=" + nonFlockSkipped
+            LOG.info("Parsed " + parsed.size() + " camera points from " + source.logName
+                    + "; skipped=" + skipped + ", nonAlprSkipped=" + nonAlprSkipped
                     + ", duplicates=" + duplicates
                     + ", features=" + features.length()
                     + ", buckets=" + cameraGrid.size());
@@ -780,9 +775,9 @@ public class CameraData {
         boolean persisted = databaseHelper.replaceAllCameras(parsed);
         databaseReady = persisted;
         if (persisted) {
-            LOG.info("Persisted " + parsed.size() + " Flock cameras to SQLite database from " + source.logName);
+            LOG.info("Persisted " + parsed.size() + " cameras to SQLite database from " + source.logName);
         } else {
-            LOG.warn("Failed to persist " + parsed.size() + " Flock cameras to SQLite database from " + source.logName);
+            LOG.warn("Failed to persist " + parsed.size() + " cameras to SQLite database from " + source.logName);
         }
     }
 
@@ -1017,48 +1012,14 @@ public class CameraData {
         return Math.max(min, Math.min(max, value));
     }
 
-    @NonNull
-    private static List<CameraPoint> filterFlockCameras(@NonNull List<CameraPoint> input) {
-        List<CameraPoint> result = new ArrayList<>(input.size());
-        for (CameraPoint point : input) {
-            if (isFlockCamera(point)) {
-                result.add(point);
-            }
-        }
-        return result;
-    }
-
-    public static boolean isFlockCamera(@NonNull CameraPoint point) {
-        // Primary: check manufacturer (OSM canonical tag)
-        if (matchesFlockAlias(point.manufacturer)) {
-            return true;
-        }
-        // Secondary: check brand
-        if (matchesFlockAlias(point.brand)) {
-            return true;
-        }
-        // Tertiary: check operator
-        return matchesFlockAlias(point.operator);
-    }
-
     /**
-     * Checks whether the given value matches any known Flock manufacturer alias.
-     * Matching is case-insensitive and checks if the value contains any alias as a substring.
-     *
-     * @param value the string to check (may be null)
-     * @return true if the value matches a known Flock alias
+     * Accepts every camera from the supported sources as a plate reader camera.
+     * The primary feed and the bundled seed are ALPR-curated, and the Overpass
+     * secondary-source query template is ALPR-gated, so no brand whitelist is
+     * needed and all ALPR vendors are shown.
      */
-    private static boolean matchesFlockAlias(@Nullable String value) {
-        if (value == null) {
-            return false;
-        }
-        String lower = value.toLowerCase(Locale.US);
-        for (String alias : FLOCK_MANUFACTURER_ALIASES) {
-            if (lower.contains(alias)) {
-                return true;
-            }
-        }
-        return false;
+    public static boolean isAlprCamera(@NonNull CameraPoint point) {
+        return true;
     }
 
     private String readGeoJsonFile(@NonNull File file) throws IOException {
